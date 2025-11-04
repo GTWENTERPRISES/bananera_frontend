@@ -1,0 +1,91 @@
+/* Estilos responsivos para todos los componentes */
+
+/* Tablas responsivas */
+.responsive-table {
+  width: 100%;
+  overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+  .responsive-table table th:not(:first-child):not(:last-child),
+  .responsive-table table td:not(:first-child):not(:last-child) {
+    display: none;
+  }
+  
+  .responsive-table-md th:nth-child(n+4),
+  .responsive-table-md td:nth-child(n+4) {
+    display: none;
+  }
+  
+  .responsive-table-sm th:nth-child(n+3),
+  .responsive-table-sm td:nth-child(n+3) {
+    display: none;
+  }
+  
+  .mobile-info {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+    margin-top: 0.25rem;
+  }
+}
+
+/* Formularios responsivos */
+@media (max-width: 768px) {
+  .responsive-form .form-row {
+    flex-direction: column;
+  }
+  
+  .responsive-form .form-col {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+}
+
+/* Tarjetas responsivas */
+.responsive-card {
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .responsive-card {
+    padding: 1rem;
+  }
+}
+
+/* Gráficos responsivos */
+.responsive-chart {
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .responsive-chart {
+    height: 250px !important;
+  }
+}
+
+/* Clases de utilidad para visibilidad */
+@media (max-width: 768px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .show-on-mobile {
+    display: none !important;
+  }
+}
+
+/* Grids responsivos */
+.responsive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .responsive-grid {
+    grid-template-columns: 1fr;
+  }
+}

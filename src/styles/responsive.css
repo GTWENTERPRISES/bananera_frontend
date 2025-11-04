@@ -1,0 +1,122 @@
+/* Estilos responsivos globales */
+
+/* Breakpoints */
+:root {
+  --mobile-breakpoint: 768px;
+  --tablet-breakpoint: 1024px;
+}
+
+/* Contenedores responsivos */
+.responsive-container {
+  width: 100%;
+  padding: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .responsive-container {
+    padding: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-container {
+    padding: 1.5rem;
+  }
+}
+
+/* Grids responsivos */
+.responsive-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .responsive-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Tablas responsivas */
+.responsive-table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* Formularios responsivos */
+.responsive-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .responsive-form-row {
+    display: flex;
+    gap: 1rem;
+  }
+  
+  .responsive-form-col {
+    flex: 1;
+  }
+}
+
+/* Tipografía responsiva */
+.responsive-text-sm {
+  font-size: 0.875rem;
+}
+
+.responsive-text-base {
+  font-size: 1rem;
+}
+
+.responsive-text-lg {
+  font-size: 1.125rem;
+}
+
+.responsive-text-xl {
+  font-size: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .responsive-text-sm {
+    font-size: 1rem;
+  }
+  
+  .responsive-text-base {
+    font-size: 1.125rem;
+  }
+  
+  .responsive-text-lg {
+    font-size: 1.25rem;
+  }
+  
+  .responsive-text-xl {
+    font-size: 1.5rem;
+  }
+}
+
+/* Utilidades de visibilidad */
+.mobile-only {
+  display: block;
+}
+
+.desktop-only {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .mobile-only {
+    display: none;
+  }
+  
+  .desktop-only {
+    display: block;
+  }
+}

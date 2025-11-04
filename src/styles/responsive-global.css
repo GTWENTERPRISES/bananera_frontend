@@ -1,0 +1,98 @@
+/* Estilos responsivos globales */
+
+/* Aplicar estilos cuando la clase is-mobile está presente en el html */
+html.is-mobile .responsive-container {
+  padding: var(--responsive-padding, 0.75rem);
+}
+
+html.is-desktop .responsive-container {
+  padding: var(--responsive-padding, 1.5rem);
+}
+
+/* Grids responsivos */
+html.is-mobile .responsive-grid {
+  grid-template-columns: 1fr;
+  gap: var(--responsive-gap, 0.5rem);
+}
+
+html.is-desktop .responsive-grid {
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--responsive-gap, 1rem);
+}
+
+/* Tablas responsivas */
+html.is-mobile .responsive-table {
+  font-size: var(--responsive-font-size, 0.875rem);
+}
+
+html.is-desktop .responsive-table {
+  font-size: var(--responsive-font-size, 1rem);
+}
+
+/* Formularios responsivos */
+html.is-mobile .responsive-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--responsive-gap, 0.5rem);
+}
+
+html.is-desktop .responsive-form-row {
+  display: flex;
+  gap: var(--responsive-gap, 1rem);
+}
+
+/* Tipografía responsiva */
+html.is-mobile .responsive-heading {
+  font-size: var(--responsive-heading-size, 1.25rem);
+}
+
+html.is-desktop .responsive-heading {
+  font-size: var(--responsive-heading-size, 1.5rem);
+}
+
+/* Visibilidad condicional */
+html.is-mobile .desktop-only {
+  display: none !important;
+}
+
+html.is-desktop .mobile-only {
+  display: none !important;
+}
+
+/* Ajustes para componentes específicos */
+html.is-mobile .card-content {
+  padding: 0.75rem;
+}
+
+html.is-mobile .chart-container {
+  height: var(--responsive-chart-height, 200px) !important;
+}
+
+html.is-desktop .chart-container {
+  height: var(--responsive-chart-height, 300px) !important;
+}
+
+/* Ajustes para tablas */
+html.is-mobile .table-container {
+  overflow-x: auto;
+}
+
+/* Ajustes para formularios */
+html.is-mobile .form-grid {
+  display: flex;
+  flex-direction: column;
+}
+
+html.is-desktop .form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* Ajustes para botones */
+html.is-mobile .button-group {
+  flex-direction: column;
+}
+
+html.is-desktop .button-group {
+  flex-direction: row;
+}
