@@ -8,18 +8,33 @@ import {
   TableHeader,
   TableRow,
 } from "@/src/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/src/components/ui/card";
 import { useApp } from "@/src/contexts/app-context";
+import { useSearchParams } from "next/navigation";
+import { useMemo } from "react";
 import { Badge } from "@/src/components/ui/badge";
 import { ExportButton } from "@/src/components/shared/export-button";
 import { cn } from "@/src/lib/utils";
 
 export function RecuperacionTable() {
   const { recuperacionCintas } = useApp();
+  const searchParams = useSearchParams();
+  const fincaFilter = searchParams.get("finca") || "";
+
+  const filtered = useMemo(() => {
+    return recuperacionCintas.filter((r) =>
+      fincaFilter ? r.finca === fincaFilter : true
+    );
+  }, [recuperacionCintas, fincaFilter]);
 
   const avgRecuperacion =
-    recuperacionCintas.reduce((sum, r) => sum + r.porcentajeRecuperacion, 0) /
-    recuperacionCintas.length;
+    filtered.reduce((sum, r) => sum + r.porcentajeRecuperacion, 0) /
+    (filtered.length || 1);
 
   const getRecuperacionColor = (porcentaje: number) => {
     if (porcentaje >= 90) return "text-green-600";
@@ -32,9 +47,29 @@ export function RecuperacionTable() {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Historial de Recuperación</CardTitle>
         <ExportButton
-          onExportExcel={() => {}}
-          onExportPDF={() => {}}
-          onExportCSV={() => {}}
+          data={filtered}
+          headers={[
+            "Finca",
+            "Semana",
+            "Iniciales",
+            "1ª Cal",
+            "2ª Cal",
+            "3ª Cal",
+            "Barrida",
+            "Recuperación",
+          ]}
+          keys={[
+            "finca",
+            "semana",
+            "enfundesIniciales",
+            "primeraCalCosecha",
+            "segundaCalCosecha",
+            "terceraCalCosecha",
+            "barridaFinal",
+            "porcentajeRecuperacion",
+          ]}
+          title="Historial de Recuperación"
+          filename="recuperacion-cintas"
         />
       </CardHeader>
       <CardContent>
@@ -65,7 +100,7 @@ export function RecuperacionTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {recuperacionCintas.map((rec) => (
+              {filtered.map((rec) => (
                 <TableRow key={rec.id}>
                   <TableCell className="font-medium">{rec.finca}</TableCell>
                   <TableCell>S{rec.semana}</TableCell>

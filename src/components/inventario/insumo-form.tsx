@@ -20,12 +20,12 @@ import {
   CardTitle,
 } from "@/src/components/ui/card";
 import { useApp } from "@/src/contexts/app-context";
-import type { Insumo } from "@/src/lib/types";
+import type { Insumo, FincaName } from "@/src/lib/types";
 import { Package } from "lucide-react";
 import { useToast } from "@/src/hooks/use-toast";
 
 export function InsumoForm() {
-  const { addInsumo } = useApp();
+  const { addInsumo, canAccess, fincas } = useApp();
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     nombre: "",
@@ -41,6 +41,7 @@ export function InsumoForm() {
     stockMaximo: "", // Agregado para coincidir con la interfaz
     precioUnitario: "",
     proveedor: "",
+    finca: "" as FincaName | "",
   });
 
   // Función helper para validar el tipo de categoría
@@ -78,8 +79,15 @@ export function InsumoForm() {
     }
   };
 
+  const allowEdit = canAccess("inventario", "edit");
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!allowEdit) {
+      toast({ title: "Permiso requerido", description: "Tu rol no puede registrar insumos", variant: "destructive" });
+      return;
+    }
 
     // Validar que categoría sea un valor válido
     if (!formData.categoria || !isValidCategoria(formData.categoria)) {
@@ -102,6 +110,7 @@ export function InsumoForm() {
       precioUnitario: Number.parseFloat(formData.precioUnitario),
       proveedor: formData.proveedor,
       // fechaVencimiento es opcional, no se incluye aquí
+      finca: formData.finca || undefined,
     };
 
     addInsumo(newInsumo);
@@ -134,6 +143,7 @@ export function InsumoForm() {
       stockMaximo: "",
       precioUnitario: "",
       proveedor: "",
+      finca: "" as FincaName | "",
     });
   };
 
@@ -262,9 +272,30 @@ export function InsumoForm() {
                 required
               />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="finca">Finca Asociada</Label>
+              <Select
+                value={formData.finca}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, finca: value as FincaName })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar finca (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {fincas.map((f) => (
+                    <SelectItem key={f.id} value={f.nombre as FincaName}>
+                      {f.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          <Button type="submit" className="w-full gap-2">
+          <Button type="submit" className="w-full gap-2" disabled={!allowEdit}>
             <Package className="h-4 w-4" />
             Registrar Insumo
           </Button>

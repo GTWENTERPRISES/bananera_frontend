@@ -14,6 +14,7 @@ import type {
   Alerta,
   RecuperacionCinta,
   Finca,
+  UserRole,
 } from "@/src/lib/types";
 import {
   mockUsers,
@@ -57,6 +58,9 @@ interface AppContextType {
     password: string
   ) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
+
+  // RBAC
+  canAccess: (resource: "dashboard" | "produccion" | "nomina" | "inventario" | "reportes" | "configuracion" | "analytics" | "geovisualizacion", action?: "view" | "edit") => boolean;
 
   // Theme
   toggleTheme: () => void;
@@ -410,6 +414,72 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     addUsuario,
     updateUsuario,
     deleteUsuario,
+    canAccess: (resource, action = "view") => {
+      const role: UserRole | undefined = state.currentUser?.rol;
+      if (!role) return false;
+      const PERMISSIONS: Record<
+        "dashboard" | "produccion" | "nomina" | "inventario" | "reportes" | "configuracion" | "analytics" | "geovisualizacion",
+        Record<UserRole, { view: boolean; edit: boolean }>
+      > = {
+        dashboard: {
+          administrador: { view: true, edit: true },
+          gerente: { view: true, edit: false },
+          supervisor_finca: { view: true, edit: false },
+          contador_rrhh: { view: true, edit: false },
+          bodeguero: { view: true, edit: false },
+        },
+        produccion: {
+          administrador: { view: true, edit: true },
+          gerente: { view: true, edit: false },
+          supervisor_finca: { view: true, edit: true },
+          contador_rrhh: { view: false, edit: false },
+          bodeguero: { view: false, edit: false },
+        },
+        nomina: {
+          administrador: { view: true, edit: true },
+          gerente: { view: true, edit: false },
+          supervisor_finca: { view: false, edit: false },
+          contador_rrhh: { view: true, edit: true },
+          bodeguero: { view: false, edit: false },
+        },
+        inventario: {
+          administrador: { view: true, edit: true },
+          gerente: { view: true, edit: false },
+          supervisor_finca: { view: true, edit: true },
+          contador_rrhh: { view: false, edit: false },
+          bodeguero: { view: true, edit: true },
+        },
+        reportes: {
+          administrador: { view: true, edit: true },
+          gerente: { view: true, edit: true },
+          supervisor_finca: { view: true, edit: false },
+          contador_rrhh: { view: true, edit: true },
+          bodeguero: { view: true, edit: true },
+        },
+        analytics: {
+          administrador: { view: true, edit: true },
+          gerente: { view: true, edit: true },
+          supervisor_finca: { view: true, edit: false },
+          contador_rrhh: { view: true, edit: false },
+          bodeguero: { view: false, edit: false },
+        },
+        geovisualizacion: {
+          administrador: { view: true, edit: true },
+          gerente: { view: true, edit: false },
+          supervisor_finca: { view: true, edit: false },
+          contador_rrhh: { view: false, edit: false },
+          bodeguero: { view: false, edit: false },
+        },
+        configuracion: {
+          administrador: { view: true, edit: true },
+          gerente: { view: false, edit: false },
+          supervisor_finca: { view: false, edit: false },
+          contador_rrhh: { view: false, edit: false },
+          bodeguero: { view: false, edit: false },
+        },
+      };
+      return PERMISSIONS[resource][role][action];
+    },
   };
 
   // No renderizar hasta que esté inicializado

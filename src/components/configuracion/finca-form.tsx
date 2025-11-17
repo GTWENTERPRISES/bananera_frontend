@@ -31,6 +31,8 @@ interface FincaFormProps {
 }
 
 export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
+  const { canAccess } = useApp();
+  const { toast } = useToast();
   const [formData, setFormData] = useState<Partial<Finca>>({
     nombre: finca?.nombre || "",
     hectareas: finca?.hectareas || 0,
@@ -42,65 +44,75 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
     estado: finca?.estado || "activa",
     coordenadas: finca?.coordenadas || "",
     telefono: finca?.telefono || "",
+    // nueva propiedad para geometría
+    geom: finca?.geom,
   });
 
   const [error, setError] = useState<string | null>(null);
+  const allowEdit = canAccess("configuracion", "edit");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit: React.FormEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault();
-    setError(null); // Resetear error al enviar
-
-    // Validaciones - Usar valores por defecto para evitar undefined
-    if (
-      !formData.nombre?.trim() ||
-      !formData.responsable?.trim() ||
-      !formData.variedad?.trim()
-    ) {
-      setError("Nombre, responsable y variedad son campos obligatorios");
+    if (!allowEdit) {
+      toast({ title: "Permiso requerido", description: "Tu rol no puede modificar fincas", variant: "destructive" });
       return;
     }
-
-    // Usar valores por defecto y asegurar que no sean undefined
-    const hectareas = formData.hectareas || 0;
-    const plantasTotales = formData.plantasTotales || 0;
-
-    if (hectareas <= 0 || plantasTotales <= 0) {
-      setError("Hectáreas y plantas totales deben ser mayores a 0");
+    if (!formData.nombre || !formData.hectareas) {
+      setError("Por favor completa los campos requeridos: nombre y hectáreas.");
       return;
     }
-
-    // Asegurar que los campos numéricos tengan valores válidos
-    const dataToSave: Partial<Finca> = {
-      ...formData,
-      hectareas: hectareas,
-      plantasTotales: plantasTotales,
-      nombre: formData.nombre.trim(),
-      responsable: formData.responsable.trim(),
-      variedad: formData.variedad.trim(),
-    };
-
-    onSave(dataToSave);
+    onSave(formData);
   };
 
-  // Función auxiliar para manejar cambios en campos numéricos
-  const handleNumberChange = (field: keyof Finca, value: string) => {
-    const numValue = value === "" ? 0 : Number.parseFloat(value);
-    setFormData((prev) => ({
-      ...prev,
-      [field]: isNaN(numValue) ? 0 : numValue,
-    }));
-    // Limpiar error cuando el usuario empiece a corregir
-    if (error) setError(null);
-  };
-
-  // Función auxiliar para manejar cambios en campos de texto
+  // Funciones auxiliares
   const handleTextChange = (field: keyof Finca, value: string) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
     }));
-    // Limpiar error cuando el usuario empiece a corregir
     if (error) setError(null);
+  };
+
+  const handleNumberChange = (field: keyof Finca, value: string) => {
+    const num = Number.parseFloat(value);
+    setFormData((prev) => ({
+      ...prev,
+      [field]: Number.isFinite(num) ? num : (prev[field] as number) || 0,
+    }));
+    if (error) setError(null);
+  };
+
+  // Parseador sencillo de GeoJSON (Polygon/MultiPolygon)
+  const handleGeomJsonChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, geom: undefined }));
+    if (!value.trim()) return;
+    try {
+      const parsed = JSON.parse(value);
+      if (
+        parsed &&
+        (parsed.type === "Polygon" || parsed.type === "MultiPolygon") &&
+        parsed.coordinates
+      ) {
+        setFormData((prev) => ({ ...prev, geom: parsed }));
+        setError(null);
+      } else if (parsed.type === "Feature" && parsed.geometry) {
+        const g = parsed.geometry;
+        if (
+          g &&
+          (g.type === "Polygon" || g.type === "MultiPolygon") &&
+          g.coordinates
+        ) {
+          setFormData((prev) => ({ ...prev, geom: g }));
+          setError(null);
+        } else {
+          setError("GeoJSON inválido: se espera Polygon/MultiPolygon.");
+        }
+      } else {
+        setError("GeoJSON inválido: se espera Polygon/MultiPolygon o Feature.");
+      }
+    } catch (e) {
+      setError("GeoJSON inválido: error de parseo.");
+    }
   };
 
   return (
@@ -114,7 +126,6 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {/* Alert de error */}
         {error && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
@@ -124,7 +135,6 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Columna 1 */}
             <div className="space-y-2">
               <Label htmlFor="nombre">Nombre de la Finca *</Label>
               <Input
@@ -144,88 +154,47 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
                 step="0.01"
                 min="0"
                 value={formData.hectareas || 0}
-                onChange={(e) =>
-                  handleNumberChange("hectareas", e.target.value)
-                }
-                placeholder="45.5"
-                required
+                onChange={(e) => handleNumberChange("hectareas", e.target.value)}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="responsable">Responsable *</Label>
-              <Input
-                id="responsable"
-                value={formData.responsable || ""}
-                onChange={(e) =>
-                  handleTextChange("responsable", e.target.value)
-                }
-                placeholder="Juan Pérez"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="variedad">Variedad de Banano *</Label>
+              <Label htmlFor="variedad">Variedad *</Label>
               <Select
                 value={formData.variedad || "Cavendish"}
-                onValueChange={(value) => handleTextChange("variedad", value)}
+                onValueChange={(v) =>
+                  setFormData((prev) => ({ ...prev, variedad: v }))
+                }
               >
                 <SelectTrigger id="variedad">
-                  <SelectValue />
+                  <SelectValue placeholder="Selecciona variedad" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Cavendish">Cavendish</SelectItem>
-                  <SelectItem value="Williams">Williams</SelectItem>
-                  <SelectItem value="Grand Naine">Grand Naine</SelectItem>
-                  <SelectItem value="Valery">Valery</SelectItem>
-                  <SelectItem value="Otra">Otra variedad</SelectItem>
+                  <SelectItem value="Clon">Clon</SelectItem>
+                  <SelectItem value="Otro">Otro</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Columna 2 */}
             <div className="space-y-2">
-              <Label htmlFor="plantasTotales">Plantas Totales *</Label>
+              <Label htmlFor="plantasTotales">Plantas Totales</Label>
               <Input
                 id="plantasTotales"
                 type="number"
                 min="0"
                 value={formData.plantasTotales || 0}
-                onChange={(e) =>
-                  handleNumberChange("plantasTotales", e.target.value)
-                }
-                placeholder="50000"
-                required
+                onChange={(e) => handleNumberChange("plantasTotales", e.target.value)}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="estado">Estado</Label>
-              <Select
-                value={formData.estado || "activa"}
-                onValueChange={(value) => handleTextChange("estado", value)}
-              >
-                <SelectTrigger id="estado">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="activa">Activa</SelectItem>
-                  <SelectItem value="inactiva">Inactiva</SelectItem>
-                  <SelectItem value="mantenimiento">
-                    En mantenimiento
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="telefono">Teléfono Contacto</Label>
+              <Label htmlFor="responsable">Responsable</Label>
               <Input
-                id="telefono"
-                value={formData.telefono || ""}
-                onChange={(e) => handleTextChange("telefono", e.target.value)}
-                placeholder="0987654321"
+                id="responsable"
+                value={formData.responsable || ""}
+                onChange={(e) => handleTextChange("responsable", e.target.value)}
+                placeholder="Juan Pérez"
               />
             </div>
 
@@ -235,13 +204,10 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
                 id="fechaSiembra"
                 type="date"
                 value={formData.fechaSiembra || ""}
-                onChange={(e) =>
-                  handleTextChange("fechaSiembra", e.target.value)
-                }
+                onChange={(e) => handleTextChange("fechaSiembra", e.target.value)}
               />
             </div>
 
-            {/* Campos de ancho completo */}
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="ubicacion">Ubicación</Label>
               <Textarea
@@ -258,11 +224,24 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
               <Input
                 id="coordenadas"
                 value={formData.coordenadas || ""}
-                onChange={(e) =>
-                  handleTextChange("coordenadas", e.target.value)
-                }
+                onChange={(e) => handleTextChange("coordenadas", e.target.value)}
                 placeholder="-3.2846, -79.9608"
               />
+            </div>
+
+            {/* Nuevo campo: GeoJSON */}
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="geomJson">GeoJSON (Polygon o Feature)</Label>
+              <Textarea
+                id="geomJson"
+                value={formData.geom ? JSON.stringify(formData.geom) : ""}
+                onChange={(e) => handleGeomJsonChange(e.target.value)}
+                placeholder='{"type":"Polygon","coordinates":[[[-79.4445,-1.117],[-79.4417,-1.117],[-79.4417,-1.1135],[-79.4445,-1.1135],[-79.4445,-1.117]]]}'
+                rows={4}
+              />
+              <p className="text-xs text-muted-foreground">
+                Pega aquí el GeoJSON de la finca (Polygon/MultiPolygon) o un Feature con geometry.
+              </p>
             </div>
           </div>
 
@@ -271,7 +250,7 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
               <X className="h-4 w-4 mr-2" />
               Cancelar
             </Button>
-            <Button type="submit">
+            <Button type="submit" disabled={!allowEdit}>
               <Save className="h-4 w-4 mr-2" />
               {finca ? "Actualizar" : "Crear"} Finca
             </Button>
@@ -281,3 +260,5 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
     </Card>
   );
 }
+import { useApp } from "@/src/contexts/app-context";
+import { useToast } from "@/src/hooks/use-toast";

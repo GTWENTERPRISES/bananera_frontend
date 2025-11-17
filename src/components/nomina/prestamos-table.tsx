@@ -58,9 +58,38 @@ export function PrestamosTable() {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Gestión de Préstamos</CardTitle>
         <ExportButton
-          onExportExcel={() => {}}
-          onExportPDF={() => {}}
-          onExportCSV={() => {}}
+          data={prestamos.map((p) => ({
+            empleado: p.empleado?.nombre || "N/A",
+            monto: p.monto,
+            valorCuota: p.valorCuota,
+            cuotasPagadas: p.cuotasPagadas,
+            numeroCuotas: p.numeroCuotas,
+            saldoPendiente: p.saldoPendiente,
+            fechaDesembolso: new Date(p.fechaDesembolso).toLocaleDateString("es-ES"),
+            estado: p.estado === "activo" ? "Activo" : "Finalizado",
+          }))}
+          headers={[
+            "Empleado",
+            "Monto",
+            "Cuota",
+            "Cuotas Pagadas",
+            "Nº Cuotas",
+            "Saldo",
+            "Fecha",
+            "Estado",
+          ]}
+          keys={[
+            "empleado",
+            "monto",
+            "valorCuota",
+            "cuotasPagadas",
+            "numeroCuotas",
+            "saldoPendiente",
+            "fechaDesembolso",
+            "estado",
+          ]}
+          title="Gestión de Préstamos"
+          filename="prestamos"
         />
       </CardHeader>
       <CardContent>

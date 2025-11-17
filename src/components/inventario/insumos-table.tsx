@@ -82,8 +82,18 @@ export function InsumosTable() {
             "Proveedor",
             "Estado",
           ]} // Actualizados los headers
+          keys={[
+            "nombre",
+            "categoria",
+            "stockActual",
+            "stockMinimo",
+            "stockMaximo",
+            "precioUnitario",
+            "proveedor",
+            "estado",
+          ]}
           title="Inventario de Insumos"
-          filename="inventario-insumos.xlsx"
+          filename="inventario-insumos"
         />
       </CardHeader>
       <CardContent>

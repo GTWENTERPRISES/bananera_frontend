@@ -17,7 +17,7 @@ import { Plus, Users } from "lucide-react";
 import { toast } from "sonner";
 
 export default function UsuariosPage() {
-  const { state, addUsuario, updateUsuario, deleteUsuario } = useApp();
+  const { state, addUsuario, updateUsuario, deleteUsuario, canAccess } = useApp();
   const [showForm, setShowForm] = useState(false);
   const [editingUsuario, setEditingUsuario] = useState<User | undefined>();
 
@@ -34,7 +34,7 @@ export default function UsuariosPage() {
           nombre: usuarioData.nombre || "",
           email: usuarioData.email || "",
           password: usuarioData.password || "123456", // Contraseña por defecto
-          rol: usuarioData.rol || "operador",
+          rol: usuarioData.rol || "bodeguero",
           activo: usuarioData.activo ?? true,
           telefono: usuarioData.telefono,
           fincaAsignada: usuarioData.fincaAsignada,
@@ -129,10 +129,8 @@ export default function UsuariosPage() {
   };
 
   // Verificar permisos del usuario actual
-  const canManageUsers =
-    state.currentUser?.rol === "administrador" ||
-    state.currentUser?.rol === "gerente";
-  const canDeleteUsers = state.currentUser?.rol === "administrador";
+  const canManageUsers = canAccess("configuracion", "edit");
+  const canDeleteUsers = canAccess("configuracion", "edit");
 
   if (!canManageUsers) {
     return (
@@ -175,7 +173,7 @@ export default function UsuariosPage() {
             Administra los usuarios y sus permisos en el sistema
           </p>
         </div>
-        {!showForm && (
+        {!showForm && canManageUsers && (
           <Button onClick={handleNewUser}>
             <Plus className="h-4 w-4 mr-2" />
             Nuevo Usuario
@@ -214,10 +212,10 @@ export default function UsuariosPage() {
 
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-orange-600">
-              {state.usuarios.filter((u) => u.rol === "operador").length}
+            <div className="text-2xl font-bold text-green-600">
+              {state.usuarios.filter((u) => u.rol === "bodeguero").length}
             </div>
-            <p className="text-sm text-muted-foreground">Operadores</p>
+            <p className="text-sm text-muted-foreground">Bodegueros</p>
           </CardContent>
         </Card>
       </div>

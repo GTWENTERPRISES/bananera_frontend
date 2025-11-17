@@ -5,9 +5,42 @@ import { useApp } from "@/src/contexts/app-context";
 import { Info, TrendingUp, Package } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 import { Button } from "@/src/components/ui/button";
+import { useRouter } from "next/navigation";
 
 export function AIAlerts() {
-  const { alertas, marcarAlertaLeida } = useApp();
+  const { alertas, fincas, currentUser, marcarAlertaLeida } = useApp();
+  const router = useRouter();
+  const fincaAsignadaNombre = (() => {
+    if (!currentUser?.fincaAsignada) return undefined;
+    const f = fincas.find((fi) => fi.id === currentUser.fincaAsignada);
+    return f?.nombre;
+  })();
+
+  const alertasVisibles = (alertas || []).filter((a) => {
+    if (!currentUser) return false;
+    const rolPermitido = a.rolesPermitidos?.includes(currentUser.rol);
+    const aplicaFinca = currentUser.rol === "supervisor_finca";
+    const fincaOk = !aplicaFinca || !a.finca || a.finca === fincaAsignadaNombre;
+    return rolPermitido && fincaOk;
+  });
+
+  const getAlertHref = (a: { modulo: string; finca?: string; titulo?: string }) => {
+    let base = "/dashboard";
+    if (a.modulo === "Inventario") base = "/inventario/alertas";
+    else if (a.modulo === "Producción") {
+      const t = a.titulo?.toLowerCase() || "";
+      base = t.includes("recuperación") ? "/produccion/recuperacion" : "/produccion/cosechas";
+    }
+    else if (a.modulo === "Nómina") {
+      const t = a.titulo?.toLowerCase() || "";
+      base = t.includes("roles de pago") ? "/nomina/roles" : "/nomina/empleados";
+    }
+    else if (a.modulo === "Analytics") base = "/analytics/predictivo";
+    else if (a.modulo === "Seguridad") base = "/configuracion/permisos";
+    else if (a.modulo === "Sistema") base = "/dashboard";
+    const qp = a.finca ? `?finca=${encodeURIComponent(a.finca)}` : "";
+    return `${base}${qp}`;
+  };
 
   const getIcon = (modulo: string) => {
     switch (modulo) {
@@ -37,7 +70,7 @@ export function AIAlerts() {
         <CardTitle>Alertas del Sistema</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {alertas.slice(0, 5).map((alerta) => {
+        {alertasVisibles.slice(0, 5).map((alerta) => {
           const Icon = getIcon(alerta.modulo);
           return (
             <div
@@ -82,6 +115,17 @@ export function AIAlerts() {
                     Marcar como leída
                   </Button>
                 )}
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="h-6 text-xs"
+                  onClick={() => {
+                    const href = getAlertHref(alerta);
+                    router.push(href);
+                  }}
+                >
+                  Ver detalle
+                </Button>
               </div>
             </div>
           );

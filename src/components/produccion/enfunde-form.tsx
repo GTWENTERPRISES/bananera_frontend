@@ -2,7 +2,8 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
@@ -27,6 +28,7 @@ import { useToast } from "@/src/hooks/use-toast";
 export function EnfundeForm() {
   const { addEnfunde } = useApp();
   const { toast } = useToast();
+  const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
     finca: "" as FincaName | "", // Usa FincaName en lugar de Finca
     semana: "",
@@ -36,6 +38,13 @@ export function EnfundeForm() {
     matasCaidas: "",
     fecha: new Date().toISOString().split("T")[0],
   });
+
+  useEffect(() => {
+    const qp = searchParams.get("finca") || "";
+    if (isValidFinca(qp)) {
+      setFormData((prev) => ({ ...prev, finca: qp as FincaName }));
+    }
+  }, [searchParams]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

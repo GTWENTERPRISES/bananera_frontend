@@ -25,7 +25,7 @@ import { UserPlus } from "lucide-react";
 import { useToast } from "@/src/hooks/use-toast";
 
 export function EmpleadoForm() {
-  const { addEmpleado } = useApp();
+  const { addEmpleado, canAccess } = useApp();
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     nombre: "",
@@ -55,8 +55,15 @@ export function EmpleadoForm() {
     }
   };
 
+  const allowEdit = canAccess("nomina", "edit");
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!allowEdit) {
+      toast({ title: "Permiso requerido", description: "Tu rol no puede registrar empleados", variant: "destructive" });
+      return;
+    }
 
     // Validar que finca sea un valor válido
     if (!formData.finca || !isValidFinca(formData.finca)) {
@@ -276,7 +283,7 @@ export function EmpleadoForm() {
             </div>
           </div>
 
-          <Button type="submit" className="w-full gap-2">
+          <Button type="submit" className="w-full gap-2" disabled={!allowEdit}>
             <UserPlus className="h-4 w-4" />
             Registrar Empleado
           </Button>

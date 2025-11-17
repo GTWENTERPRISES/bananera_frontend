@@ -2,6 +2,7 @@ import type React from "react";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+// Leaflet CSS se importa en componentes cliente de mapas para evitar SSR
 import { AppProvider } from "@/src/contexts/app-context";
 import { ResponsiveProvider } from "@/src/contexts/responsive-context";
 import { ThemeProvider } from "@/src/components/theme-provider";
@@ -30,6 +31,7 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body
+        suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
         <ThemeProvider

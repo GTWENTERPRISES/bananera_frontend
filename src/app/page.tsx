@@ -1,32 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 export default function HomePage() {
   const router = useRouter();
-  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    // Verificar si hay usuario en localStorage directamente
-    const savedUser = localStorage.getItem("currentUser");
-
-    if (savedUser) {
-      router.push("/dashboard");
-    } else {
-      router.push("/login");
+    try {
+      const savedUser = localStorage.getItem("currentUser");
+      const target = savedUser ? "/dashboard" : "/login";
+      // Usar replace para evitar historial y asegurar navegación inmediata
+      router.replace(target);
+    } catch (error) {
+      // Fallback seguro: si algo falla al leer localStorage, enviar a /login
+      router.replace("/login");
     }
-    setIsChecking(false);
   }, [router]);
 
-  if (isChecking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  return null;
+  // Mostrar un loader mientras ocurre la redirección para evitar pantalla en blanco
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
 }

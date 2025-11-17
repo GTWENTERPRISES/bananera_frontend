@@ -9,6 +9,8 @@ import { AIAlerts } from "@/src/components/dashboard/ai-alerts";
 import { WeeklySummary } from "@/src/components/dashboard/weekly-summary";
 import { useApp } from "@/src/contexts/app-context";
 import { Package, Users, TrendingUp, AlertCircle } from "lucide-react";
+import dynamic from "next/dynamic";
+const MiniMap = dynamic(() => import("@/src/components/geo/mini-map").then(m => m.MiniMap), { ssr: false });
 
 export default function DashboardPage() {
   const { cosechas, enfundes, rolesPago, alertas, insumos } = useApp();
@@ -83,6 +85,13 @@ export default function DashboardPage() {
 
       {/* Heatmap */}
       <HeatmapProductivity />
+
+      {/* Mini Map Widget */}
+      <div>
+        <h2 className="text-xl font-semibold">Mapa de Fincas</h2>
+        <p className="text-muted-foreground mb-2">Vista rápida de la ubicación y rendimiento por hectárea.</p>
+        <MiniMap />
+      </div>
     </div>
   );
 }

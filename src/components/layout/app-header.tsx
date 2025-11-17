@@ -20,13 +20,55 @@ import { cn } from "@/src/lib/utils";
 
 export function AppHeader() {
   const router = useRouter();
-  const { currentUser, theme, toggleTheme, alertas, logout } = useApp();
+  const { currentUser, theme, toggleTheme, alertas, fincas, logout, canAccess, marcarAlertaLeida } = useApp();
   const isMobile = useIsMobile();
-  const alertasNoLeidas = alertas?.filter((a) => !a.leida).length || 0;
+  const fincaAsignadaNombre = (() => {
+    if (!currentUser?.fincaAsignada) return undefined;
+    const f = fincas.find((fi) => fi.id === currentUser.fincaAsignada);
+    return f?.nombre;
+  })();
+
+  const alertasVisibles = (alertas || []).filter((a) => {
+    if (!currentUser) return false;
+    const rolPermitido = a.rolesPermitidos?.includes(currentUser.rol);
+    const aplicaFinca = currentUser.rol === "supervisor_finca";
+    const fincaOk = !aplicaFinca || !a.finca || a.finca === fincaAsignadaNombre;
+    return rolPermitido && fincaOk;
+  });
+
+  const alertasNoLeidas = alertasVisibles.filter((a) => !a.leida).length || 0;
+
+  const getAlertHref = (a: { modulo: string; finca?: string; titulo?: string }) => {
+    let base = "/dashboard";
+    if (a.modulo === "Inventario") base = "/inventario/alertas";
+    else if (a.modulo === "Producción") {
+      const t = a.titulo?.toLowerCase() || "";
+      base = t.includes("recuperación") ? "/produccion/recuperacion" : "/produccion/cosechas";
+    }
+    else if (a.modulo === "Nómina") {
+      const t = a.titulo?.toLowerCase() || "";
+      base = t.includes("roles de pago") ? "/nomina/roles" : "/nomina/empleados";
+    }
+    else if (a.modulo === "Analytics") base = "/analytics/predictivo";
+    else if (a.modulo === "Seguridad") base = "/configuracion/permisos";
+    else if (a.modulo === "Sistema") base = "/dashboard";
+    const qp = a.finca ? `?finca=${encodeURIComponent(a.finca)}` : "";
+    return `${base}${qp}`;
+  };
 
   const handleLogout = () => {
     logout();
     router.push("/login");
+  };
+
+  const goPerfil = () => {
+    router.push("/perfil");
+  };
+
+  const goConfiguracion = () => {
+    if (canAccess("configuracion", "view")) {
+      router.push("/configuracion");
+    }
   };
 
   return (
@@ -76,22 +118,24 @@ export function AppHeader() {
             <DropdownMenuLabel>Notificaciones</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <div className="max-h-96 overflow-y-auto">
-              <DropdownMenuItem>
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm font-medium">Stock crítico detectado</p>
-                  <p className="text-xs text-muted-foreground">
-                    Fungicida Mancozeb por debajo del mínimo
-                  </p>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm font-medium">Recuperación baja</p>
-                  <p className="text-xs text-muted-foreground">
-                    Finca SOLO: 78% en semana 52
-                  </p>
-                </div>
-              </DropdownMenuItem>
+              {alertasVisibles.length === 0 && (
+                <div className="p-3 text-xs text-muted-foreground">Sin notificaciones para tu rol</div>
+              )}
+              {alertasVisibles.slice(0, 8).map((a) => (
+                <DropdownMenuItem
+                  key={a.id}
+                  onClick={() => {
+                    const href = getAlertHref(a);
+                    marcarAlertaLeida(a.id);
+                    router.push(href);
+                  }}
+                >
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm font-medium">{a.titulo}</p>
+                    <p className="text-xs text-muted-foreground">{a.descripcion}</p>
+                  </div>
+                </DropdownMenuItem>
+              ))}
             </div>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -118,8 +162,10 @@ export function AppHeader() {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Perfil</DropdownMenuItem>
-            <DropdownMenuItem>Configuración</DropdownMenuItem>
+            <DropdownMenuItem onClick={goPerfil}>Perfil</DropdownMenuItem>
+            {canAccess("configuracion", "view") && (
+              <DropdownMenuItem onClick={goConfiguracion}>Configuración</DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive"

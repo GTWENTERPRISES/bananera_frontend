@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/src/components/ui/select";
 import { Button } from "@/src/components/ui/button";
+import { ExportButton } from "@/src/components/shared/export-button";
 import {
   BarChart,
   Bar,
@@ -40,6 +41,7 @@ export default function ReportesProduccionPage() {
   const { enfundes, cosechas } = useApp();
   const [periodo, setPeriodo] = useState("mensual");
   const [añoSeleccionado, setAñoSeleccionado] = useState("2025");
+  const [tab, setTab] = useState("volumen");
 
   // Altura fija para los gráficos
   const chartHeight = 400;
@@ -80,49 +82,37 @@ export default function ReportesProduccionPage() {
       return {
         mes,
         BABY: cosechasFiltradas
-          .filter(
-            (c) => c.finca === "BABY" && Math.ceil(c.semana / 4.33) === mesNum
-          )
+          .filter((c) => c.finca === "BABY" && Math.ceil(c.semana / 4.33) === mesNum)
           .reduce((sum, c) => sum + c.cajasProducidas, 0),
         SOLO: cosechasFiltradas
-          .filter(
-            (c) => c.finca === "SOLO" && Math.ceil(c.semana / 4.33) === mesNum
-          )
+          .filter((c) => c.finca === "SOLO" && Math.ceil(c.semana / 4.33) === mesNum)
           .reduce((sum, c) => sum + c.cajasProducidas, 0),
         LAURITA: cosechasFiltradas
-          .filter(
-            (c) =>
-              c.finca === "LAURITA" && Math.ceil(c.semana / 4.33) === mesNum
-          )
+          .filter((c) => c.finca === "LAURITA" && Math.ceil(c.semana / 4.33) === mesNum)
           .reduce((sum, c) => sum + c.cajasProducidas, 0),
         MARAVILLA: cosechasFiltradas
-          .filter(
-            (c) =>
-              c.finca === "MARAVILLA" && Math.ceil(c.semana / 4.33) === mesNum
-          )
+          .filter((c) => c.finca === "MARAVILLA" && Math.ceil(c.semana / 4.33) === mesNum)
           .reduce((sum, c) => sum + c.cajasProducidas, 0),
       };
     });
 
     // Producción semanal (últimas 4 semanas)
-    const produccionSemanal = Array.from({ length: 4 }, (_, i) => {
-      const semanaNum = i + 1;
-      return {
-        semana: `Sem ${semanaNum}`,
-        BABY: cosechasFiltradas
-          .filter((c) => c.finca === "BABY" && c.semana === semanaNum)
-          .reduce((sum, c) => sum + c.cajasProducidas, 0),
-        SOLO: cosechasFiltradas
-          .filter((c) => c.finca === "SOLO" && c.semana === semanaNum)
-          .reduce((sum, c) => sum + c.cajasProducidas, 0),
-        LAURITA: cosechasFiltradas
-          .filter((c) => c.finca === "LAURITA" && c.semana === semanaNum)
-          .reduce((sum, c) => sum + c.cajasProducidas, 0),
-        MARAVILLA: cosechasFiltradas
-          .filter((c) => c.finca === "MARAVILLA" && c.semana === semanaNum)
-          .reduce((sum, c) => sum + c.cajasProducidas, 0),
-      };
-    });
+    const semanasDisponibles = Array.from(new Set(cosechasFiltradas.map((c) => c.semana))).sort((a: number, b: number) => Number(a) - Number(b));
+    const produccionSemanal = semanasDisponibles.map((sem) => ({
+      semana: `Sem ${sem}`,
+      BABY: cosechasFiltradas
+        .filter((c) => c.finca === "BABY" && c.semana === sem)
+        .reduce((sum, c) => sum + c.cajasProducidas, 0),
+      SOLO: cosechasFiltradas
+        .filter((c) => c.finca === "SOLO" && c.semana === sem)
+        .reduce((sum, c) => sum + c.cajasProducidas, 0),
+      LAURITA: cosechasFiltradas
+        .filter((c) => c.finca === "LAURITA" && c.semana === sem)
+        .reduce((sum, c) => sum + c.cajasProducidas, 0),
+      MARAVILLA: cosechasFiltradas
+        .filter((c) => c.finca === "MARAVILLA" && c.semana === sem)
+        .reduce((sum, c) => sum + c.cajasProducidas, 0),
+    }));
 
     // Calidad de producción (simulado basado en merma)
     const calidadProduccion = meses.map((mes, index) => {
@@ -208,11 +198,41 @@ export default function ReportesProduccionPage() {
     };
   }, [enfundes, cosechas, añoSeleccionado]);
 
-  // Función para exportar reportes
-  const handleExport = () => {
-    // Aquí iría la lógica para exportar los reportes
-    console.log("Exportando reportes...");
-  };
+  const currentData = useMemo(() => {
+    if (tab === "volumen") {
+      return periodo === "mensual" ? produccionMensual : produccionSemanal;
+    }
+    if (tab === "calidad") {
+      return calidadProduccion;
+    }
+    return rendimientoData;
+  }, [tab, periodo, produccionMensual, produccionSemanal, calidadProduccion, rendimientoData]);
+
+  const currentHeaders = useMemo(() => {
+    if (tab === "volumen") {
+      return [periodo === "mensual" ? "Mes" : "Semana", "BABY", "SOLO", "LAURITA", "MARAVILLA"];
+    }
+    if (tab === "calidad") {
+      return ["Mes", "Premium", "Estándar", "Rechazo"];
+    }
+    return ["Mes", "Rendimiento"];
+  }, [tab, periodo]);
+
+  const currentKeys = useMemo(() => {
+    if (tab === "volumen") {
+      return [periodo === "mensual" ? "mes" : "semana", "BABY", "SOLO", "LAURITA", "MARAVILLA"];
+    }
+    if (tab === "calidad") {
+      return ["mes", "premium", "estandar", "rechazo"];
+    }
+    return ["mes", "rendimiento"];
+  }, [tab, periodo]);
+
+  const currentTitle = useMemo(() => {
+    if (tab === "volumen") return `Volumen de Producción (${añoSeleccionado})`;
+    if (tab === "calidad") return `Calidad de Producción (${añoSeleccionado})`;
+    return `Rendimiento de Producción (${añoSeleccionado})`;
+  }, [tab, añoSeleccionado]);
 
   return (
     <div className="space-y-6">
@@ -247,14 +267,17 @@ export default function ReportesProduccionPage() {
             Filtros
           </Button>
 
-          <Button variant="default" onClick={handleExport}>
-            <Download className="h-4 w-4 mr-2" />
-            Exportar
-          </Button>
+          <ExportButton
+            data={currentData}
+            headers={currentHeaders}
+            keys={currentKeys}
+            title={currentTitle}
+            filename="reportes-produccion"
+          />
         </div>
       </div>
 
-      <Tabs defaultValue="volumen" className="w-full">
+      <Tabs value={tab} className="w-full" onValueChange={setTab}>
         <TabsList className="grid grid-cols-3 w-full md:w-[400px]">
           <TabsTrigger value="volumen">Volumen</TabsTrigger>
           <TabsTrigger value="calidad">Calidad</TabsTrigger>

@@ -60,7 +60,11 @@ export function MovimientosTable() {
         <CardTitle>Historial de Movimientos</CardTitle>
         <ExportButton
           data={filteredMovimientos.map((mov) => ({
-            Fecha: mov.fecha,
+            Fecha: new Date(mov.fecha).toLocaleDateString("es-ES", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            }),
             Insumo: getInsumoNombre(mov.insumoId),
             Tipo: mov.tipo === "entrada" ? "Entrada" : "Salida",
             Cantidad: `${mov.cantidad} ${getInsumoUnidad(mov.insumoId)}`,
@@ -75,6 +79,15 @@ export function MovimientosTable() {
             "Responsable",
             "Motivo",
           ]}
+          keys={[
+            "Fecha",
+            "Insumo",
+            "Tipo",
+            "Cantidad",
+            "Responsable",
+            "Motivo",
+          ]}
+          title="Historial de Movimientos"
           filename="movimientos-inventario"
         />
       </CardHeader>

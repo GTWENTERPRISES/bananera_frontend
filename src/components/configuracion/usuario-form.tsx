@@ -22,6 +22,7 @@ import {
 } from "@/src/components/ui/select";
 import type { User, UserRole, Finca } from "@/src/lib/types";
 import { Save, X } from "lucide-react";
+import { useToast } from "@/src/hooks/use-toast";
 
 interface UsuarioFormProps {
   usuario?: User;
@@ -38,20 +39,27 @@ export function UsuarioForm({
   fincas,
   currentUserRole,
 }: UsuarioFormProps) {
+  const { canAccess } = useApp();
+  const { toast } = useToast();
   const [formData, setFormData] = useState<Partial<User>>({
     nombre: usuario?.nombre || "",
     email: usuario?.email || "",
     password: usuario?.password || "",
-    rol: usuario?.rol || "operador",
+    rol: usuario?.rol || "bodeguero",
     fincaAsignada: usuario?.fincaAsignada || "",
     telefono: usuario?.telefono || "",
     activo: usuario?.activo ?? true,
   });
 
   const [showPassword, setShowPassword] = useState(false);
+  const allowEdit = canAccess("configuracion", "edit");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!allowEdit) {
+      toast({ title: "Permiso requerido", description: "Tu rol no puede modificar usuarios", variant: "destructive" });
+      return;
+    }
 
     // Validaciones básicas
     if (!formData.nombre || !formData.email) {
@@ -160,15 +168,15 @@ export function UsuarioForm({
                 <SelectTrigger id="rol">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  {canAssignAdminRole && (
-                    <SelectItem value="administrador">Administrador</SelectItem>
-                  )}
-                  <SelectItem value="gerente">Gerente</SelectItem>
-                  <SelectItem value="supervisor">Supervisor</SelectItem>
-                  <SelectItem value="operador">Operador</SelectItem>
-                  <SelectItem value="consulta">Consulta</SelectItem>
-                </SelectContent>
+              <SelectContent>
+                {canAssignAdminRole && (
+                  <SelectItem value="administrador">Administrador</SelectItem>
+                )}
+                <SelectItem value="gerente">Gerente</SelectItem>
+                <SelectItem value="supervisor_finca">Supervisor Finca</SelectItem>
+                <SelectItem value="contador_rrhh">Contador/RRHH</SelectItem>
+                <SelectItem value="bodeguero">Bodeguero</SelectItem>
+              </SelectContent>
               </Select>
             </div>
 
@@ -218,7 +226,7 @@ export function UsuarioForm({
               <X className="h-4 w-4 mr-2" />
               Cancelar
             </Button>
-            <Button type="submit">
+            <Button type="submit" disabled={!allowEdit}>
               <Save className="h-4 w-4 mr-2" />
               {usuario ? "Actualizar" : "Crear"} Usuario
             </Button>

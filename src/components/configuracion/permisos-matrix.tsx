@@ -22,9 +22,9 @@ interface Permiso {
   modulo: string;
   administrador: boolean;
   gerente: boolean;
-  supervisor: boolean;
-  operador: boolean;
-  consulta: boolean;
+  supervisor_finca: boolean;
+  contador_rrhh: boolean;
+  bodeguero: boolean;
 }
 
 const permisos: Permiso[] = [
@@ -32,73 +32,73 @@ const permisos: Permiso[] = [
     modulo: "Dashboard",
     administrador: true,
     gerente: true,
-    supervisor: true,
-    operador: true,
-    consulta: true,
+    supervisor_finca: true,
+    contador_rrhh: true,
+    bodeguero: true,
   },
   {
     modulo: "Producción - Ver",
     administrador: true,
     gerente: true,
-    supervisor: true,
-    operador: true,
-    consulta: true,
+    supervisor_finca: true,
+    contador_rrhh: false,
+    bodeguero: false,
   },
   {
     modulo: "Producción - Editar",
     administrador: true,
-    gerente: true,
-    supervisor: true,
-    operador: true,
-    consulta: false,
+    gerente: false,
+    supervisor_finca: true,
+    contador_rrhh: false,
+    bodeguero: false,
   },
   {
     modulo: "Nómina - Ver",
     administrador: true,
     gerente: true,
-    supervisor: false,
-    operador: false,
-    consulta: false,
+    supervisor_finca: false,
+    contador_rrhh: true,
+    bodeguero: false,
   },
   {
     modulo: "Nómina - Editar",
     administrador: true,
-    gerente: true,
-    supervisor: false,
-    operador: false,
-    consulta: false,
+    gerente: false,
+    supervisor_finca: false,
+    contador_rrhh: true,
+    bodeguero: false,
   },
   {
     modulo: "Inventario - Ver",
     administrador: true,
     gerente: true,
-    supervisor: true,
-    operador: true,
-    consulta: true,
+    supervisor_finca: true,
+    contador_rrhh: false,
+    bodeguero: true,
   },
   {
     modulo: "Inventario - Editar",
     administrador: true,
-    gerente: true,
-    supervisor: true,
-    operador: false,
-    consulta: false,
+    gerente: false,
+    supervisor_finca: true,
+    contador_rrhh: false,
+    bodeguero: true,
   },
   {
     modulo: "Reportes",
     administrador: true,
     gerente: true,
-    supervisor: true,
-    operador: false,
-    consulta: true,
+    supervisor_finca: true,
+    contador_rrhh: true,
+    bodeguero: true,
   },
   {
     modulo: "Configuración",
     administrador: true,
     gerente: false,
-    supervisor: false,
-    operador: false,
-    consulta: false,
+    supervisor_finca: false,
+    contador_rrhh: false,
+    bodeguero: false,
   },
 ];
 
@@ -124,13 +124,13 @@ export function PermisosMatrix() {
                   <Badge className="bg-orange-500">Gerente</Badge>
                 </TableHead>
                 <TableHead className="text-center">
-                  <Badge className="bg-blue-500">Supervisor</Badge>
+                  <Badge className="bg-blue-500">Supervisor Finca</Badge>
                 </TableHead>
                 <TableHead className="text-center">
-                  <Badge className="bg-green-500">Operador</Badge>
+                  <Badge className="bg-green-500">Contador/RRHH</Badge>
                 </TableHead>
                 <TableHead className="text-center">
-                  <Badge variant="secondary">Consulta</Badge>
+                  <Badge variant="secondary">Bodeguero</Badge>
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -155,21 +155,21 @@ export function PermisosMatrix() {
                     )}
                   </TableCell>
                   <TableCell className="text-center">
-                    {permiso.supervisor ? (
+                    {permiso.supervisor_finca ? (
                       <Check className="h-5 w-5 text-green-500 mx-auto" />
                     ) : (
                       <X className="h-5 w-5 text-red-500 mx-auto" />
                     )}
                   </TableCell>
                   <TableCell className="text-center">
-                    {permiso.operador ? (
+                    {permiso.contador_rrhh ? (
                       <Check className="h-5 w-5 text-green-500 mx-auto" />
                     ) : (
                       <X className="h-5 w-5 text-red-500 mx-auto" />
                     )}
                   </TableCell>
                   <TableCell className="text-center">
-                    {permiso.consulta ? (
+                    {permiso.bodeguero ? (
                       <Check className="h-5 w-5 text-green-500 mx-auto" />
                     ) : (
                       <X className="h-5 w-5 text-red-500 mx-auto" />
@@ -189,20 +189,16 @@ export function PermisosMatrix() {
               de usuarios y configuración
             </li>
             <li>
-              <strong>Gerente:</strong> Acceso a todas las fincas, puede ver y
-              editar producción, nómina y reportes
+              <strong>Gerente:</strong> Visión completa con edición limitada; no cambia configuración ni registra datos
             </li>
             <li>
-              <strong>Supervisor:</strong> Acceso limitado a su finca asignada,
-              gestión de producción e inventario
+              <strong>Supervisor de finca:</strong> Opera su finca: producción e inventario de su finca
             </li>
             <li>
-              <strong>Operador:</strong> Registro de datos de producción y
-              consulta de información básica
+              <strong>Contador/RRHH:</strong> Gestión de nómina y personal, reportes y exportaciones
             </li>
             <li>
-              <strong>Consulta:</strong> Solo lectura de dashboard, producción,
-              inventario y reportes
+              <strong>Bodeguero:</strong> Gestión completa de inventario, proveedores y órdenes de compra
             </li>
           </ul>
         </div>

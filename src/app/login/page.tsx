@@ -108,13 +108,13 @@ export default function LoginPage() {
                 <strong>Gerente:</strong> gerente@bananerahg.com / gerente123
               </p>
               <p>
-                <strong>Supervisor:</strong> supervisor@bananerahg.com / supervisor123
+                <strong>Supervisor Finca:</strong> supervisor@bananerahg.com / supervisor123
               </p>
               <p>
-                <strong>Operador:</strong> operador@bananerahg.com / operador123
+                <strong>Contador/RRHH:</strong> rrhh@bananerahg.com / rrhh123
               </p>
               <p>
-                <strong>Consulta:</strong> consulta@bananerahg.com / consulta123
+                <strong>Bodeguero:</strong> bodega@bananerahg.com / bodega123
               </p>
             </div>
           </div>

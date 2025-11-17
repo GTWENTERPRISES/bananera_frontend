@@ -29,9 +29,38 @@ export function RolesPagoTable() {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Roles de Pago</CardTitle>
         <ExportButton
-          onExportExcel={() => {}}
-          onExportPDF={() => {}}
-          onExportCSV={() => {}}
+          data={rolesPago?.map((rol) => ({
+            empleado: rol.empleado?.nombre || "N/A",
+            semana: rol.semana,
+            diasLaborados: rol.diasLaborados || 0,
+            horasExtras: rol.horasExtras || 0,
+            totalIngresos: rol.totalIngresos || 0,
+            totalEgresos: rol.totalEgresos || 0,
+            netoAPagar: rol.netoAPagar || 0,
+            estado: rol.estado === "pagado" ? "Pagado" : "Pendiente",
+          })) || []}
+          headers={[
+            "Empleado",
+            "Semana",
+            "Días",
+            "H. Extras",
+            "Ingresos",
+            "Descuentos",
+            "Neto",
+            "Estado",
+          ]}
+          keys={[
+            "empleado",
+            "semana",
+            "diasLaborados",
+            "horasExtras",
+            "totalIngresos",
+            "totalEgresos",
+            "netoAPagar",
+            "estado",
+          ]}
+          title="Roles de Pago"
+          filename="roles-pago"
         />
       </CardHeader>
       <CardContent>

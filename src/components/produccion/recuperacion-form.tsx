@@ -2,7 +2,8 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
@@ -23,11 +24,12 @@ import type { FincaName, RecuperacionCinta } from "@/src/lib/types"; // Cambia F
 import { Calculator, AlertTriangle } from "lucide-react";
 import { useToast } from "@/src/hooks/use-toast";
 import { cn } from "@/src/lib/utils";
-import { useApp } from "@/src/contexts/app-context"; // Agrega useApp
+import { useApp } from "@/src/contexts/app-context";
 
 export function RecuperacionForm() {
-  const { addRecuperacionCinta } = useApp(); // Agrega esta función del contexto
+  const { addRecuperacionCinta, canAccess } = useApp();
   const { toast } = useToast();
+  const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
     finca: "" as FincaName | "", // Usa FincaName en lugar de Finca
     semana: "",
@@ -38,6 +40,13 @@ export function RecuperacionForm() {
     terceraCalCosecha: "",
     barridaFinal: "",
   });
+
+  useEffect(() => {
+    const qp = searchParams.get("finca") || "";
+    if (isValidFinca(qp)) {
+      setFormData((prev) => ({ ...prev, finca: qp as FincaName }));
+    }
+  }, [searchParams]);
 
   const primeraCalSaldo =
     Number.parseInt(formData.enfundesIniciales || "0") -
@@ -73,8 +82,15 @@ export function RecuperacionForm() {
     }
   };
 
+  const allowEdit = canAccess("produccion", "edit");
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!allowEdit) {
+      toast({ title: "Permiso requerido", description: "Tu rol no puede registrar recuperación", variant: "destructive" });
+      return;
+    }
 
     // Validar que finca sea un valor válido
     if (!formData.finca || !isValidFinca(formData.finca)) {
@@ -335,7 +351,7 @@ export function RecuperacionForm() {
             </div>
           </div>
 
-          <Button type="submit" className="w-full gap-2">
+          <Button type="submit" className="w-full gap-2" disabled={!allowEdit}>
             <Calculator className="h-4 w-4" />
             Registrar Recuperación
           </Button>

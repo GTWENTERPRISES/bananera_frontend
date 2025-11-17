@@ -15,6 +15,7 @@ import {
   ChevronDown,
   Menu,
   X,
+  Map,
 } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 import { Button } from "@/src/components/ui/button";
@@ -25,6 +26,7 @@ import {
 } from "@/src/components/ui/collapsible";
 import { useState, useEffect } from "react";
 import { useIsMobile } from "@/src/hooks/use-mobile";
+import { useApp } from "@/src/hooks/useApp";
 
 interface NavItem {
   title: string;
@@ -38,6 +40,11 @@ const navItems: NavItem[] = [
     title: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
+  },
+  {
+    title: "Perfil",
+    href: "/perfil",
+    icon: Users,
   },
   {
     title: "Producción",
@@ -89,6 +96,11 @@ const navItems: NavItem[] = [
     ],
   },
   {
+    title: "Geovisualización",
+    href: "/geovisualizacion",
+    icon: Map,
+  },
+  {
     title: "Configuración",
     href: "/configuracion",
     icon: Settings,
@@ -103,11 +115,34 @@ const navItems: NavItem[] = [
 export function AppSidebar() {
   const pathname = usePathname();
   const isMobile = useIsMobile();
+  const { canAccess } = useApp();
   const [isOpen, setIsOpen] = useState(!isMobile);
   const [openItems, setOpenItems] = useState<string[]>([
     "Producción",
     "Nómina",
   ]);
+
+  const mapResource = (href: string):
+    | "dashboard"
+    | "produccion"
+    | "nomina"
+    | "inventario"
+    | "reportes"
+    | "analytics"
+    | "geovisualizacion"
+    | "configuracion" => {
+    if (href.startsWith("/dashboard")) return "dashboard";
+    if (href.startsWith("/produccion")) return "produccion";
+    if (href.startsWith("/nomina")) return "nomina";
+    if (href.startsWith("/inventario")) return "inventario";
+    if (href.startsWith("/reportes")) return "reportes";
+    if (href.startsWith("/analytics")) return "analytics";
+    if (href.startsWith("/geovisualizacion")) return "geovisualizacion";
+    if (href.startsWith("/configuracion")) return "configuracion";
+    return "dashboard";
+  };
+
+  const visibleNavItems = navItems.filter((item) => canAccess(mapResource(item.href), "view"));
 
   // Actualizar el estado del sidebar cuando cambia el tamaño de la pantalla
   useEffect(() => {
@@ -165,7 +200,7 @@ export function AppSidebar() {
           </Link>
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto p-4">{navItems.map((item) => {
+        <nav className="flex-1 space-y-1 overflow-y-auto p-4">{visibleNavItems.map((item) => {
           const Icon = item.icon;
           const isActive =
             pathname === item.href || pathname.startsWith(item.href + "/");

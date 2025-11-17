@@ -59,6 +59,12 @@ const getRolIcon = (rol: string) => {
       return <ShieldCheck className="h-4 w-4" />;
     case "gerente":
       return <ShieldAlert className="h-4 w-4" />;
+    case "supervisor_finca":
+      return <Shield className="h-4 w-4" />;
+    case "contador_rrhh":
+      return <Shield className="h-4 w-4" />;
+    case "bodeguero":
+      return <Shield className="h-4 w-4" />;
     default:
       return <Shield className="h-4 w-4" />;
   }
@@ -70,9 +76,11 @@ const getRolColor = (rol: string) => {
       return "bg-red-500/10 text-red-500 border-red-500/20";
     case "gerente":
       return "bg-orange-500/10 text-orange-500 border-orange-500/20";
-    case "supervisor":
+    case "supervisor_finca":
       return "bg-blue-500/10 text-blue-500 border-blue-500/20";
-    case "operador":
+    case "contador_rrhh":
+      return "bg-purple-500/10 text-purple-500 border-purple-500/20";
+    case "bodeguero":
       return "bg-green-500/10 text-green-500 border-green-500/20";
     default:
       return "bg-gray-500/10 text-gray-500 border-gray-500/20";

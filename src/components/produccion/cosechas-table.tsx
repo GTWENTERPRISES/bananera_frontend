@@ -18,7 +18,8 @@ import { useApp } from "@/src/contexts/app-context";
 import { Badge } from "@/src/components/ui/badge";
 import { ExportButton } from "@/src/components/shared/export-button";
 import { cn } from "@/src/lib/utils";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Edit, Search, Trash2 } from "lucide-react";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
@@ -26,19 +27,24 @@ import { Button } from "../ui/button";
 export function CosechasTable() {
   const { cosechas, fincas } = useApp();
   const [searchTerm, setSearchTerm] = useState("");
+  const searchParams = useSearchParams();
+  const fincaFilter = searchParams.get("finca") || "";
 
   // Función para obtener información de la finca
   const getFincaInfo = (fincaName: string) => {
     return fincas.find((f) => f.nombre === fincaName);
   };
 
-  const filteredCosechas = cosechas.filter(
-    (cosecha) =>
-      cosecha.finca.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getFincaInfo(cosecha.finca)
-        ?.responsable.toLowerCase()
-        .includes(searchTerm.toLowerCase())
-  );
+  const filteredCosechas = useMemo(() => {
+    return cosechas.filter((cosecha) => {
+      const matchesSearch =
+        cosecha.finca.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (getFincaInfo(cosecha.finca)?.responsable?.toLowerCase() || "")
+          .includes(searchTerm.toLowerCase());
+      const matchesFinca = fincaFilter ? cosecha.finca === fincaFilter : true;
+      return matchesSearch && matchesFinca;
+    });
+  }, [cosechas, searchTerm, fincaFilter]);
 
   const totalCajas = filteredCosechas.reduce(
     (sum, c) => sum + c.cajasProducidas,
@@ -81,8 +87,22 @@ export function CosechasTable() {
             "Ratio",
             "Merma",
           ]}
+          keys={[
+            "semana",
+            "año",
+            "finca",
+            "racimosCorta",
+            "racimosRechazados",
+            "racimosRecuperados",
+            "cajasProducidas",
+            "pesoPromedio",
+            "calibracion",
+            "numeroManos",
+            "ratio",
+            "merma",
+          ]}
           title="Registro de Cosechas"
-          filename="registro-cosechas.xlsx"
+          filename="registro-cosechas"
         />
       </CardHeader>
       <CardContent>

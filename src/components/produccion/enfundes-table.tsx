@@ -17,7 +17,8 @@ import {
 import { useApp } from "@/src/contexts/app-context";
 import { Badge } from "@/src/components/ui/badge";
 import { ExportButton } from "@/src/components/shared/export-button";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Input } from "@/src/components/ui/input";
 import { Button } from "@/src/components/ui/button";
 import { Search, Edit, Trash2 } from "lucide-react";
@@ -60,17 +61,25 @@ const colorMap: { [key: string]: string } = {
 export function EnfundesTable() {
   const { enfundes, fincas } = useApp();
   const [searchTerm, setSearchTerm] = useState("");
+  const searchParams = useSearchParams();
+  const fincaFilter = searchParams.get("finca") || "";
 
   // Función para obtener información de la finca
   const getFincaInfo = (fincaName: string) => {
     return fincas.find((f) => f.nombre === fincaName);
   };
 
-  const filteredEnfundes = enfundes.filter(
-    (enfunde) =>
-      enfunde.finca.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      enfunde.colorCinta.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredEnfundes = useMemo(() => {
+    return enfundes.filter((enfunde) => {
+      const matchesSearch =
+        enfunde.finca.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        enfunde.colorCinta.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesFinca = fincaFilter
+        ? enfunde.finca === fincaFilter
+        : true;
+      return matchesSearch && matchesFinca;
+    });
+  }, [enfundes, searchTerm, fincaFilter]);
 
   const totalEnfundes = enfundes.reduce(
     (sum, e) => sum + e.cantidadEnfundes,
@@ -91,7 +100,10 @@ export function EnfundesTable() {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Registro de Enfundes</CardTitle>
         <ExportButton
-          data={filteredEnfundes}
+          data={filteredEnfundes.map(e => ({
+            ...e,
+            responsable: getFincaInfo(e.finca)?.responsable || "No asignado",
+          }))}
           headers={[
             "Fecha",
             "Finca",
@@ -100,6 +112,17 @@ export function EnfundesTable() {
             "Color de Cinta",
             "Cantidad de Enfundes",
             "Matas Caídas",
+            "Responsable",
+          ]}
+          keys={[
+            "fecha",
+            "finca",
+            "semana",
+            "año",
+            "colorCinta",
+            "cantidadEnfundes",
+            "matasCaidas",
+            "responsable",
           ]}
           title="Registro de Enfundes"
           filename="registro-enfundes.xlsx"

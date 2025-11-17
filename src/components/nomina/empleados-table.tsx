@@ -41,7 +41,10 @@ export function EmpleadosTable() {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Lista de Empleados</CardTitle>
         <ExportButton
-          data={filteredEmpleados}
+          data={filteredEmpleados.map(e => ({
+            ...e,
+            estado: e.activo ? "Activo" : "Inactivo",
+          }))}
           headers={[
             "Cédula",
             "Nombre",
@@ -50,7 +53,16 @@ export function EmpleadosTable() {
             "Tarifa Diaria",
             "Estado",
           ]}
-          filename="empleados.xlsx"
+          keys={[
+            "cedula",
+            "nombre",
+            "labor",
+            "fechaIngreso",
+            "tarifaDiaria",
+            "estado",
+          ]}
+          title="Lista de Empleados"
+          filename="empleados"
         />
       </CardHeader>
       <CardContent>

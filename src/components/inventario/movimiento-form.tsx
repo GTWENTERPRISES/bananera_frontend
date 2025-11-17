@@ -2,7 +2,8 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
@@ -25,15 +26,16 @@ import { ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import { useToast } from "@/src/hooks/use-toast";
 
 export function MovimientoForm() {
-  const { addMovimientoInventario, insumos } = useApp(); // Removí updateInsumoStock
+  const { addMovimientoInventario, insumos, canAccess, currentUser } = useApp();
   const { toast } = useToast();
+  const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
     insumoId: "",
     tipo: "" as "entrada" | "salida",
     cantidad: "",
     finca: "" as FincaName | "", // Usa FincaName en lugar de Finca
     motivo: "",
-    responsable: "",
+    responsable: currentUser?.nombre || "",
   });
 
   const insumo = insumos.find((i) => i.id === formData.insumoId);
@@ -52,8 +54,31 @@ export function MovimientoForm() {
     }
   };
 
+  const allowEdit = canAccess("inventario", "edit");
+
+  useEffect(() => {
+    const insumoId = searchParams.get("insumoId") || "";
+    const tipo = (searchParams.get("tipo") || "") as "entrada" | "salida";
+    const cantidad = searchParams.get("cantidad") || "";
+    const motivo = searchParams.get("motivo") || "";
+    const finca = searchParams.get("finca") || "";
+    setFormData((prev) => ({
+      ...prev,
+      insumoId: insumoId || prev.insumoId,
+      tipo: tipo || prev.tipo,
+      cantidad: cantidad || prev.cantidad,
+      motivo: motivo || prev.motivo,
+      finca: (finca as FincaName) || prev.finca,
+    }));
+  }, [searchParams]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!allowEdit) {
+      toast({ title: "Permiso requerido", description: "Tu rol no puede registrar movimientos", variant: "destructive" });
+      return;
+    }
 
     // Validar que finca sea un valor válido
     if (!formData.finca || !isValidFinca(formData.finca)) {
@@ -248,6 +273,7 @@ export function MovimientoForm() {
             type="submit"
             className="w-full gap-2"
             disabled={
+              !allowEdit ||
               !insumo ||
               !formData.tipo ||
               !formData.cantidad ||

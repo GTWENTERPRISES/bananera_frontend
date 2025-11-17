@@ -18,6 +18,7 @@ interface ExportButtonProps {
   headers?: string[];
   title?: string;
   filename?: string;
+  keys?: string[]; // agregado: mapeo explícito de claves de objeto
 }
 
 export function ExportButton({
@@ -28,23 +29,31 @@ export function ExportButton({
   headers,
   title,
   filename,
+  keys, // nuevo
 }: ExportButtonProps) {
-  const handleExport = (format: 'pdf' | 'excel' | 'csv') => {
+  const handleExport = async (format: 'pdf' | 'excel' | 'csv') => {
     if (data && headers && title) {
       // Preparar los datos para exportación (solo valores, sin objetos complejos)
       const exportableData = data.map(item => {
         if (Array.isArray(item)) {
           return item;
         }
-        // Si es un objeto, extraer los valores en el mismo orden que los headers
-        return headers.map(header => {
+        // Si es un objeto y hay `keys`, extraer en ese orden
+        if (keys && keys.length) {
+          return keys.map(k => {
+            const value = item[k] !== undefined ? item[k] : '';
+            return typeof value === 'object' ? JSON.stringify(value) : value;
+          });
+        }
+        // Fallback: mapear usando los headers transformados
+        return (headers || []).map(header => {
           const key = header.toLowerCase().replace(/\s+/g, '_');
           const value = item[key] !== undefined ? item[key] : '';
           return typeof value === 'object' ? JSON.stringify(value) : value;
         });
       });
 
-      exportData(format, exportableData, headers, title, filename);
+      await exportData(format, exportableData, headers, title, filename);
     } else {
       // Usar los callbacks personalizados si no se proporcionan datos directamente
       if (format === 'excel' && onExportExcel) onExportExcel();

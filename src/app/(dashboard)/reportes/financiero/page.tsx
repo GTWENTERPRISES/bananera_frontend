@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import { Button } from "@/src/components/ui/button";
+import { ExportButton } from "@/src/components/shared/export-button";
 import { AreaChart, Area, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieLabelRenderProps } from "recharts";
 import { Download, Filter, Calendar, DollarSign, TrendingUp, TrendingDown } from "lucide-react";
 import { useIsMobile } from "@/src/hooks/use-mobile";
@@ -54,6 +57,7 @@ export default function ReportesFinancieroPage() {
   const isMobile = useIsMobile();
   const chartHeight = isMobile ? 300 : 400;
   const { state } = useApp();
+  const [tab, setTab] = useState("ingresos");
   
   return (
     <div className={cn("space-y-6", isMobile && "px-2")}>
@@ -87,10 +91,25 @@ export default function ReportesFinancieroPage() {
             Filtros
           </Button>
           
-          <Button variant="default" size={isMobile ? "sm" : "default"}>
-            <Download className="h-4 w-4 mr-2" />
-            Exportar
-          </Button>
+          <ExportButton
+            data={tab === "ingresos" ? ingresosMensuales : tab === "distribucion" ? distribucionCostos : preciosMercado}
+            headers={tab === "ingresos"
+              ? ["Mes", "Ingresos", "Costos", "Beneficio"]
+              : tab === "distribucion"
+                ? ["Concepto", "Porcentaje"]
+                : ["Mes", "Precio"]}
+            keys={tab === "ingresos"
+              ? ["mes", "ingresos", "costos", "beneficio"]
+              : tab === "distribucion"
+                ? ["name", "value"]
+                : ["mes", "precio"]}
+            title={tab === "ingresos"
+              ? "Ingresos, Costos y Beneficios"
+              : tab === "distribucion"
+                ? "Distribución de Costos Operativos"
+                : "Evolución de Precios de Mercado"}
+            filename="reportes-financieros"
+          />
         </div>
       </div>
       
@@ -144,7 +163,7 @@ export default function ReportesFinancieroPage() {
         </Card>
       </div>
       
-      <Tabs defaultValue="ingresos" className="w-full">
+      <Tabs value={tab} className="w-full" onValueChange={setTab}>
         <TabsList className="grid grid-cols-3 w-full md:w-[400px]">
           <TabsTrigger value="ingresos">Ingresos/Costos</TabsTrigger>
           <TabsTrigger value="distribucion">Distribución</TabsTrigger>

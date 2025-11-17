@@ -2,15 +2,19 @@ export interface Finca {
   id: string;
   nombre: string;
   hectareas: number;
-  ubicacion: string;
-  responsable: string;
-  variedad: string;
-  plantasTotales: number;
-  // Propiedades opcionales que puedes agregar si las necesitas
+  ubicacion?: string;
+  responsable?: string;
+  variedad?: string;
+  plantasTotales?: number;
   fechaSiembra?: string;
-  estado?: string;
+  estado?: "activa" | "inactiva" | "mantenimiento";
   coordenadas?: string;
   telefono?: string;
+  // Nuevo: geometría GeoJSON de la finca (Polygon/MultiPolygon)
+  geom?: {
+    type: "Polygon" | "MultiPolygon";
+    coordinates: any;
+  };
 }
 
 export type FincaName = "BABY" | "SOLO" | "LAURITA" | "MARAVILLA";
@@ -18,9 +22,9 @@ export type FincaName = "BABY" | "SOLO" | "LAURITA" | "MARAVILLA";
 export type UserRole =
   | "administrador"
   | "gerente"
-  | "supervisor"
-  | "operador"
-  | "consulta";
+  | "supervisor_finca"
+  | "contador_rrhh"
+  | "bodeguero";
 
 export interface User {
   id: string;
@@ -121,6 +125,7 @@ export interface Insumo {
   stockMaximo: number;
   precioUnitario: number;
   fechaVencimiento?: string;
+  finca?: FincaName;
 }
 
 export interface MovimientoInventario {
@@ -142,6 +147,8 @@ export interface Alerta {
   fecha: string;
   leida: boolean;
   accionRequerida?: string;
+  finca?: FincaName;
+  rolesPermitidos: UserRole[];
 }
 
 export interface KPI {
