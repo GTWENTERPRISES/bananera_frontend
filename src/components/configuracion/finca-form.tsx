@@ -23,6 +23,8 @@ import {
 import { Alert, AlertDescription } from "@/src/components/ui/alert";
 import type { Finca } from "@/src/lib/types";
 import { Save, X, AlertCircle } from "lucide-react";
+import { FincaSchema } from "@/src/lib/validation";
+import { Spinner } from "@/src/components/ui/spinner";
 
 interface FincaFormProps {
   finca?: Finca;
@@ -33,6 +35,7 @@ interface FincaFormProps {
 export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
   const { canAccess } = useApp();
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<Partial<Finca>>({
     nombre: finca?.nombre || "",
     hectareas: finca?.hectareas || 0,
@@ -53,15 +56,34 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
 
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
     if (!allowEdit) {
       toast({ title: "Permiso requerido", description: "Tu rol no puede modificar fincas", variant: "destructive" });
+      setIsSubmitting(false);
       return;
     }
-    if (!formData.nombre || !formData.hectareas) {
-      setError("Por favor completa los campos requeridos: nombre y hectáreas.");
+    const parsed = FincaSchema.safeParse({
+      nombre: formData.nombre || "",
+      hectareas: String(formData.hectareas ?? ""),
+      ubicacion: formData.ubicacion || undefined,
+      responsable: formData.responsable || undefined,
+      variedad: (formData.variedad || "Cavendish") as any,
+      plantasTotales: String(formData.plantasTotales ?? ""),
+      fechaSiembra: formData.fechaSiembra || undefined,
+      estado: (formData.estado || "activa") as any,
+      coordenadas: formData.coordenadas || undefined,
+      telefono: formData.telefono || undefined,
+    });
+    if (!parsed.success) {
+      setError(parsed.error.errors[0]?.message || "Revisa los campos");
+      setIsSubmitting(false);
       return;
     }
-    onSave(formData);
+    try {
+      onSave(formData);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Funciones auxiliares
@@ -142,6 +164,7 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
                 value={formData.nombre || ""}
                 onChange={(e) => handleTextChange("nombre", e.target.value)}
                 placeholder="BABY"
+                disabled={isSubmitting || !allowEdit}
                 required
               />
             </div>
@@ -155,6 +178,7 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
                 min="0"
                 value={formData.hectareas || 0}
                 onChange={(e) => handleNumberChange("hectareas", e.target.value)}
+                disabled={isSubmitting || !allowEdit}
               />
             </div>
 
@@ -165,6 +189,7 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
                 onValueChange={(v) =>
                   setFormData((prev) => ({ ...prev, variedad: v }))
                 }
+                disabled={isSubmitting || !allowEdit}
               >
                 <SelectTrigger id="variedad">
                   <SelectValue placeholder="Selecciona variedad" />
@@ -185,6 +210,7 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
                 min="0"
                 value={formData.plantasTotales || 0}
                 onChange={(e) => handleNumberChange("plantasTotales", e.target.value)}
+                disabled={isSubmitting || !allowEdit}
               />
             </div>
 
@@ -195,6 +221,7 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
                 value={formData.responsable || ""}
                 onChange={(e) => handleTextChange("responsable", e.target.value)}
                 placeholder="Juan Pérez"
+                disabled={isSubmitting || !allowEdit}
               />
             </div>
 
@@ -205,6 +232,7 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
                 type="date"
                 value={formData.fechaSiembra || ""}
                 onChange={(e) => handleTextChange("fechaSiembra", e.target.value)}
+                disabled={isSubmitting || !allowEdit}
               />
             </div>
 
@@ -216,6 +244,7 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
                 onChange={(e) => handleTextChange("ubicacion", e.target.value)}
                 placeholder="Km 26 vía Machala - Pasaje"
                 rows={2}
+                disabled={isSubmitting || !allowEdit}
               />
             </div>
 
@@ -226,6 +255,7 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
                 value={formData.coordenadas || ""}
                 onChange={(e) => handleTextChange("coordenadas", e.target.value)}
                 placeholder="-3.2846, -79.9608"
+                disabled={isSubmitting || !allowEdit}
               />
             </div>
 
@@ -238,6 +268,7 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
                 onChange={(e) => handleGeomJsonChange(e.target.value)}
                 placeholder='{"type":"Polygon","coordinates":[[[-79.4445,-1.117],[-79.4417,-1.117],[-79.4417,-1.1135],[-79.4445,-1.1135],[-79.4445,-1.117]]]}'
                 rows={4}
+                disabled={isSubmitting || !allowEdit}
               />
               <p className="text-xs text-muted-foreground">
                 Pega aquí el GeoJSON de la finca (Polygon/MultiPolygon) o un Feature con geometry.
@@ -246,12 +277,12 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
           </div>
 
           <div className="flex gap-2 justify-end pt-4">
-            <Button type="button" variant="outline" onClick={onCancel}>
+            <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
               <X className="h-4 w-4 mr-2" />
               Cancelar
             </Button>
-            <Button type="submit" disabled={!allowEdit}>
-              <Save className="h-4 w-4 mr-2" />
+            <Button type="submit" disabled={!allowEdit || isSubmitting}>
+              {isSubmitting ? <Spinner className="h-4 w-4 mr-2" /> : <Save className="h-4 w-4 mr-2" />}
               {finca ? "Actualizar" : "Crear"} Finca
             </Button>
           </div>

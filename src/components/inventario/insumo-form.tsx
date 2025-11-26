@@ -23,10 +23,13 @@ import { useApp } from "@/src/contexts/app-context";
 import type { Insumo, FincaName } from "@/src/lib/types";
 import { Package } from "lucide-react";
 import { useToast } from "@/src/hooks/use-toast";
+import { InsumoSchema } from "@/src/lib/validation";
+import { Spinner } from "@/src/components/ui/spinner";
 
 export function InsumoForm() {
   const { addInsumo, canAccess, fincas } = useApp();
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     nombre: "",
     categoria: "" as
@@ -83,19 +86,27 @@ export function InsumoForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     if (!allowEdit) {
       toast({ title: "Permiso requerido", description: "Tu rol no puede registrar insumos", variant: "destructive" });
       return;
     }
 
-    // Validar que categoría sea un valor válido
-    if (!formData.categoria || !isValidCategoria(formData.categoria)) {
-      toast({
-        title: "Error",
-        description: "Por favor selecciona una categoría válida",
-        variant: "destructive",
-      });
+    const parsed = InsumoSchema.safeParse({
+      nombre: formData.nombre,
+      categoria: formData.categoria || "",
+      unidadMedida: formData.unidadMedida,
+      stockActual: formData.stockActual,
+      stockMinimo: formData.stockMinimo,
+      stockMaximo: formData.stockMaximo,
+      precioUnitario: formData.precioUnitario,
+      proveedor: formData.proveedor,
+      finca: formData.finca || undefined,
+    });
+    if (!parsed.success) {
+      toast({ title: "Datos inválidos", description: parsed.error.errors[0]?.message || "Revisa los campos", variant: "destructive" });
+      setIsSubmitting(false);
       return;
     }
 
@@ -145,6 +156,7 @@ export function InsumoForm() {
       proveedor: "",
       finca: "" as FincaName | "",
     });
+    setIsSubmitting(false);
   };
 
   return (
@@ -163,6 +175,7 @@ export function InsumoForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, nombre: e.target.value })
                 }
+                disabled={isSubmitting || !allowEdit}
                 required
               />
             </div>
@@ -172,6 +185,7 @@ export function InsumoForm() {
               <Select
                 value={formData.categoria}
                 onValueChange={handleCategoriaChange}
+                disabled={isSubmitting || !allowEdit}
                 required
               >
                 <SelectTrigger>
@@ -196,6 +210,7 @@ export function InsumoForm() {
                   setFormData({ ...formData, unidadMedida: e.target.value })
                 }
                 placeholder="Ej: kg, L, unidades, rollos, etc."
+                disabled={isSubmitting || !allowEdit}
                 required
               />
             </div>
@@ -211,6 +226,7 @@ export function InsumoForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, stockActual: e.target.value })
                 }
+                disabled={isSubmitting || !allowEdit}
                 required
               />
             </div>
@@ -226,6 +242,7 @@ export function InsumoForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, stockMinimo: e.target.value })
                 }
+                disabled={isSubmitting || !allowEdit}
                 required
               />
             </div>
@@ -242,6 +259,7 @@ export function InsumoForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, stockMaximo: e.target.value })
                 }
+                disabled={isSubmitting || !allowEdit}
                 required
               />
             </div>
@@ -257,6 +275,7 @@ export function InsumoForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, precioUnitario: e.target.value })
                 }
+                disabled={isSubmitting || !allowEdit}
                 required
               />
             </div>
@@ -269,6 +288,7 @@ export function InsumoForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, proveedor: e.target.value })
                 }
+                disabled={isSubmitting || !allowEdit}
                 required
               />
             </div>
@@ -280,6 +300,7 @@ export function InsumoForm() {
                 onValueChange={(value) =>
                   setFormData({ ...formData, finca: value as FincaName })
                 }
+                disabled={isSubmitting || !allowEdit}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar finca (opcional)" />
@@ -295,8 +316,8 @@ export function InsumoForm() {
             </div>
           </div>
 
-          <Button type="submit" className="w-full gap-2" disabled={!allowEdit}>
-            <Package className="h-4 w-4" />
+          <Button type="submit" className="w-full gap-2" disabled={!allowEdit || isSubmitting}>
+            {isSubmitting ? <Spinner className="h-4 w-4" /> : <Package className="h-4 w-4" />}
             Registrar Insumo
           </Button>
         </form>

@@ -23,10 +23,13 @@ import { useApp } from "@/src/contexts/app-context";
 import type { Prestamo, Empleado } from "@/src/lib/types";
 import { DollarSign } from "lucide-react";
 import { useToast } from "@/src/hooks/use-toast";
+import { PrestamoSchema } from "@/src/lib/validation";
+import { Spinner } from "@/src/components/ui/spinner";
 
 export function PrestamoForm() {
   const { addPrestamo, empleados } = useApp();
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     empleadoId: "",
     monto: "",
@@ -41,6 +44,20 @@ export function PrestamoForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
+
+    const parsed = PrestamoSchema.safeParse({
+      empleadoId: formData.empleadoId,
+      monto: formData.monto,
+      numeroCuotas: formData.numeroCuotas,
+      fechaDesembolso: formData.fechaDesembolso,
+      motivo: formData.motivo || undefined,
+    });
+    if (!parsed.success) {
+      toast({ title: "Datos inválidos", description: parsed.error.errors[0]?.message || "Revisa los campos", variant: "destructive" });
+      setIsSubmitting(false);
+      return;
+    }
 
     const empleado = empleados.find((emp) => emp.id === formData.empleadoId);
     if (!empleado) {
@@ -49,6 +66,7 @@ export function PrestamoForm() {
         description: "Por favor selecciona un empleado válido",
         variant: "destructive",
       });
+      setIsSubmitting(false);
       return;
     }
 
@@ -79,6 +97,7 @@ export function PrestamoForm() {
       fechaDesembolso: new Date().toISOString().split("T")[0],
       motivo: "",
     });
+    setIsSubmitting(false);
   };
 
   return (
@@ -96,6 +115,7 @@ export function PrestamoForm() {
                 onValueChange={(value) =>
                   setFormData({ ...formData, empleadoId: value })
                 }
+                disabled={isSubmitting}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar empleado" />
@@ -124,6 +144,7 @@ export function PrestamoForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, monto: e.target.value })
                 }
+                disabled={isSubmitting}
                 required
               />
             </div>
@@ -139,6 +160,7 @@ export function PrestamoForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, numeroCuotas: e.target.value })
                 }
+                disabled={isSubmitting}
                 required
               />
             </div>
@@ -153,6 +175,7 @@ export function PrestamoForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, fechaDesembolso: e.target.value })
                 }
+                disabled={isSubmitting}
                 required
               />
             </div>
@@ -167,6 +190,7 @@ export function PrestamoForm() {
                   setFormData({ ...formData, motivo: e.target.value })
                 }
                 placeholder="Ej: Emergencia médica, educación, etc."
+                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -195,8 +219,8 @@ export function PrestamoForm() {
             </div>
           )}
 
-          <Button type="submit" className="w-full gap-2">
-            <DollarSign className="h-4 w-4" />
+          <Button type="submit" className="w-full gap-2" disabled={isSubmitting}>
+            {isSubmitting ? <Spinner className="h-4 w-4" /> : <DollarSign className="h-4 w-4" />}
             Registrar Préstamo
           </Button>
         </form>

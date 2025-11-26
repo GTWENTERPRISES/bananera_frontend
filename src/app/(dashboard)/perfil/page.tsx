@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/src/components/ui/avatar"
 import { Label } from "@/src/components/ui/label";
 import { useApp } from "@/src/contexts/app-context";
 import { useToast } from "@/src/hooks/use-toast";
+import { isValidEcuadorPhone } from "@/src/lib/validation";
 
 export default function PerfilPage() {
   const { currentUser, setCurrentUser } = useApp();
@@ -22,8 +23,8 @@ export default function PerfilPage() {
       toast({ title: "Nombre requerido", description: "Ingresa tu nombre", variant: "destructive" });
       return;
     }
-    if (telefono && !/^\d{7,15}$/.test(telefono)) {
-      toast({ title: "Teléfono inválido", description: "Usa solo dígitos (7-15)", variant: "destructive" });
+    if (telefono && !isValidEcuadorPhone(telefono)) {
+      toast({ title: "Teléfono inválido", description: "Debe ser un número de Ecuador", variant: "destructive" });
       return;
     }
     setCurrentUser({ ...currentUser, nombre, telefono, avatar });

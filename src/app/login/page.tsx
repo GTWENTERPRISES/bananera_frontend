@@ -11,6 +11,7 @@ import { Label } from "@/src/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { AlertCircle, Loader2 } from "lucide-react"
 import { Alert, AlertDescription } from "@/src/components/ui/alert"
+import { LoginSchema } from "@/src/lib/validation"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -26,6 +27,11 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
+      const parsed = LoginSchema.safeParse({ email, password })
+      if (!parsed.success) {
+        setError(parsed.error.errors[0]?.message || "Datos inválidos")
+        return
+      }
       const result = await login(email, password)
 
       if (result.success) {

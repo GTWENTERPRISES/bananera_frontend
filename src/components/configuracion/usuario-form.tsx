@@ -23,6 +23,8 @@ import {
 import type { User, UserRole, Finca } from "@/src/lib/types";
 import { Save, X } from "lucide-react";
 import { useToast } from "@/src/hooks/use-toast";
+import { UsuarioSchema } from "@/src/lib/validation";
+import { Spinner } from "@/src/components/ui/spinner";
 
 interface UsuarioFormProps {
   usuario?: User;
@@ -41,6 +43,7 @@ export function UsuarioForm({
 }: UsuarioFormProps) {
   const { canAccess } = useApp();
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<Partial<User>>({
     nombre: usuario?.nombre || "",
     email: usuario?.email || "",
@@ -56,14 +59,24 @@ export function UsuarioForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     if (!allowEdit) {
       toast({ title: "Permiso requerido", description: "Tu rol no puede modificar usuarios", variant: "destructive" });
+      setIsSubmitting(false);
       return;
     }
-
-    // Validaciones básicas
-    if (!formData.nombre || !formData.email) {
-      alert("Nombre y email son obligatorios");
+    const parsed = UsuarioSchema.safeParse({
+      nombre: formData.nombre || "",
+      email: formData.email || "",
+      password: formData.password,
+      rol: (formData.rol || "bodeguero") as any,
+      fincaAsignada: formData.fincaAsignada,
+      telefono: formData.telefono,
+      activo: formData.activo ?? true,
+    });
+    if (!parsed.success) {
+      toast({ title: "Datos inválidos", description: parsed.error.errors[0]?.message || "Revisa los campos", variant: "destructive" });
+      setIsSubmitting(false);
       return;
     }
 
@@ -72,7 +85,11 @@ export function UsuarioForm({
       formData.password = "123456";
     }
 
-    onSave(formData);
+    try {
+      onSave(formData);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Restringir la asignación de rol administrador solo a administradores actuales
@@ -100,6 +117,7 @@ export function UsuarioForm({
                   setFormData({ ...formData, nombre: e.target.value })
                 }
                 placeholder="Juan Pérez"
+                disabled={isSubmitting || !allowEdit}
                 required
               />
             </div>
@@ -114,6 +132,7 @@ export function UsuarioForm({
                   setFormData({ ...formData, email: e.target.value })
                 }
                 placeholder="juan@bananerashg.com"
+                disabled={isSubmitting || !allowEdit}
                 required
               />
             </div>
@@ -130,11 +149,13 @@ export function UsuarioForm({
                       setFormData({ ...formData, password: e.target.value })
                     }
                     placeholder="Dejar vacío para contraseña por defecto"
+                    disabled={isSubmitting || !allowEdit}
                   />
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setShowPassword(!showPassword)}
+                    disabled={isSubmitting}
                   >
                     {showPassword ? "Ocultar" : "Mostrar"}
                   </Button>
@@ -154,6 +175,7 @@ export function UsuarioForm({
                   setFormData({ ...formData, telefono: e.target.value })
                 }
                 placeholder="0999999999"
+                disabled={isSubmitting || !allowEdit}
               />
             </div>
 
@@ -164,6 +186,7 @@ export function UsuarioForm({
                 onValueChange={(value) =>
                   setFormData({ ...formData, rol: value as UserRole })
                 }
+                disabled={isSubmitting || !allowEdit}
               >
                 <SelectTrigger id="rol">
                   <SelectValue />
@@ -187,6 +210,7 @@ export function UsuarioForm({
                 onValueChange={(value) =>
                   setFormData({ ...formData, fincaAsignada: value })
                 }
+                disabled={isSubmitting || !allowEdit}
               >
                 <SelectTrigger id="finca">
                   <SelectValue placeholder="Seleccionar finca" />
@@ -209,6 +233,7 @@ export function UsuarioForm({
                 onValueChange={(value) =>
                   setFormData({ ...formData, activo: value === "activo" })
                 }
+                disabled={isSubmitting || !allowEdit}
               >
                 <SelectTrigger id="activo">
                   <SelectValue />
@@ -222,12 +247,12 @@ export function UsuarioForm({
           </div>
 
           <div className="flex gap-2 justify-end pt-4">
-            <Button type="button" variant="outline" onClick={onCancel}>
+            <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
               <X className="h-4 w-4 mr-2" />
               Cancelar
             </Button>
-            <Button type="submit" disabled={!allowEdit}>
-              <Save className="h-4 w-4 mr-2" />
+            <Button type="submit" disabled={!allowEdit || isSubmitting}>
+              {isSubmitting ? <Spinner className="h-4 w-4 mr-2" /> : <Save className="h-4 w-4 mr-2" />}
               {usuario ? "Actualizar" : "Crear"} Usuario
             </Button>
           </div>

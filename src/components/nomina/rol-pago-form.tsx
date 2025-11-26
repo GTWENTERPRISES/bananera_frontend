@@ -18,10 +18,13 @@ import { useApp } from "@/src//contexts/app-context";
 import type { RolPago } from "@/src//lib/types";
 import { Calculator, DollarSign } from "lucide-react";
 import { useToast } from "@/src/hooks/use-toast";
+import { RolPagoInputSchema } from "@/src/lib/validation";
+import { Spinner } from "@/src/components/ui/spinner";
 
 export function RolPagoForm() {
   const { addRolPago, empleados } = useApp();
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     empleadoId: "",
     semana: "",
@@ -55,6 +58,24 @@ export function RolPagoForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
+
+    const parsed = RolPagoInputSchema.safeParse({
+      empleadoId: formData.empleadoId,
+      semana: formData.semana,
+      año: formData.año,
+      diasLaborados: formData.diasLaborados,
+      horasExtras: formData.horasExtras || undefined,
+      cosecha: formData.cosecha || undefined,
+      tareasEspeciales: formData.tareasEspeciales || undefined,
+      multas: formData.multas || undefined,
+      prestamos: formData.prestamos || undefined,
+    });
+    if (!parsed.success) {
+      toast({ title: "Datos inválidos", description: parsed.error.errors[0]?.message || "Revisa los campos", variant: "destructive" });
+      setIsSubmitting(false);
+      return;
+    }
 
     if (!empleado) {
       toast({
@@ -62,6 +83,7 @@ export function RolPagoForm() {
         description: "Debe seleccionar un empleado",
         variant: "destructive",
       });
+      setIsSubmitting(false);
       return;
     }
 
@@ -106,6 +128,7 @@ export function RolPagoForm() {
       multas: "",
       prestamos: "",
     });
+    setIsSubmitting(false);
   };
 
   return (
@@ -123,6 +146,7 @@ export function RolPagoForm() {
                 onValueChange={(value) =>
                   setFormData({ ...formData, empleadoId: value })
                 }
+                disabled={isSubmitting}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar empleado" />
@@ -148,6 +172,7 @@ export function RolPagoForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, semana: e.target.value })
                 }
+                disabled={isSubmitting}
                 required
               />
             </div>
@@ -163,6 +188,7 @@ export function RolPagoForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, diasLaborados: e.target.value })
                 }
+                disabled={isSubmitting}
                 required
               />
             </div>
@@ -178,6 +204,7 @@ export function RolPagoForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, horasExtras: e.target.value })
                 }
+                disabled={isSubmitting}
               />
             </div>
 
@@ -192,6 +219,7 @@ export function RolPagoForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, cosecha: e.target.value })
                 }
+                disabled={isSubmitting}
               />
             </div>
 
@@ -206,6 +234,7 @@ export function RolPagoForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, tareasEspeciales: e.target.value })
                 }
+                disabled={isSubmitting}
               />
             </div>
 
@@ -220,6 +249,7 @@ export function RolPagoForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, multas: e.target.value })
                 }
+                disabled={isSubmitting}
               />
             </div>
 
@@ -234,6 +264,7 @@ export function RolPagoForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, prestamos: e.target.value })
                 }
+                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -295,8 +326,8 @@ export function RolPagoForm() {
             </div>
           )}
 
-          <Button type="submit" className="w-full gap-2" disabled={!empleado}>
-            <DollarSign className="h-4 w-4" />
+          <Button type="submit" className="w-full gap-2" disabled={!empleado || isSubmitting}>
+            {isSubmitting ? <Spinner className="h-4 w-4" /> : <DollarSign className="h-4 w-4" />}
             Generar Rol de Pago
           </Button>
         </form>

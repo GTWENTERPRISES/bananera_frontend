@@ -24,13 +24,16 @@ import { useApp } from "@/src/contexts/app-context";
 import type { Enfunde, FincaName } from "@/src/lib/types"; // Cambia Finca por FincaName
 import { Plus } from "lucide-react";
 import { useToast } from "@/src/hooks/use-toast";
+import { EnfundeSchema } from "@/src/lib/validation";
+import { Spinner } from "@/src/components/ui/spinner";
 
 export function EnfundeForm() {
   const { addEnfunde } = useApp();
   const { toast } = useToast();
   const searchParams = useSearchParams();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    finca: "" as FincaName | "", // Usa FincaName en lugar de Finca
+    finca: undefined as FincaName | undefined,
     semana: "",
     año: "2025",
     colorCinta: "",
@@ -48,20 +51,25 @@ export function EnfundeForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Validar que finca sea un valor válido de FincaName
-    if (!formData.finca || !isValidFinca(formData.finca)) {
-      toast({
-        title: "Error",
-        description: "Por favor selecciona una finca válida",
-        variant: "destructive",
-      });
+    setIsSubmitting(true);
+    const parsed = EnfundeSchema.safeParse({
+      finca: formData.finca || "",
+      semana: formData.semana,
+      año: formData.año,
+      colorCinta: formData.colorCinta,
+      cantidadEnfundes: formData.cantidadEnfundes,
+      matasCaidas: formData.matasCaidas,
+      fecha: formData.fecha,
+    });
+    if (!parsed.success) {
+      toast({ title: "Datos inválidos", description: parsed.error.errors[0]?.message || "Revisa los campos", variant: "destructive" });
+      setIsSubmitting(false);
       return;
     }
 
     const newEnfunde: Enfunde = {
       id: Date.now().toString(),
-      finca: formData.finca, // Ya está tipado como FincaName
+      finca: formData.finca as FincaName,
       semana: Number.parseInt(formData.semana),
       año: Number.parseInt(formData.año),
       colorCinta: formData.colorCinta,
@@ -78,7 +86,7 @@ export function EnfundeForm() {
 
     // Reset form
     setFormData({
-      finca: "" as FincaName | "", // Reset a string vacío
+      finca: undefined as FincaName | undefined,
       semana: "",
       año: "2025",
       colorCinta: "",
@@ -86,6 +94,7 @@ export function EnfundeForm() {
       matasCaidas: "",
       fecha: new Date().toISOString().split("T")[0],
     });
+    setIsSubmitting(false);
   };
 
   // Función helper para validar el tipo FincaName
@@ -98,7 +107,7 @@ export function EnfundeForm() {
     if (isValidFinca(value)) {
       setFormData({ ...formData, finca: value });
     } else {
-      setFormData({ ...formData, finca: "" as FincaName | "" });
+      setFormData({ ...formData, finca: undefined });
     }
   };
 
@@ -115,6 +124,7 @@ export function EnfundeForm() {
               <Select
                 value={formData.finca}
                 onValueChange={handleFincaChange}
+                disabled={isSubmitting}
                 required
               >
                 <SelectTrigger>
@@ -140,6 +150,7 @@ export function EnfundeForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, semana: e.target.value })
                 }
+                disabled={isSubmitting}
                 required
               />
             </div>
@@ -151,6 +162,7 @@ export function EnfundeForm() {
                 onValueChange={(value) =>
                   setFormData({ ...formData, colorCinta: value })
                 }
+                disabled={isSubmitting}
                 required
               >
                 <SelectTrigger>
@@ -177,6 +189,7 @@ export function EnfundeForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, cantidadEnfundes: e.target.value })
                 }
+                disabled={isSubmitting}
                 required
               />
             </div>
@@ -191,6 +204,7 @@ export function EnfundeForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, matasCaidas: e.target.value })
                 }
+                disabled={isSubmitting}
                 required
               />
             </div>
@@ -204,13 +218,14 @@ export function EnfundeForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, fecha: e.target.value })
                 }
+                disabled={isSubmitting}
                 required
               />
             </div>
           </div>
 
-          <Button type="submit" className="w-full gap-2">
-            <Plus className="h-4 w-4" />
+          <Button type="submit" className="w-full gap-2" disabled={isSubmitting}>
+            {isSubmitting ? <Spinner className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
             Registrar Enfunde
           </Button>
         </form>

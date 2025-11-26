@@ -23,15 +23,18 @@ import { useApp } from "@/src/contexts/app-context";
 import type { Empleado, FincaName } from "@/src/lib/types"; // Cambia Finca por FincaName
 import { UserPlus } from "lucide-react";
 import { useToast } from "@/src/hooks/use-toast";
+import { EmpleadoSchema } from "@/src/lib/validation";
+import { Spinner } from "@/src/components/ui/spinner";
 
 export function EmpleadoForm() {
   const { addEmpleado, canAccess } = useApp();
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     nombre: "",
     cedula: "",
     labor: "", // Cambiado de "cargo" a "labor" para coincidir con la interfaz
-    finca: "" as FincaName | "", // Usa FincaName en lugar de Finca
+    finca: undefined as FincaName | undefined,
     tarifaDiaria: "", // Cambiado de "salarioDiario" a "tarifaDiaria"
     fechaIngreso: new Date().toISOString().split("T")[0],
     telefono: "",
@@ -51,7 +54,7 @@ export function EmpleadoForm() {
     if (isValidFinca(value)) {
       setFormData({ ...formData, finca: value });
     } else {
-      setFormData({ ...formData, finca: "" as FincaName | "" });
+      setFormData({ ...formData, finca: undefined });
     }
   };
 
@@ -64,14 +67,24 @@ export function EmpleadoForm() {
       toast({ title: "Permiso requerido", description: "Tu rol no puede registrar empleados", variant: "destructive" });
       return;
     }
+    setIsSubmitting(true);
 
-    // Validar que finca sea un valor válido
-    if (!formData.finca || !isValidFinca(formData.finca)) {
-      toast({
-        title: "Error",
-        description: "Por favor selecciona una finca válida",
-        variant: "destructive",
-      });
+    const parsed = EmpleadoSchema.safeParse({
+      nombre: formData.nombre,
+      cedula: formData.cedula,
+      labor: formData.labor,
+      finca: formData.finca || "",
+      tarifaDiaria: formData.tarifaDiaria,
+      fechaIngreso: formData.fechaIngreso,
+      telefono: formData.telefono,
+      activo: formData.activo,
+      lote: formData.lote || undefined,
+      direccion: formData.direccion || undefined,
+      cuentaBancaria: formData.cuentaBancaria || undefined,
+    });
+    if (!parsed.success) {
+      toast({ title: "Datos inválidos", description: parsed.error.errors[0]?.message || "Revisa los campos", variant: "destructive" });
+      setIsSubmitting(false);
       return;
     }
 
@@ -80,7 +93,7 @@ export function EmpleadoForm() {
       nombre: formData.nombre,
       cedula: formData.cedula,
       labor: formData.labor, // Cambiado de "cargo" a "labor"
-      finca: formData.finca, // Ya está tipado como FincaName
+      finca: formData.finca as FincaName,
       tarifaDiaria: Number.parseFloat(formData.tarifaDiaria), // Cambiado de "salarioDiario"
       fechaIngreso: formData.fechaIngreso,
       telefono: formData.telefono,
@@ -101,7 +114,7 @@ export function EmpleadoForm() {
       nombre: "",
       cedula: "",
       labor: "",
-      finca: "" as FincaName | "",
+      finca: undefined as FincaName | undefined,
       tarifaDiaria: "",
       fechaIngreso: new Date().toISOString().split("T")[0],
       telefono: "",
@@ -110,6 +123,7 @@ export function EmpleadoForm() {
       direccion: "",
       cuentaBancaria: "",
     });
+    setIsSubmitting(false);
   };
 
   return (
@@ -128,6 +142,7 @@ export function EmpleadoForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, nombre: e.target.value })
                 }
+                disabled={isSubmitting || !allowEdit}
                 required
               />
             </div>
@@ -140,6 +155,7 @@ export function EmpleadoForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, cedula: e.target.value })
                 }
+                disabled={isSubmitting || !allowEdit}
                 required
               />
             </div>
@@ -151,6 +167,7 @@ export function EmpleadoForm() {
                 onValueChange={(value) =>
                   setFormData({ ...formData, labor: value })
                 }
+                disabled={isSubmitting || !allowEdit}
                 required
               >
                 <SelectTrigger>
@@ -172,6 +189,7 @@ export function EmpleadoForm() {
               <Select
                 value={formData.finca}
                 onValueChange={handleFincaChange}
+                disabled={isSubmitting || !allowEdit}
                 required
               >
                 <SelectTrigger>
@@ -198,6 +216,7 @@ export function EmpleadoForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, tarifaDiaria: e.target.value })
                 }
+                disabled={isSubmitting || !allowEdit}
                 required
               />
             </div>
@@ -211,6 +230,7 @@ export function EmpleadoForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, fechaIngreso: e.target.value })
                 }
+                disabled={isSubmitting || !allowEdit}
                 required
               />
             </div>
@@ -223,6 +243,7 @@ export function EmpleadoForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, lote: e.target.value })
                 }
+                disabled={isSubmitting || !allowEdit}
               />
             </div>
 
@@ -234,6 +255,7 @@ export function EmpleadoForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, telefono: e.target.value })
                 }
+                disabled={isSubmitting || !allowEdit}
               />
             </div>
 
@@ -246,6 +268,7 @@ export function EmpleadoForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, direccion: e.target.value })
                 }
+                disabled={isSubmitting || !allowEdit}
               />
             </div>
 
@@ -258,6 +281,7 @@ export function EmpleadoForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, cuentaBancaria: e.target.value })
                 }
+                disabled={isSubmitting || !allowEdit}
               />
             </div>
 
@@ -271,6 +295,7 @@ export function EmpleadoForm() {
                     activo: value === "activo",
                   })
                 }
+                disabled={isSubmitting || !allowEdit}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -283,8 +308,8 @@ export function EmpleadoForm() {
             </div>
           </div>
 
-          <Button type="submit" className="w-full gap-2" disabled={!allowEdit}>
-            <UserPlus className="h-4 w-4" />
+          <Button type="submit" className="w-full gap-2" disabled={!allowEdit || isSubmitting}>
+            {isSubmitting ? <Spinner className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
             Registrar Empleado
           </Button>
         </form>

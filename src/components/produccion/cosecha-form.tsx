@@ -24,13 +24,16 @@ import { useApp } from "@/src/contexts/app-context";
 import type { Cosecha, FincaName } from "@/src/lib/types";
 import { Calculator } from "lucide-react";
 import { useToast } from "@/src/hooks/use-toast";
+import { CosechaSchema } from "@/src/lib/validation";
+import { Spinner } from "@/src/components/ui/spinner";
 
 export function CosechaForm() {
   const { addCosecha } = useApp();
   const { toast } = useToast();
   const searchParams = useSearchParams();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    finca: "" as FincaName | "",
+    finca: undefined as FincaName | undefined,
     semana: "",
     año: "2025",
     racimosCorta: "", // Cambiado a racimosCorta
@@ -72,26 +75,33 @@ export function CosechaForm() {
     if (isValidFinca(value)) {
       setFormData({ ...formData, finca: value });
     } else {
-      setFormData({ ...formData, finca: "" as FincaName | "" });
+      setFormData({ ...formData, finca: undefined });
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Validar que finca sea un valor válido
-    if (!formData.finca || !isValidFinca(formData.finca)) {
-      toast({
-        title: "Error",
-        description: "Por favor selecciona una finca válida",
-        variant: "destructive",
-      });
+    setIsSubmitting(true);
+    const parsed = CosechaSchema.safeParse({
+      finca: formData.finca || "",
+      semana: formData.semana,
+      año: formData.año,
+      racimosCorta: formData.racimosCorta,
+      racimosRechazados: formData.racimosRechazados,
+      cajasProducidas: formData.cajasProducidas,
+      pesoPromedio: formData.pesoPromedio,
+      calibracion: formData.calibracion,
+      numeroManos: formData.numeroManos,
+    });
+    if (!parsed.success) {
+      toast({ title: "Datos inválidos", description: parsed.error.errors[0]?.message || "Revisa los campos", variant: "destructive" });
+      setIsSubmitting(false);
       return;
     }
 
     const newCosecha: Cosecha = {
       id: Date.now().toString(),
-      finca: formData.finca,
+      finca: formData.finca as FincaName,
       semana: Number.parseInt(formData.semana),
       año: Number.parseInt(formData.año),
       racimosCorta: Number.parseInt(formData.racimosCorta), // Cambiado a racimosCorta
@@ -113,7 +123,7 @@ export function CosechaForm() {
 
     // Reset form
     setFormData({
-      finca: "" as FincaName | "",
+      finca: undefined as FincaName | undefined,
       semana: "",
       año: "2025",
       racimosCorta: "", // Cambiado a racimosCorta
@@ -123,6 +133,7 @@ export function CosechaForm() {
       calibracion: "",
       numeroManos: "",
     });
+    setIsSubmitting(false);
   };
 
   return (
@@ -138,6 +149,7 @@ export function CosechaForm() {
               <Select
                 value={formData.finca}
                 onValueChange={handleFincaChange}
+                disabled={isSubmitting}
                 required
               >
                 <SelectTrigger>
@@ -163,6 +175,7 @@ export function CosechaForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, semana: e.target.value })
                 }
+                disabled={isSubmitting}
                 required
               />
             </div>
@@ -179,6 +192,7 @@ export function CosechaForm() {
                   (e) =>
                     setFormData({ ...formData, racimosCorta: e.target.value }) // Cambiado a racimosCorta
                 }
+                disabled={isSubmitting}
                 required
               />
             </div>
@@ -196,6 +210,7 @@ export function CosechaForm() {
                     racimosRechazados: e.target.value,
                   })
                 }
+                disabled={isSubmitting}
                 required
               />
             </div>
@@ -210,6 +225,7 @@ export function CosechaForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, cajasProducidas: e.target.value })
                 }
+                disabled={isSubmitting}
                 required
               />
             </div>
@@ -225,6 +241,7 @@ export function CosechaForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, pesoPromedio: e.target.value })
                 }
+                disabled={isSubmitting}
                 required
               />
             </div>
@@ -239,6 +256,7 @@ export function CosechaForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, calibracion: e.target.value })
                 }
+                disabled={isSubmitting}
                 required
               />
             </div>
@@ -254,6 +272,7 @@ export function CosechaForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, numeroManos: e.target.value })
                 }
+                disabled={isSubmitting}
                 required
               />
             </div>
@@ -288,8 +307,8 @@ export function CosechaForm() {
             </div>
           </div>
 
-          <Button type="submit" className="w-full gap-2">
-            <Calculator className="h-4 w-4" />
+          <Button type="submit" className="w-full gap-2" disabled={isSubmitting}>
+            {isSubmitting ? <Spinner className="h-4 w-4" /> : <Calculator className="h-4 w-4" />}
             Registrar Cosecha
           </Button>
         </form>

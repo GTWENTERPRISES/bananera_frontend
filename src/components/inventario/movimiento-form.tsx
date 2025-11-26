@@ -24,11 +24,14 @@ import { useApp } from "@/src/contexts/app-context";
 import type { MovimientoInventario, FincaName } from "@/src/lib/types"; // Cambia Finca por FincaName
 import { ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import { useToast } from "@/src/hooks/use-toast";
+import { MovimientoInventarioSchema } from "@/src/lib/validation";
+import { Spinner } from "@/src/components/ui/spinner";
 
 export function MovimientoForm() {
   const { addMovimientoInventario, insumos, canAccess, currentUser } = useApp();
   const { toast } = useToast();
   const searchParams = useSearchParams();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     insumoId: "",
     tipo: "" as "entrada" | "salida",
@@ -74,19 +77,24 @@ export function MovimientoForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     if (!allowEdit) {
       toast({ title: "Permiso requerido", description: "Tu rol no puede registrar movimientos", variant: "destructive" });
       return;
     }
 
-    // Validar que finca sea un valor válido
-    if (!formData.finca || !isValidFinca(formData.finca)) {
-      toast({
-        title: "Error",
-        description: "Por favor selecciona una finca válida",
-        variant: "destructive",
-      });
+    const parsed = MovimientoInventarioSchema.safeParse({
+      insumoId: formData.insumoId,
+      tipo: formData.tipo || "",
+      cantidad: formData.cantidad,
+      finca: formData.finca || "",
+      motivo: formData.motivo,
+      responsable: formData.responsable,
+    });
+    if (!parsed.success) {
+      toast({ title: "Datos inválidos", description: parsed.error.errors[0]?.message || "Revisa los campos", variant: "destructive" });
+      setIsSubmitting(false);
       return;
     }
 
@@ -96,6 +104,7 @@ export function MovimientoForm() {
         description: "Por favor selecciona un insumo válido",
         variant: "destructive",
       });
+      setIsSubmitting(false);
       return;
     }
 
@@ -140,6 +149,7 @@ export function MovimientoForm() {
       motivo: "",
       responsable: "",
     });
+    setIsSubmitting(false);
   };
 
   return (
@@ -157,6 +167,7 @@ export function MovimientoForm() {
                 onValueChange={(value) =>
                   setFormData({ ...formData, insumoId: value })
                 }
+                disabled={isSubmitting || !allowEdit}
                 required
               >
                 <SelectTrigger>
@@ -182,6 +193,7 @@ export function MovimientoForm() {
                     tipo: value as "entrada" | "salida",
                   })
                 }
+                disabled={isSubmitting || !allowEdit}
                 required
               >
                 <SelectTrigger>
@@ -205,6 +217,7 @@ export function MovimientoForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, cantidad: e.target.value })
                 }
+                disabled={isSubmitting || !allowEdit}
                 required
               />
             </div>
@@ -217,6 +230,7 @@ export function MovimientoForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, responsable: e.target.value })
                 }
+                disabled={isSubmitting || !allowEdit}
                 required
               />
             </div>
@@ -230,6 +244,7 @@ export function MovimientoForm() {
                   setFormData({ ...formData, motivo: e.target.value })
                 }
                 placeholder="Ej: Aplicación semanal, compra, etc."
+                disabled={isSubmitting || !allowEdit}
                 required
               />
             </div>
@@ -278,10 +293,13 @@ export function MovimientoForm() {
               !formData.tipo ||
               !formData.cantidad ||
               !formData.responsable ||
-              !formData.motivo
+              !formData.motivo ||
+              isSubmitting
             }
           >
-            {formData.tipo === "entrada" ? (
+            {isSubmitting ? (
+              <Spinner className="h-4 w-4" />
+            ) : formData.tipo === "entrada" ? (
               <>
                 <ArrowDownCircle className="h-4 w-4" />
                 Registrar Entrada

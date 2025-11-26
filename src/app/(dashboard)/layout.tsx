@@ -7,6 +7,8 @@ import { Breadcrumbs } from "@/src/components/layout/breadcrumbs";
 import { ProtectedRoute } from "@/src/components/auth/protected-route";
 import { usePathname } from "next/navigation";
 import { useApp } from "@/src/contexts/app-context";
+import { Suspense, useEffect, useState } from "react";
+import { Spinner } from "@/src/components/ui/spinner";
 
 export default function DashboardLayout({
   children,
@@ -15,6 +17,13 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const { canAccess } = useApp();
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  useEffect(() => {
+    setIsTransitioning(true);
+    const t = setTimeout(() => setIsTransitioning(false), 600);
+    return () => clearTimeout(t);
+  }, [pathname]);
 
   const mapResource = (href: string):
     | "dashboard"
@@ -51,7 +60,22 @@ export default function DashboardLayout({
                 <Breadcrumbs />
               </div>
               {allowView ? (
-                children
+                <Suspense
+                  fallback={
+                    <div className="flex items-center justify-center h-[60vh]">
+                      <Spinner className="h-6 w-6" />
+                    </div>
+                  }
+                >
+                  <div className="relative">
+                    {isTransitioning && (
+                      <div className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center bg-background/60">
+                        <Spinner className="h-8 w-8" />
+                      </div>
+                    )}
+                    {children}
+                  </div>
+                </Suspense>
               ) : (
                 <div className="rounded-lg border p-6">
                   <h2 className="text-xl font-semibold">Acceso restringido</h2>

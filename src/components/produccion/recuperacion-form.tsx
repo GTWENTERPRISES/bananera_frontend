@@ -23,15 +23,18 @@ import {
 import type { FincaName, RecuperacionCinta } from "@/src/lib/types"; // Cambia Finca por FincaName y agrega RecuperacionCinta
 import { Calculator, AlertTriangle } from "lucide-react";
 import { useToast } from "@/src/hooks/use-toast";
+import { RecuperacionCintaSchema } from "@/src/lib/validation";
 import { cn } from "@/src/lib/utils";
 import { useApp } from "@/src/contexts/app-context";
+import { Spinner } from "@/src/components/ui/spinner";
 
 export function RecuperacionForm() {
   const { addRecuperacionCinta, canAccess } = useApp();
   const { toast } = useToast();
   const searchParams = useSearchParams();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    finca: "" as FincaName | "", // Usa FincaName en lugar de Finca
+    finca: undefined as FincaName | undefined,
     semana: "",
     año: "2025",
     enfundesIniciales: "",
@@ -78,7 +81,7 @@ export function RecuperacionForm() {
     if (isValidFinca(value)) {
       setFormData({ ...formData, finca: value });
     } else {
-      setFormData({ ...formData, finca: "" as FincaName | "" });
+      setFormData({ ...formData, finca: undefined });
     }
   };
 
@@ -91,21 +94,29 @@ export function RecuperacionForm() {
       toast({ title: "Permiso requerido", description: "Tu rol no puede registrar recuperación", variant: "destructive" });
       return;
     }
+    setIsSubmitting(true);
 
     // Validar que finca sea un valor válido
-    if (!formData.finca || !isValidFinca(formData.finca)) {
-      toast({
-        title: "Error",
-        description: "Por favor selecciona una finca válida",
-        variant: "destructive",
-      });
+    const parsed = RecuperacionCintaSchema.safeParse({
+      finca: formData.finca || "",
+      semana: formData.semana,
+      año: formData.año,
+      enfundesIniciales: formData.enfundesIniciales,
+      primeraCalCosecha: formData.primeraCalCosecha,
+      segundaCalCosecha: formData.segundaCalCosecha,
+      terceraCalCosecha: formData.terceraCalCosecha,
+      barridaFinal: formData.barridaFinal,
+    });
+    if (!parsed.success) {
+      toast({ title: "Datos inválidos", description: parsed.error.errors[0]?.message || "Revisa los campos", variant: "destructive" });
+      setIsSubmitting(false);
       return;
     }
 
     // Crear el objeto de recuperación
     const newRecuperacion: RecuperacionCinta = {
       id: Date.now().toString(),
-      finca: formData.finca,
+      finca: formData.finca as FincaName,
       semana: Number.parseInt(formData.semana),
       año: Number.parseInt(formData.año),
       enfundesIniciales: Number.parseInt(formData.enfundesIniciales),
@@ -141,7 +152,7 @@ export function RecuperacionForm() {
 
     // Reset form
     setFormData({
-      finca: "" as FincaName | "",
+      finca: undefined as FincaName | undefined,
       semana: "",
       año: "2025",
       enfundesIniciales: "",
@@ -150,6 +161,7 @@ export function RecuperacionForm() {
       terceraCalCosecha: "",
       barridaFinal: "",
     });
+    setIsSubmitting(false);
   };
 
   return (
@@ -165,6 +177,7 @@ export function RecuperacionForm() {
               <Select
                 value={formData.finca}
                 onValueChange={handleFincaChange}
+                disabled={isSubmitting}
                 required
               >
                 <SelectTrigger>
@@ -190,6 +203,7 @@ export function RecuperacionForm() {
                 onChange={(e) =>
                   setFormData({ ...formData, semana: e.target.value })
                 }
+                disabled={isSubmitting}
                 required
               />
             </div>
@@ -207,6 +221,7 @@ export function RecuperacionForm() {
                     enfundesIniciales: e.target.value,
                   })
                 }
+                disabled={isSubmitting}
                 required
               />
             </div>
@@ -231,6 +246,7 @@ export function RecuperacionForm() {
                       primeraCalCosecha: e.target.value,
                     })
                   }
+                  disabled={isSubmitting}
                   required
                 />
               </div>
@@ -254,6 +270,7 @@ export function RecuperacionForm() {
                       segundaCalCosecha: e.target.value,
                     })
                   }
+                  disabled={isSubmitting}
                   required
                 />
               </div>
@@ -277,6 +294,7 @@ export function RecuperacionForm() {
                       terceraCalCosecha: e.target.value,
                     })
                   }
+                  disabled={isSubmitting}
                   required
                 />
               </div>
@@ -295,6 +313,7 @@ export function RecuperacionForm() {
                   onChange={(e) =>
                     setFormData({ ...formData, barridaFinal: e.target.value })
                   }
+                  disabled={isSubmitting}
                   required
                 />
               </div>
@@ -351,8 +370,8 @@ export function RecuperacionForm() {
             </div>
           </div>
 
-          <Button type="submit" className="w-full gap-2" disabled={!allowEdit}>
-            <Calculator className="h-4 w-4" />
+          <Button type="submit" className="w-full gap-2" disabled={!allowEdit || isSubmitting}>
+            {isSubmitting ? <Spinner className="h-4 w-4" /> : <Calculator className="h-4 w-4" />}
             Registrar Recuperación
           </Button>
         </form>
