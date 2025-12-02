@@ -44,15 +44,19 @@ export function MovimientosTable() {
     return insumo?.unidadMedida || "";
   };
 
-  const filteredMovimientos = movimientosInventario.filter(
-    (mov) =>
-      getInsumoNombre(mov.insumoId)
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      mov.tipo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      mov.responsable.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      mov.motivo.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredMovimientos = movimientosInventario.filter((mov) => {
+    const term = searchTerm.toLowerCase();
+    const nombre = (getInsumoNombre(mov.insumoId) || "").toLowerCase();
+    const tipo = (mov.tipo || "").toLowerCase();
+    const responsable = (mov.responsable || "").toLowerCase();
+    const motivo = (mov.motivo || "").toLowerCase();
+    return (
+      nombre.includes(term) ||
+      tipo.includes(term) ||
+      responsable.includes(term) ||
+      motivo.includes(term)
+    );
+  });
 
   return (
     <Card>

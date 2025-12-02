@@ -141,7 +141,7 @@ export function InsumosTable() {
                 <TableHead>Categoría</TableHead>
                 <TableHead className="text-right">Stock Actual</TableHead>
                 <TableHead className="text-right">Stock Mínimo</TableHead>
-                <TableHead className="text-right">Stock Máximo</TableHead>{" "}
+                <TableHead className="text-right">Stock Máximo</TableHead>
                 {/* Nueva columna */}
                 <TableHead className="text-right">Precio Unit.</TableHead>
                 <TableHead className="text-right">Valor Total</TableHead>
@@ -178,7 +178,6 @@ export function InsumosTable() {
                       {insumo.stockMinimo} {insumo.unidadMedida}
                     </TableCell>
                     <TableCell className="text-right">
-                      {" "}
                       {/* Nueva columna */}
                       {insumo.stockMaximo} {insumo.unidadMedida}
                     </TableCell>

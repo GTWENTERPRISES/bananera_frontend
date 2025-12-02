@@ -125,7 +125,7 @@ export function EnfundesTable() {
             "responsable",
           ]}
           title="Registro de Enfundes"
-          filename="registro-enfundes.xlsx"
+          filename="registro-enfundes"
         />
       </CardHeader>
       <CardContent>

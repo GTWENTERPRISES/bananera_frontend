@@ -66,10 +66,10 @@ export function FincasTable({
   const filteredFincas = fincas.filter(
     (finca) =>
       finca.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      finca.ubicacion.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (finca.ubicacion || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (finca.responsable &&
         finca.responsable.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      finca.variedad.toLowerCase().includes(searchTerm.toLowerCase())
+      (finca.variedad || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleDeleteClick = (finca: Finca) => {
@@ -144,8 +144,18 @@ export function FincasTable({
               "Estado",
               "Teléfono",
             ]}
+            keys={[
+              "nombre",
+              "hectareas",
+              "plantasTotales",
+              "variedad",
+              "responsable",
+              "ubicacion",
+              "estado",
+              "telefono",
+            ]}
             title="Listado de Fincas"
-            filename="fincas.xlsx"
+            filename="fincas"
           />
         </div>
 
@@ -235,7 +245,9 @@ export function FincasTable({
                                 {finca.variedad} - {finca.hectareas} ha
                               </div>
                               <div>
-                                {finca.plantasTotales.toLocaleString()} plantas
+                                {typeof finca.plantasTotales === "number"
+                                  ? finca.plantasTotales.toLocaleString()
+                                  : "-"} plantas
                               </div>
                               <div>{getEstadoBadge(finca.estado)}</div>
                               {tieneRegistros && (
@@ -256,7 +268,9 @@ export function FincasTable({
                       <TableCell
                         className={cn(isMobile && "hidden md:table-cell")}
                       >
-                        {finca.plantasTotales.toLocaleString()}
+                        {typeof finca.plantasTotales === "number"
+                          ? finca.plantasTotales.toLocaleString()
+                          : "-"}
                       </TableCell>
                       <TableCell
                         className={cn(isMobile && "hidden md:table-cell")}

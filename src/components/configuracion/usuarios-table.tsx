@@ -137,10 +137,14 @@ export function UsuariosTable({
             />
           </div>
           <ExportButton
-            data={filteredUsuarios}
+            data={filteredUsuarios.map(u => ({
+              ...u,
+              estado: u.activo ? "Activo" : "Inactivo",
+            }))}
             headers={["Nombre", "Email", "Rol", "Finca", "Teléfono", "Estado"]}
+            keys={["nombre", "email", "rol", "fincaAsignada", "telefono", "estado"]}
             title="Listado de Usuarios"
-            filename="usuarios.xlsx"
+            filename="usuarios"
           />
         </div>
 

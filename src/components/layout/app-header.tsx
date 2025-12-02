@@ -126,7 +126,6 @@ export function AppHeader() {
                   key={a.id}
                   onClick={() => {
                     const href = getAlertHref(a);
-                    marcarAlertaLeida(a.id);
                     router.push(href);
                   }}
                 >

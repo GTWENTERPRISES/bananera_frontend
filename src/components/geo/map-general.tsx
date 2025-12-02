@@ -1,19 +1,8 @@
 "use client";
 
-import { useMemo, useEffect } from "react";
-import {
-  MapContainer,
-  TileLayer,
-  GeoJSON,
-  CircleMarker,
-  Popup,
-  useMap,
-  ZoomControl,
-} from "react-leaflet";
-import "leaflet/dist/leaflet.css";
+import { useMemo, useEffect, useRef } from "react";
 import { useApp } from "@/src/contexts/app-context";
 import type { Finca } from "@/src/lib/types";
-import type { PathOptions, Layer, Path } from "leaflet";
 
 interface FeatureProperties {
   nombre: string;
@@ -47,8 +36,11 @@ function getCentroid(geom: any): [number, number] | null {
   return [latAvg, lonAvg];
 }
 
-export function MapGeneral() {
+export function MapGeneral({ selectedFinca }: { selectedFinca?: string }) {
   const { fincas, cosechas, empleados, insumos } = useApp();
+  const mapRef = useRef<HTMLDivElement | null>(null);
+  const mapInstance = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
 
   const fincaLinks: Record<string, string> = {
     BABY: "https://maps.app.goo.gl/oBSwV5z1GYJTL2HH8",
@@ -58,29 +50,26 @@ export function MapGeneral() {
   };
 
   const features = useMemo(() => {
-    // Determinar la última semana por finca para calcular rendimiento
     const latestByFinca = new Map<string, { cajas: number }>();
     for (const c of cosechas) {
-      // Tomar la última cosecha registrada por finca (por simplicidad)
       const prev = latestByFinca.get(c.finca);
       if (!prev) {
         latestByFinca.set(c.finca, { cajas: c.cajasProducidas });
       } else {
-        // Mantener el mayor número de cajas como proxy de la última (mock data con una semana)
         if (c.cajasProducidas >= prev.cajas) {
           latestByFinca.set(c.finca, { cajas: c.cajasProducidas });
         }
       }
     }
 
-    const feats: GeoJSON.Feature<GeoJSON.Geometry, FeatureProperties>[] = [];
+    const feats: any[] = [];
     for (const f of fincas) {
       if (!f.geom) continue;
       const cajas = latestByFinca.get(f.nombre)?.cajas ?? 0;
       const rendimientoHa = f.hectareas ? cajas / f.hectareas : 0;
       feats.push({
         type: "Feature",
-        geometry: f.geom as unknown as GeoJSON.Geometry,
+        geometry: f.geom as any,
         properties: {
           nombre: f.nombre,
           hectareas: f.hectareas,
@@ -91,7 +80,6 @@ export function MapGeneral() {
     return feats;
   }, [fincas, cosechas]);
 
-  // Cálculo de centroides y cuadrillas activas (Enfunde) por finca
   const crewMarkers = useMemo(() => {
     return fincas
       .filter((f) => !!f.geom)
@@ -115,12 +103,10 @@ export function MapGeneral() {
     }[];
   }, [fincas, empleados]);
 
-  // Marcadores de bodegas (mock) y estado de inventario (stock bajo)
   const bodegaMarkers = useMemo(() => {
     const stockBajo = insumos.filter(
       (i) => i.stockActual < i.stockMinimo
     ).length;
-    // Ubicar bodegas cerca de los centroides de fincas
     const bases = fincas
       .filter((f) => !!f.geom)
       .slice(0, 4)
@@ -144,39 +130,10 @@ export function MapGeneral() {
     }));
   }, [insumos, fincas]);
 
-  const style = (
-    feature?: GeoJSON.Feature<GeoJSON.Geometry, FeatureProperties>
-  ) => {
-    const r = feature?.properties?.rendimientoHa ?? 0;
-    let fillColor = "#e53935"; // rojo
-    if (r >= 45) fillColor = "#1a5e20"; // verde fuerte
-    else if (r >= 35) fillColor = "#2e7d32"; // verde
-    else if (r >= 25) fillColor = "#fbc02d"; // amarillo
-
-    return {
-      color: "#1a5e20",
-      weight: 1.2,
-      fillColor,
-      fillOpacity: 0.5,
-    } as PathOptions;
-  };
-
-  const onEachFeature = (
-    feature: GeoJSON.Feature<GeoJSON.Geometry, FeatureProperties>,
-    layer: Layer
-  ) => {
-    const p = feature.properties;
-    if (!p) return;
-    const url = fincaLinks[p.nombre] || "";
-    const popupHtml = `<div style=\"min-width:180px\">\n      <strong>${
-      p.nombre
-    }</strong><br/>\n      Hectáreas: ${p.hectareas.toFixed(
-      1
-    )}<br/>\n      Cajas/ha (semana): ${p.rendimientoHa.toFixed(
-      1
-    )}<br/>\n      <a href='${url}' target='_blank' rel='noopener noreferrer'>Abrir en Maps</a>\n    </div>`;
-    (layer as Path).bindPopup(popupHtml);
-  };
+  const featureCollection = useMemo(() => ({
+    type: "FeatureCollection",
+    features: features,
+  }), [features]);
 
   // Calcular centro promedio dinámico para inicializar
   const center: [number, number] = useMemo(() => {
@@ -191,149 +148,135 @@ export function MapGeneral() {
     return [lat, lng];
   }, [fincas]);
 
-  return (
-    <div className="relative w-full h-[50vh] md:h-[60vh] lg:h-[70vh] rounded-md overflow-hidden">
-      <MapContainer
-        center={center}
-        zoom={13}
-        style={{ width: "100%", height: "100%", minHeight: "420px" }}
-        scrollWheelZoom
-        zoomControl={false}
-      >
-        <MapAutoResize />
-        <MapSizeObserver />
-        <FitToFeatures features={features} />
-        <ZoomControl position="topright" />
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution="&copy; OpenStreetMap contributors"
-        />
-        {features.length > 0 && (
-          <GeoJSON
-            data={features as any}
-            style={style}
-            onEachFeature={onEachFeature}
-          />
-        )}
-        {crewMarkers.map((m) => (
-          <CircleMarker
-            key={`crew-${m.finca}`}
-            center={m.position}
-            radius={6}
-            pathOptions={{
-              color: m.count > 0 ? "#1976d2" : "#9e9e9e",
-              fillOpacity: 0.8,
-            }}
-          >
-            <Popup>
-              <div className="text-sm">
-                <div className="font-semibold">{m.finca}</div>
-                <div>Cuadrillas activas (Enfunde): {m.count}</div>
-              </div>
-            </Popup>
-          </CircleMarker>
-        ))}
-        {bodegaMarkers.map((b) => (
-          <CircleMarker
-            key={`bodega-${b.nombre}`}
-            center={b.position}
-            radius={7}
-            pathOptions={{
-              color: b.stockBajo > 0 ? "#d32f2f" : "#2e7d32",
-              fillOpacity: 0.85,
-            }}
-          >
-            <Popup>
-              <div className="text-sm">
-                <div className="font-semibold">{b.nombre}</div>
-                <div>Insumos con stock bajo: {b.stockBajo}</div>
-              </div>
-            </Popup>
-          </CircleMarker>
-        ))}
-      </MapContainer>
-      {/* Leyenda choropleth */}
-    </div>
-  );
-}
-
-// Agrega un manejador para recalcular el tamaño del mapa al montarse y al redimensionar la ventana
-function MapAutoResize() {
-  const map = useMap();
   useEffect(() => {
-    const t = setTimeout(() => {
-      try {
-        map.invalidateSize();
-      } catch {}
-    }, 150);
-    const onResize = () => {
-      try {
-        map.invalidateSize();
-      } catch {}
-    };
-    window.addEventListener("resize", onResize);
-    return () => {
-      clearTimeout(t);
-      window.removeEventListener("resize", onResize);
-    };
-  }, [map]);
-  return null;
-}
-
-function FitToFeatures({
-  features,
-}: {
-  features: GeoJSON.Feature<GeoJSON.Geometry, any>[];
-}) {
-  const map = useMap();
-  useEffect(() => {
-    if (!features || features.length === 0) return;
-    const bounds: [number, number][] = [];
-    features.forEach((feat) => {
-      const g: any = feat.geometry;
-      const type = g?.type;
-      const coords = g?.coordinates;
-      let ring: number[][] | null = null;
-      if (type === "Polygon" && Array.isArray(coords)) ring = coords[0];
-      else if (type === "MultiPolygon" && Array.isArray(coords))
-        ring = coords[0]?.[0] ?? null;
-      if (!ring) return;
-      ring.forEach(([lng, lat]) => bounds.push([lat, lng]));
+    const ensure = () => new Promise<void>((resolve) => {
+      if ((window as any).maplibregl) return resolve();
+      let link = document.querySelector('link[data-maplibre]') as HTMLLinkElement | null;
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/maplibre-gl@3.6.1/dist/maplibre-gl.css';
+        link.setAttribute('data-maplibre','1');
+        document.head.appendChild(link);
+      }
+      let script = document.querySelector('script[data-maplibre]') as HTMLScriptElement | null;
+      if (!script) {
+        script = document.createElement('script');
+        script.src = 'https://unpkg.com/maplibre-gl@3.6.1/dist/maplibre-gl.js';
+        script.async = true;
+        script.setAttribute('data-maplibre','1');
+        script.onload = () => resolve();
+        document.body.appendChild(script);
+      } else {
+        script.addEventListener('load', () => resolve(), { once: true });
+      }
     });
-    if (bounds.length) {
-      try {
-        (map as any).fitBounds(bounds, { padding: [20, 20] });
-      } catch {}
-    }
-  }, [features, map]);
-  return null;
-}
 
-function MapSizeObserver() {
-  const map = useMap();
+    let disposed = false;
+    ensure().then(() => {
+      if (disposed || !mapRef.current) return;
+      const maplibregl = (window as any).maplibregl;
+      if (!mapInstance.current) {
+        mapInstance.current = new maplibregl.Map({
+          container: mapRef.current,
+          style: 'https://demotiles.maplibre.org/style.json',
+          center: [center[1], center[0]],
+          zoom: 13,
+          attributionControl: true
+        });
+        mapInstance.current.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), 'top-right');
+      }
+      const map = mapInstance.current;
+      const data = featureCollection as any;
+      const addOrUpdate = () => {
+        if (!map.getSource('osm')) {
+          map.addSource('osm', {
+            type: 'raster',
+            tiles: [
+              'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+              'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
+              'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'
+            ],
+            tileSize: 256,
+            minzoom: 0,
+            maxzoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+          });
+          map.addLayer({ id: 'osm-layer', type: 'raster', source: 'osm' });
+        }
+        if (!map.getSource('fincas')) {
+          map.addSource('fincas', { type: 'geojson', data });
+          map.addLayer({ id: 'fincas-fill', type: 'fill', source: 'fincas', paint: { 'fill-color': [ 'case', ['>=', ['get','rendimientoHa'], 45], '#1a5e20', ['>=', ['get','rendimientoHa'], 35], '#2e7d32', ['>=', ['get','rendimientoHa'], 25], '#fbc02d', '#e53935' ], 'fill-opacity': 0.5 } });
+          map.addLayer({ id: 'fincas-outline', type: 'line', source: 'fincas', paint: { 'line-color': '#1a5e20', 'line-width': 1.2 } });
+          map.addLayer({ id: 'fincas-selected', type: 'line', source: 'fincas', filter: ['==', ['get','nombre'], selectedFinca || '' ], paint: { 'line-color': '#1976d2', 'line-width': 2 } });
+        } else {
+          (map.getSource('fincas') as any).setData(data);
+        }
+      };
+      if (map.loaded()) addOrUpdate(); else map.once('load', addOrUpdate);
+    });
+    return () => { disposed = true; };
+  }, [center, featureCollection, selectedFinca]);
+
   useEffect(() => {
-    const container = map.getContainer();
-    let rafId: number | null = null;
-    const invalidate = () => {
-      if (rafId) cancelAnimationFrame(rafId as number);
-      rafId = requestAnimationFrame(() => {
-        try {
-          map.invalidateSize();
-        } catch {}
-      });
-    };
+    const map = mapInstance.current;
+    if (!map) return;
+    if (map.getLayer('fincas-selected')) {
+      map.setFilter('fincas-selected', ['==', ['get','nombre'], selectedFinca || '' ]);
+    }
+    const g: any = fincas.find((x) => x.nombre === selectedFinca && x.geom)?.geom;
+    const coords = g?.coordinates;
+    const type = g?.type;
+    let ring: number[][] | null = null;
+    if (type === 'Polygon' && Array.isArray(coords)) ring = coords[0];
+    else if (type === 'MultiPolygon' && Array.isArray(coords)) ring = coords[0]?.[0] ?? null;
+    const bounds = new ((window as any).maplibregl).LngLatBounds();
+    if (ring) ring.forEach(([lng, lat]) => bounds.extend([lng, lat]));
+    if (ring && bounds) map.fitBounds(bounds, { padding: 30 });
+  }, [selectedFinca, fincas]);
+
+  useEffect(() => {
+    const map = mapInstance.current;
+    if (!map) return;
+    markersRef.current.forEach((m) => m.remove());
+    markersRef.current = [];
+    const gl = (window as any).maplibregl;
+    crewMarkers.forEach((m) => {
+      const color = m.count > 0 ? '#1976d2' : '#9e9e9e';
+      const marker = new gl.Marker({ color }).setLngLat([m.position[1], m.position[0]]).setPopup(new gl.Popup().setHTML(`<div class="text-sm"><div class="font-semibold">${m.finca}</div><div>Cuadrillas activas (Enfunde): ${m.count}</div></div>`)).addTo(map);
+      markersRef.current.push(marker);
+    });
+    bodegaMarkers.forEach((b) => {
+      const color = b.stockBajo > 0 ? '#d32f2f' : '#2e7d32';
+      const marker = new gl.Marker({ color }).setLngLat([b.position[1], b.position[0]]).setPopup(new gl.Popup().setHTML(`<div class="text-sm"><div class="font-semibold">${b.nombre}</div><div>Insumos con stock bajo: ${b.stockBajo}</div></div>`)).addTo(map);
+      markersRef.current.push(marker);
+    });
+  }, [crewMarkers, bodegaMarkers]);
+
+  useEffect(() => {
+    const map = mapInstance.current;
+    const node = mapRef.current;
+    if (!map || !node) return;
     const ResizeObserverCtor = (window as any).ResizeObserver;
-    const observer = ResizeObserverCtor
-      ? new ResizeObserverCtor((entries: any[]) => {
-          if (!entries || entries.length === 0) return;
-          invalidate();
-        })
-      : null;
-    if (observer && container) observer.observe(container);
+    const ro = ResizeObserverCtor ? new ResizeObserverCtor(() => map.resize()) : null;
+    if (ro) ro.observe(node);
     return () => {
-      if (observer && container) observer.unobserve(container);
-      if (rafId) cancelAnimationFrame(rafId as number);
+      if (ro) ro.disconnect();
     };
-  }, [map]);
-  return null;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      markersRef.current.forEach((m) => m.remove());
+      markersRef.current = [];
+      if (mapInstance.current) {
+        mapInstance.current.remove();
+        mapInstance.current = null;
+      }
+    };
+  }, []);
+
+  return (
+    <div ref={mapRef} className="relative w-full h-[50vh] md:h-[60vh] lg:h-[70vh] rounded-md overflow-hidden" />
+  );
 }
