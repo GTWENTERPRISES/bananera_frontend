@@ -84,6 +84,7 @@ interface AppContextType {
   addInsumo: (insumo: Insumo) => void;
   updateInsumo: (id: string, insumo: Partial<Insumo>) => void;
   addMovimientoInventario: (movimiento: MovimientoInventario) => void;
+  generarOrdenCompra: (insumoId: string) => void;
 
   // Alertas
   addAlerta: (alerta: Alerta) => void;
@@ -333,6 +334,46 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  // Generar orden de compra para un insumo y manejar alertas asociadas
+  const generarOrdenCompra = (insumoId: string) => {
+    setState((prev) => {
+      const insumo = prev.insumos.find((i) => i.id === insumoId);
+      const newInsumos = prev.insumos.map((i) =>
+        i.id === insumoId ? { ...i, pedidoGenerado: true } : i
+      );
+
+      const infoAlert: Alerta = {
+        id: `inv-orden-${insumoId}-${Date.now()}`,
+        tipo: "info",
+        modulo: "inventario",
+        titulo: "Orden de compra generada",
+        descripcion: insumo
+          ? `${insumo.nombre} - pedido enviado`
+          : `Insumo ${insumoId} - pedido enviado`,
+        fecha: new Date().toISOString(),
+        leida: false,
+        accionRequerida: "Seguimiento de compra",
+        rolesPermitidos: [
+          "administrador",
+          "gerente",
+          "supervisor_finca",
+          "contador_rrhh",
+          "bodeguero",
+        ],
+      };
+
+      const alertasActualizadas = prev.alertas.map((a) =>
+        a.id === `inv-stock-${insumoId}` ? { ...a, leida: true } : a
+      );
+
+      return {
+        ...prev,
+        insumos: newInsumos,
+        alertas: [infoAlert, ...alertasActualizadas],
+      };
+    });
+  };
+
   // Alertas functions
   const addAlerta = (alerta: Alerta) => {
     setState((prev) => ({ ...prev, alertas: [alerta, ...prev.alertas] }));
@@ -346,6 +387,44 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ),
     }));
   };
+
+  // Motor de alertas de inventario: sincroniza alertas automáticas según stock
+  useEffect(() => {
+    setState((prev) => {
+      // Mantener otras alertas que no sean de inventario/stock
+      const baseAlertas = prev.alertas.filter(
+        (a) => !(a.modulo === "inventario" && a.titulo.startsWith("Stock"))
+      );
+
+      // Derivar alertas por stock bajo/crítico para insumos sin pedido
+      const derived = prev.insumos
+        .filter((i) => i.stockActual < i.stockMinimo && !i.pedidoGenerado)
+        .map((i) => {
+          const critico = i.stockActual < i.stockMinimo * 0.5;
+          const titulo = critico ? "Stock Crítico" : "Stock Bajo";
+          const tipo: Alerta["tipo"] = critico ? "critico" : "advertencia";
+          return {
+            id: `inv-stock-${i.id}`,
+            tipo,
+            modulo: "inventario",
+            titulo,
+            descripcion: `${i.nombre} - Stock ${i.stockActual} ${i.unidadMedida} / Mínimo ${i.stockMinimo} ${i.unidadMedida}`,
+            fecha: new Date().toISOString(),
+            leida: false,
+            rolesPermitidos: [
+              "administrador",
+              "gerente",
+              "supervisor_finca",
+              "contador_rrhh",
+              "bodeguero",
+            ],
+          } as Alerta;
+        });
+
+      return { ...prev, alertas: [...derived, ...baseAlertas] };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.insumos]);
 
   // Configuración functions
   const addFinca = (finca: Finca) => {
@@ -406,6 +485,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     addInsumo,
     updateInsumo,
     addMovimientoInventario,
+    generarOrdenCompra,
     addAlerta,
     marcarAlertaLeida,
     addFinca,

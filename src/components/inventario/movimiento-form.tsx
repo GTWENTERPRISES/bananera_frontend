@@ -32,6 +32,7 @@ export function MovimientoForm() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     insumoId: "",
     tipo: "" as "entrada" | "salida",
@@ -93,7 +94,13 @@ export function MovimientoForm() {
       responsable: formData.responsable,
     });
     if (!parsed.success) {
-      toast({ title: "Datos inválidos", description: parsed.error.errors[0]?.message || "Revisa los campos", variant: "destructive" });
+      const flat = parsed.error.flatten();
+      const fieldErrors: Record<string, string> = {};
+      Object.entries(flat.fieldErrors).forEach(([k, v]) => {
+        if (v && v.length) fieldErrors[k] = String(v[0]);
+      });
+      setErrors(fieldErrors);
+      toast({ title: "Datos inválidos", description: Object.values(fieldErrors)[0] || "Revisa los campos", variant: "destructive" });
       setIsSubmitting(false);
       return;
     }
@@ -149,6 +156,7 @@ export function MovimientoForm() {
       motivo: "",
       responsable: "",
     });
+    setErrors({});
     setIsSubmitting(false);
   };
 
@@ -165,7 +173,7 @@ export function MovimientoForm() {
               <Select
                 value={formData.insumoId}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, insumoId: value })
+                  (setFormData({ ...formData, insumoId: value }), setErrors((prev) => ({ ...prev, insumoId: "" })))
                 }
                 disabled={isSubmitting || !allowEdit}
                 required
@@ -181,6 +189,9 @@ export function MovimientoForm() {
                   ))}
                 </SelectContent>
               </Select>
+              {errors.insumoId && (
+                <p className="text-xs text-red-600">{errors.insumoId}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -204,6 +215,32 @@ export function MovimientoForm() {
                   <SelectItem value="salida">Salida</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.tipo && (
+                <p className="text-xs text-red-600">{errors.tipo}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="finca">Finca</Label>
+              <Select
+                value={formData.finca}
+                onValueChange={handleFincaChange}
+                disabled={isSubmitting || !allowEdit}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar finca" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="BABY">BABY</SelectItem>
+                  <SelectItem value="SOLO">SOLO</SelectItem>
+                  <SelectItem value="LAURITA">LAURITA</SelectItem>
+                  <SelectItem value="MARAVILLA">MARAVILLA</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.finca && (
+                <p className="text-xs text-red-600">{errors.finca}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -215,11 +252,14 @@ export function MovimientoForm() {
                 min="0"
                 value={formData.cantidad}
                 onChange={(e) =>
-                  setFormData({ ...formData, cantidad: e.target.value })
+                  (setFormData({ ...formData, cantidad: e.target.value }), setErrors((prev) => ({ ...prev, cantidad: "" })))
                 }
                 disabled={isSubmitting || !allowEdit}
                 required
               />
+              {errors.cantidad && (
+                <p className="text-xs text-red-600">{errors.cantidad}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -228,11 +268,14 @@ export function MovimientoForm() {
                 id="responsable"
                 value={formData.responsable}
                 onChange={(e) =>
-                  setFormData({ ...formData, responsable: e.target.value })
+                  (setFormData({ ...formData, responsable: e.target.value }), setErrors((prev) => ({ ...prev, responsable: "" })))
                 }
                 disabled={isSubmitting || !allowEdit}
                 required
               />
+              {errors.responsable && (
+                <p className="text-xs text-red-600">{errors.responsable}</p>
+              )}
             </div>
 
             <div className="col-span-2 space-y-2">
@@ -241,12 +284,15 @@ export function MovimientoForm() {
                 id="motivo"
                 value={formData.motivo}
                 onChange={(e) =>
-                  setFormData({ ...formData, motivo: e.target.value })
+                  (setFormData({ ...formData, motivo: e.target.value }), setErrors((prev) => ({ ...prev, motivo: "" })))
                 }
                 placeholder="Ej: Aplicación semanal, compra, etc."
                 disabled={isSubmitting || !allowEdit}
                 required
               />
+              {errors.motivo && (
+                <p className="text-xs text-red-600">{errors.motivo}</p>
+              )}
             </div>
           </div>
 

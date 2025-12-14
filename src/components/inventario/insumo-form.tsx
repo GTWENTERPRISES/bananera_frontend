@@ -30,6 +30,7 @@ export function InsumoForm() {
   const { addInsumo, canAccess, fincas } = useApp();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     nombre: "",
     categoria: "" as
@@ -105,7 +106,13 @@ export function InsumoForm() {
       finca: formData.finca || undefined,
     });
     if (!parsed.success) {
-      toast({ title: "Datos inválidos", description: parsed.error.errors[0]?.message || "Revisa los campos", variant: "destructive" });
+      const flat = parsed.error.flatten();
+      const fieldErrors: Record<string, string> = {};
+      Object.entries(flat.fieldErrors).forEach(([k, v]) => {
+        if (v && v.length) fieldErrors[k] = String(v[0]);
+      });
+      setErrors(fieldErrors);
+      toast({ title: "Datos inválidos", description: Object.values(fieldErrors)[0] || "Revisa los campos", variant: "destructive" });
       setIsSubmitting(false);
       return;
     }
@@ -156,6 +163,7 @@ export function InsumoForm() {
       proveedor: "",
       finca: "" as FincaName | "",
     });
+    setErrors({});
     setIsSubmitting(false);
   };
 
@@ -173,11 +181,14 @@ export function InsumoForm() {
                 id="nombre"
                 value={formData.nombre}
                 onChange={(e) =>
-                  setFormData({ ...formData, nombre: e.target.value })
+                  (setFormData({ ...formData, nombre: e.target.value }), setErrors((prev) => ({ ...prev, nombre: "" })))
                 }
                 disabled={isSubmitting || !allowEdit}
                 required
               />
+              {errors.nombre && (
+                <p className="text-xs text-red-600">{errors.nombre}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -199,6 +210,9 @@ export function InsumoForm() {
                   <SelectItem value="otro">Otro</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.categoria && (
+                <p className="text-xs text-red-600">{errors.categoria}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -207,12 +221,15 @@ export function InsumoForm() {
                 id="unidadMedida"
                 value={formData.unidadMedida}
                 onChange={(e) =>
-                  setFormData({ ...formData, unidadMedida: e.target.value })
+                  (setFormData({ ...formData, unidadMedida: e.target.value }), setErrors((prev) => ({ ...prev, unidadMedida: "" })))
                 }
                 placeholder="Ej: kg, L, unidades, rollos, etc."
                 disabled={isSubmitting || !allowEdit}
                 required
               />
+              {errors.unidadMedida && (
+                <p className="text-xs text-red-600">{errors.unidadMedida}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -224,11 +241,14 @@ export function InsumoForm() {
                 min="0"
                 value={formData.stockActual}
                 onChange={(e) =>
-                  setFormData({ ...formData, stockActual: e.target.value })
+                  (setFormData({ ...formData, stockActual: e.target.value }), setErrors((prev) => ({ ...prev, stockActual: "" })))
                 }
                 disabled={isSubmitting || !allowEdit}
                 required
               />
+              {errors.stockActual && (
+                <p className="text-xs text-red-600">{errors.stockActual}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -240,11 +260,14 @@ export function InsumoForm() {
                 min="0"
                 value={formData.stockMinimo}
                 onChange={(e) =>
-                  setFormData({ ...formData, stockMinimo: e.target.value })
+                  (setFormData({ ...formData, stockMinimo: e.target.value }), setErrors((prev) => ({ ...prev, stockMinimo: "" })))
                 }
                 disabled={isSubmitting || !allowEdit}
                 required
               />
+              {errors.stockMinimo && (
+                <p className="text-xs text-red-600">{errors.stockMinimo}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -257,11 +280,14 @@ export function InsumoForm() {
                 min="0"
                 value={formData.stockMaximo}
                 onChange={(e) =>
-                  setFormData({ ...formData, stockMaximo: e.target.value })
+                  (setFormData({ ...formData, stockMaximo: e.target.value }), setErrors((prev) => ({ ...prev, stockMaximo: "" })))
                 }
                 disabled={isSubmitting || !allowEdit}
                 required
               />
+              {errors.stockMaximo && (
+                <p className="text-xs text-red-600">{errors.stockMaximo}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -273,11 +299,14 @@ export function InsumoForm() {
                 min="0"
                 value={formData.precioUnitario}
                 onChange={(e) =>
-                  setFormData({ ...formData, precioUnitario: e.target.value })
+                  (setFormData({ ...formData, precioUnitario: e.target.value }), setErrors((prev) => ({ ...prev, precioUnitario: "" })))
                 }
                 disabled={isSubmitting || !allowEdit}
                 required
               />
+              {errors.precioUnitario && (
+                <p className="text-xs text-red-600">{errors.precioUnitario}</p>
+              )}
             </div>
 
             <div className="col-span-2 space-y-2">
@@ -286,11 +315,14 @@ export function InsumoForm() {
                 id="proveedor"
                 value={formData.proveedor}
                 onChange={(e) =>
-                  setFormData({ ...formData, proveedor: e.target.value })
+                  (setFormData({ ...formData, proveedor: e.target.value }), setErrors((prev) => ({ ...prev, proveedor: "" })))
                 }
                 disabled={isSubmitting || !allowEdit}
                 required
               />
+              {errors.proveedor && (
+                <p className="text-xs text-red-600">{errors.proveedor}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -298,7 +330,7 @@ export function InsumoForm() {
               <Select
                 value={formData.finca}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, finca: value as FincaName })
+                  (setFormData({ ...formData, finca: value as FincaName }), setErrors((prev) => ({ ...prev, finca: "" })))
                 }
                 disabled={isSubmitting || !allowEdit}
               >
@@ -313,6 +345,9 @@ export function InsumoForm() {
                   ))}
                 </SelectContent>
               </Select>
+              {errors.finca && (
+                <p className="text-xs text-red-600">{errors.finca}</p>
+              )}
             </div>
           </div>
 

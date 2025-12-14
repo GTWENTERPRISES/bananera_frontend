@@ -126,6 +126,7 @@ export interface Insumo {
   precioUnitario: number;
   fechaVencimiento?: string;
   finca?: FincaName;
+  pedidoGenerado?: boolean;
 }
 
 export interface MovimientoInventario {

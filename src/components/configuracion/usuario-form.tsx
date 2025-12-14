@@ -44,6 +44,7 @@ export function UsuarioForm({
   const { canAccess } = useApp();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState<Partial<User>>({
     nombre: usuario?.nombre || "",
     email: usuario?.email || "",
@@ -75,7 +76,13 @@ export function UsuarioForm({
       activo: formData.activo ?? true,
     });
     if (!parsed.success) {
-      toast({ title: "Datos inválidos", description: parsed.error.errors[0]?.message || "Revisa los campos", variant: "destructive" });
+      const flat = parsed.error.flatten();
+      const fieldErrors: Record<string, string> = {};
+      Object.entries(flat.fieldErrors).forEach(([k, v]) => {
+        if (v && v.length) fieldErrors[k] = String(v[0]);
+      });
+      setErrors(fieldErrors);
+      toast({ title: "Datos inválidos", description: Object.values(fieldErrors)[0] || "Revisa los campos", variant: "destructive" });
       setIsSubmitting(false);
       return;
     }
@@ -89,6 +96,7 @@ export function UsuarioForm({
       onSave(formData);
     } finally {
       setIsSubmitting(false);
+      setErrors({});
     }
   };
 
@@ -114,12 +122,15 @@ export function UsuarioForm({
                 id="nombre"
                 value={formData.nombre}
                 onChange={(e) =>
-                  setFormData({ ...formData, nombre: e.target.value })
+                  (setFormData({ ...formData, nombre: e.target.value }), setErrors((prev) => ({ ...prev, nombre: "" })))
                 }
                 placeholder="Juan Pérez"
                 disabled={isSubmitting || !allowEdit}
                 required
               />
+              {errors.nombre && (
+                <p className="text-xs text-red-600">{errors.nombre}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -129,12 +140,15 @@ export function UsuarioForm({
                 type="email"
                 value={formData.email}
                 onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
+                  (setFormData({ ...formData, email: e.target.value }), setErrors((prev) => ({ ...prev, email: "" })))
                 }
                 placeholder="juan@bananerashg.com"
                 disabled={isSubmitting || !allowEdit}
                 required
               />
+              {errors.email && (
+                <p className="text-xs text-red-600">{errors.email}</p>
+              )}
             </div>
 
             {!usuario && (
@@ -146,7 +160,7 @@ export function UsuarioForm({
                     type={showPassword ? "text" : "password"}
                     value={formData.password}
                     onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
+                      (setFormData({ ...formData, password: e.target.value }), setErrors((prev) => ({ ...prev, password: "" })))
                     }
                     placeholder="Dejar vacío para contraseña por defecto"
                     disabled={isSubmitting || !allowEdit}
@@ -163,6 +177,9 @@ export function UsuarioForm({
                 <p className="text-xs text-muted-foreground">
                   Si se deja vacío, se asignará "123456"
                 </p>
+                {errors.password && (
+                  <p className="text-xs text-red-600">{errors.password}</p>
+                )}
               </div>
             )}
 
@@ -172,11 +189,14 @@ export function UsuarioForm({
                 id="telefono"
                 value={formData.telefono}
                 onChange={(e) =>
-                  setFormData({ ...formData, telefono: e.target.value })
+                  (setFormData({ ...formData, telefono: e.target.value }), setErrors((prev) => ({ ...prev, telefono: "" })))
                 }
                 placeholder="0999999999"
                 disabled={isSubmitting || !allowEdit}
               />
+              {errors.telefono && (
+                <p className="text-xs text-red-600">{errors.telefono}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -184,7 +204,7 @@ export function UsuarioForm({
               <Select
                 value={formData.rol}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, rol: value as UserRole })
+                  (setFormData({ ...formData, rol: value as UserRole }), setErrors((prev) => ({ ...prev, rol: "" })))
                 }
                 disabled={isSubmitting || !allowEdit}
               >
@@ -201,6 +221,9 @@ export function UsuarioForm({
                 <SelectItem value="bodeguero">Bodeguero</SelectItem>
               </SelectContent>
               </Select>
+              {errors.rol && (
+                <p className="text-xs text-red-600">{errors.rol}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -208,7 +231,7 @@ export function UsuarioForm({
               <Select
                 value={formData.fincaAsignada}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, fincaAsignada: value })
+                  (setFormData({ ...formData, fincaAsignada: value }), setErrors((prev) => ({ ...prev, fincaAsignada: "" })))
                 }
                 disabled={isSubmitting || !allowEdit}
               >
@@ -224,6 +247,9 @@ export function UsuarioForm({
                   ))}
                 </SelectContent>
               </Select>
+              {errors.fincaAsignada && (
+                <p className="text-xs text-red-600">{errors.fincaAsignada}</p>
+              )}
             </div>
 
             <div className="space-y-2">

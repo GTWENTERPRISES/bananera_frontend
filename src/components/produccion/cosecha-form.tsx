@@ -32,6 +32,7 @@ export function CosechaForm() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     finca: undefined as FincaName | undefined,
     semana: "",
@@ -94,7 +95,13 @@ export function CosechaForm() {
       numeroManos: formData.numeroManos,
     });
     if (!parsed.success) {
-      toast({ title: "Datos inválidos", description: parsed.error.errors[0]?.message || "Revisa los campos", variant: "destructive" });
+      const flat = parsed.error.flatten();
+      const fieldErrors: Record<string, string> = {};
+      Object.entries(flat.fieldErrors).forEach(([k, v]) => {
+        if (v && v.length) fieldErrors[k] = String(v[0]);
+      });
+      setErrors(fieldErrors);
+      toast({ title: "Datos inválidos", description: Object.values(fieldErrors)[0] || "Revisa los campos", variant: "destructive" });
       setIsSubmitting(false);
       return;
     }
@@ -133,6 +140,7 @@ export function CosechaForm() {
       calibracion: "",
       numeroManos: "",
     });
+    setErrors({});
     setIsSubmitting(false);
   };
 
@@ -162,6 +170,9 @@ export function CosechaForm() {
                   <SelectItem value="MARAVILLA">MARAVILLA</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.finca && (
+                <p className="text-xs text-red-600">{errors.finca}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -173,11 +184,14 @@ export function CosechaForm() {
                 max="52"
                 value={formData.semana}
                 onChange={(e) =>
-                  setFormData({ ...formData, semana: e.target.value })
+                  (setFormData({ ...formData, semana: e.target.value }), setErrors((prev) => ({ ...prev, semana: "" })))
                 }
                 disabled={isSubmitting}
                 required
               />
+              {errors.semana && (
+                <p className="text-xs text-red-600">{errors.semana}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -190,11 +204,14 @@ export function CosechaForm() {
                 value={formData.racimosCorta}
                 onChange={
                   (e) =>
-                    setFormData({ ...formData, racimosCorta: e.target.value }) // Cambiado a racimosCorta
+                    (setFormData({ ...formData, racimosCorta: e.target.value }), setErrors((prev) => ({ ...prev, racimosCorta: "" })))
                 }
                 disabled={isSubmitting}
                 required
               />
+              {errors.racimosCorta && (
+                <p className="text-xs text-red-600">{errors.racimosCorta}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -205,14 +222,17 @@ export function CosechaForm() {
                 min="0"
                 value={formData.racimosRechazados}
                 onChange={(e) =>
-                  setFormData({
+                  (setFormData({
                     ...formData,
                     racimosRechazados: e.target.value,
-                  })
+                  }), setErrors((prev) => ({ ...prev, racimosRechazados: "" })))
                 }
                 disabled={isSubmitting}
                 required
               />
+              {errors.racimosRechazados && (
+                <p className="text-xs text-red-600">{errors.racimosRechazados}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -223,11 +243,14 @@ export function CosechaForm() {
                 min="0"
                 value={formData.cajasProducidas}
                 onChange={(e) =>
-                  setFormData({ ...formData, cajasProducidas: e.target.value })
+                  (setFormData({ ...formData, cajasProducidas: e.target.value }), setErrors((prev) => ({ ...prev, cajasProducidas: "" })))
                 }
                 disabled={isSubmitting}
                 required
               />
+              {errors.cajasProducidas && (
+                <p className="text-xs text-red-600">{errors.cajasProducidas}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -239,11 +262,14 @@ export function CosechaForm() {
                 min="0"
                 value={formData.pesoPromedio}
                 onChange={(e) =>
-                  setFormData({ ...formData, pesoPromedio: e.target.value })
+                  (setFormData({ ...formData, pesoPromedio: e.target.value }), setErrors((prev) => ({ ...prev, pesoPromedio: "" })))
                 }
                 disabled={isSubmitting}
                 required
               />
+              {errors.pesoPromedio && (
+                <p className="text-xs text-red-600">{errors.pesoPromedio}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -254,11 +280,14 @@ export function CosechaForm() {
                 min="0"
                 value={formData.calibracion}
                 onChange={(e) =>
-                  setFormData({ ...formData, calibracion: e.target.value })
+                  (setFormData({ ...formData, calibracion: e.target.value }), setErrors((prev) => ({ ...prev, calibracion: "" })))
                 }
                 disabled={isSubmitting}
                 required
               />
+              {errors.calibracion && (
+                <p className="text-xs text-red-600">{errors.calibracion}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -270,11 +299,14 @@ export function CosechaForm() {
                 min="0"
                 value={formData.numeroManos}
                 onChange={(e) =>
-                  setFormData({ ...formData, numeroManos: e.target.value })
+                  (setFormData({ ...formData, numeroManos: e.target.value }), setErrors((prev) => ({ ...prev, numeroManos: "" })))
                 }
                 disabled={isSubmitting}
                 required
               />
+              {errors.numeroManos && (
+                <p className="text-xs text-red-600">{errors.numeroManos}</p>
+              )}
             </div>
           </div>
 

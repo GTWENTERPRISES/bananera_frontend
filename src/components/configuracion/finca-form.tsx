@@ -36,6 +36,7 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
   const { canAccess } = useApp();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState<Partial<Finca>>({
     nombre: finca?.nombre || "",
     hectareas: finca?.hectareas || 0,
@@ -75,7 +76,13 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
       telefono: formData.telefono || undefined,
     });
     if (!parsed.success) {
-      setError(parsed.error.errors[0]?.message || "Revisa los campos");
+      const flat = parsed.error.flatten();
+      const fieldErrors: Record<string, string> = {};
+      Object.entries(flat.fieldErrors).forEach(([k, v]) => {
+        if (v && v.length) fieldErrors[k] = String(v[0]);
+      });
+      setErrors(fieldErrors);
+      setError(Object.values(fieldErrors)[0] || "Revisa los campos");
       setIsSubmitting(false);
       return;
     }
@@ -93,6 +100,7 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
       [field]: value,
     }));
     if (error) setError(null);
+    setErrors((prev) => ({ ...prev, [field]: "" }));
   };
 
   const handleNumberChange = (field: keyof Finca, value: string) => {
@@ -102,6 +110,7 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
       [field]: Number.isFinite(num) ? num : (prev[field] as number) || 0,
     }));
     if (error) setError(null);
+    setErrors((prev) => ({ ...prev, [field]: "" }));
   };
 
   // Parseador sencillo de GeoJSON (Polygon/MultiPolygon)
@@ -167,6 +176,9 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
                 disabled={isSubmitting || !allowEdit}
                 required
               />
+              {errors.nombre && (
+                <p className="text-xs text-red-600">{errors.nombre}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -180,6 +192,9 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
                 onChange={(e) => handleNumberChange("hectareas", e.target.value)}
                 disabled={isSubmitting || !allowEdit}
               />
+              {errors.hectareas && (
+                <p className="text-xs text-red-600">{errors.hectareas}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -200,6 +215,9 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
                   <SelectItem value="Otro">Otro</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.variedad && (
+                <p className="text-xs text-red-600">{errors.variedad}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -212,6 +230,9 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
                 onChange={(e) => handleNumberChange("plantasTotales", e.target.value)}
                 disabled={isSubmitting || !allowEdit}
               />
+              {errors.plantasTotales && (
+                <p className="text-xs text-red-600">{errors.plantasTotales}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -223,6 +244,9 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
                 placeholder="Juan Pérez"
                 disabled={isSubmitting || !allowEdit}
               />
+              {errors.responsable && (
+                <p className="text-xs text-red-600">{errors.responsable}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -234,6 +258,9 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
                 onChange={(e) => handleTextChange("fechaSiembra", e.target.value)}
                 disabled={isSubmitting || !allowEdit}
               />
+              {errors.fechaSiembra && (
+                <p className="text-xs text-red-600">{errors.fechaSiembra}</p>
+              )}
             </div>
 
             <div className="space-y-2 md:col-span-2">
@@ -246,6 +273,9 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
                 rows={2}
                 disabled={isSubmitting || !allowEdit}
               />
+              {errors.ubicacion && (
+                <p className="text-xs text-red-600">{errors.ubicacion}</p>
+              )}
             </div>
 
             <div className="space-y-2 md:col-span-2">
@@ -257,6 +287,9 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
                 placeholder="-3.2846, -79.9608"
                 disabled={isSubmitting || !allowEdit}
               />
+              {errors.coordenadas && (
+                <p className="text-xs text-red-600">{errors.coordenadas}</p>
+              )}
             </div>
 
             {/* Nuevo campo: GeoJSON */}

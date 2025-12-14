@@ -162,6 +162,9 @@ export function InsumosTable() {
                           <AlertTriangle className="h-4 w-4 text-yellow-600" />
                         )}
                         {insumo.nombre}
+                        {insumo.pedidoGenerado && (
+                          <Badge variant="outline" className="text-xs">Orden generada</Badge>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>

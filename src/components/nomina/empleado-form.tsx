@@ -30,6 +30,7 @@ export function EmpleadoForm() {
   const { addEmpleado, canAccess } = useApp();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     nombre: "",
     cedula: "",
@@ -83,7 +84,13 @@ export function EmpleadoForm() {
       cuentaBancaria: formData.cuentaBancaria || undefined,
     });
     if (!parsed.success) {
-      toast({ title: "Datos inválidos", description: parsed.error.errors[0]?.message || "Revisa los campos", variant: "destructive" });
+      const flat = parsed.error.flatten();
+      const fieldErrors: Record<string, string> = {};
+      Object.entries(flat.fieldErrors).forEach(([k, v]) => {
+        if (v && v.length) fieldErrors[k] = String(v[0]);
+      });
+      setErrors(fieldErrors);
+      toast({ title: "Datos inválidos", description: Object.values(fieldErrors)[0] || "Revisa los campos", variant: "destructive" });
       setIsSubmitting(false);
       return;
     }
@@ -123,6 +130,7 @@ export function EmpleadoForm() {
       direccion: "",
       cuentaBancaria: "",
     });
+    setErrors({});
     setIsSubmitting(false);
   };
 
@@ -140,11 +148,14 @@ export function EmpleadoForm() {
                 id="nombre"
                 value={formData.nombre}
                 onChange={(e) =>
-                  setFormData({ ...formData, nombre: e.target.value })
+                  (setFormData({ ...formData, nombre: e.target.value }), setErrors((prev) => ({ ...prev, nombre: "" })))
                 }
                 disabled={isSubmitting || !allowEdit}
                 required
               />
+              {errors.nombre && (
+                <p className="text-xs text-red-600">{errors.nombre}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -153,11 +164,14 @@ export function EmpleadoForm() {
                 id="cedula"
                 value={formData.cedula}
                 onChange={(e) =>
-                  setFormData({ ...formData, cedula: e.target.value })
+                  (setFormData({ ...formData, cedula: e.target.value }), setErrors((prev) => ({ ...prev, cedula: "" })))
                 }
                 disabled={isSubmitting || !allowEdit}
                 required
               />
+              {errors.cedula && (
+                <p className="text-xs text-red-600">{errors.cedula}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -165,7 +179,7 @@ export function EmpleadoForm() {
               <Select
                 value={formData.labor}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, labor: value })
+                  (setFormData({ ...formData, labor: value }), setErrors((prev) => ({ ...prev, labor: "" })))
                 }
                 disabled={isSubmitting || !allowEdit}
                 required
@@ -182,6 +196,9 @@ export function EmpleadoForm() {
                   <SelectItem value="Supervisor">Supervisor</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.labor && (
+                <p className="text-xs text-red-600">{errors.labor}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -202,6 +219,9 @@ export function EmpleadoForm() {
                   <SelectItem value="MARAVILLA">MARAVILLA</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.finca && (
+                <p className="text-xs text-red-600">{errors.finca}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -214,11 +234,14 @@ export function EmpleadoForm() {
                 min="0"
                 value={formData.tarifaDiaria}
                 onChange={(e) =>
-                  setFormData({ ...formData, tarifaDiaria: e.target.value })
+                  (setFormData({ ...formData, tarifaDiaria: e.target.value }), setErrors((prev) => ({ ...prev, tarifaDiaria: "" })))
                 }
                 disabled={isSubmitting || !allowEdit}
                 required
               />
+              {errors.tarifaDiaria && (
+                <p className="text-xs text-red-600">{errors.tarifaDiaria}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -228,11 +251,14 @@ export function EmpleadoForm() {
                 type="date"
                 value={formData.fechaIngreso}
                 onChange={(e) =>
-                  setFormData({ ...formData, fechaIngreso: e.target.value })
+                  (setFormData({ ...formData, fechaIngreso: e.target.value }), setErrors((prev) => ({ ...prev, fechaIngreso: "" })))
                 }
                 disabled={isSubmitting || !allowEdit}
                 required
               />
+              {errors.fechaIngreso && (
+                <p className="text-xs text-red-600">{errors.fechaIngreso}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -253,10 +279,13 @@ export function EmpleadoForm() {
                 id="telefono"
                 value={formData.telefono}
                 onChange={(e) =>
-                  setFormData({ ...formData, telefono: e.target.value })
+                  (setFormData({ ...formData, telefono: e.target.value }), setErrors((prev) => ({ ...prev, telefono: "" })))
                 }
                 disabled={isSubmitting || !allowEdit}
               />
+              {errors.telefono && (
+                <p className="text-xs text-red-600">{errors.telefono}</p>
+              )}
             </div>
 
             <div className="space-y-2">

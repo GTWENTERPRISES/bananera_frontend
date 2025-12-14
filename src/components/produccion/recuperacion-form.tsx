@@ -33,6 +33,7 @@ export function RecuperacionForm() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     finca: undefined as FincaName | undefined,
     semana: "",
@@ -108,7 +109,13 @@ export function RecuperacionForm() {
       barridaFinal: formData.barridaFinal,
     });
     if (!parsed.success) {
-      toast({ title: "Datos inválidos", description: parsed.error.errors[0]?.message || "Revisa los campos", variant: "destructive" });
+      const flat = parsed.error.flatten();
+      const fieldErrors: Record<string, string> = {};
+      Object.entries(flat.fieldErrors).forEach(([k, v]) => {
+        if (v && v.length) fieldErrors[k] = String(v[0]);
+      });
+      setErrors(fieldErrors);
+      toast({ title: "Datos inválidos", description: Object.values(fieldErrors)[0] || "Revisa los campos", variant: "destructive" });
       setIsSubmitting(false);
       return;
     }
@@ -161,6 +168,7 @@ export function RecuperacionForm() {
       terceraCalCosecha: "",
       barridaFinal: "",
     });
+    setErrors({});
     setIsSubmitting(false);
   };
 
@@ -190,6 +198,9 @@ export function RecuperacionForm() {
                   <SelectItem value="MARAVILLA">MARAVILLA</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.finca && (
+                <p className="text-xs text-red-600">{errors.finca}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -201,11 +212,14 @@ export function RecuperacionForm() {
                 max="52"
                 value={formData.semana}
                 onChange={(e) =>
-                  setFormData({ ...formData, semana: e.target.value })
+                  (setFormData({ ...formData, semana: e.target.value }), setErrors((prev) => ({ ...prev, semana: "" })))
                 }
                 disabled={isSubmitting}
                 required
               />
+              {errors.semana && (
+                <p className="text-xs text-red-600">{errors.semana}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -216,14 +230,17 @@ export function RecuperacionForm() {
                 min="0"
                 value={formData.enfundesIniciales}
                 onChange={(e) =>
-                  setFormData({
+                  (setFormData({
                     ...formData,
                     enfundesIniciales: e.target.value,
-                  })
+                  }), setErrors((prev) => ({ ...prev, enfundesIniciales: "" })))
                 }
                 disabled={isSubmitting}
                 required
               />
+              {errors.enfundesIniciales && (
+                <p className="text-xs text-red-600">{errors.enfundesIniciales}</p>
+              )}
             </div>
           </div>
 
@@ -235,21 +252,24 @@ export function RecuperacionForm() {
                 <Label htmlFor="primeraCalCosecha">
                   1ª Calibración - Cosecha
                 </Label>
-                <Input
-                  id="primeraCalCosecha"
-                  type="number"
-                  min="0"
-                  value={formData.primeraCalCosecha}
-                  onChange={(e) =>
-                    setFormData({
+              <Input
+                id="primeraCalCosecha"
+                type="number"
+                min="0"
+                value={formData.primeraCalCosecha}
+                onChange={(e) =>
+                    (setFormData({
                       ...formData,
                       primeraCalCosecha: e.target.value,
-                    })
+                    }), setErrors((prev) => ({ ...prev, primeraCalCosecha: "" })))
                   }
-                  disabled={isSubmitting}
-                  required
-                />
-              </div>
+                disabled={isSubmitting}
+                required
+              />
+              {errors.primeraCalCosecha && (
+                <p className="text-xs text-red-600">{errors.primeraCalCosecha}</p>
+              )}
+            </div>
               <div className="space-y-2">
                 <Label>1ª Calibración - Saldo</Label>
                 <Input value={primeraCalSaldo} disabled className="bg-muted" />
@@ -259,21 +279,24 @@ export function RecuperacionForm() {
                 <Label htmlFor="segundaCalCosecha">
                   2ª Calibración - Cosecha
                 </Label>
-                <Input
-                  id="segundaCalCosecha"
-                  type="number"
-                  min="0"
-                  value={formData.segundaCalCosecha}
-                  onChange={(e) =>
-                    setFormData({
+              <Input
+                id="segundaCalCosecha"
+                type="number"
+                min="0"
+                value={formData.segundaCalCosecha}
+                onChange={(e) =>
+                    (setFormData({
                       ...formData,
                       segundaCalCosecha: e.target.value,
-                    })
+                    }), setErrors((prev) => ({ ...prev, segundaCalCosecha: "" })))
                   }
-                  disabled={isSubmitting}
-                  required
-                />
-              </div>
+                disabled={isSubmitting}
+                required
+              />
+              {errors.segundaCalCosecha && (
+                <p className="text-xs text-red-600">{errors.segundaCalCosecha}</p>
+              )}
+            </div>
               <div className="space-y-2">
                 <Label>2ª Calibración - Saldo</Label>
                 <Input value={segundaCalSaldo} disabled className="bg-muted" />
@@ -283,21 +306,24 @@ export function RecuperacionForm() {
                 <Label htmlFor="terceraCalCosecha">
                   3ª Calibración - Cosecha
                 </Label>
-                <Input
-                  id="terceraCalCosecha"
-                  type="number"
-                  min="0"
-                  value={formData.terceraCalCosecha}
-                  onChange={(e) =>
-                    setFormData({
+              <Input
+                id="terceraCalCosecha"
+                type="number"
+                min="0"
+                value={formData.terceraCalCosecha}
+                onChange={(e) =>
+                    (setFormData({
                       ...formData,
                       terceraCalCosecha: e.target.value,
-                    })
+                    }), setErrors((prev) => ({ ...prev, terceraCalCosecha: "" })))
                   }
-                  disabled={isSubmitting}
-                  required
-                />
-              </div>
+                disabled={isSubmitting}
+                required
+              />
+              {errors.terceraCalCosecha && (
+                <p className="text-xs text-red-600">{errors.terceraCalCosecha}</p>
+              )}
+            </div>
               <div className="space-y-2">
                 <Label>3ª Calibración - Saldo</Label>
                 <Input value={terceraCalSaldo} disabled className="bg-muted" />
@@ -305,18 +331,21 @@ export function RecuperacionForm() {
 
               <div className="space-y-2">
                 <Label htmlFor="barridaFinal">Barrida Final</Label>
-                <Input
-                  id="barridaFinal"
-                  type="number"
-                  min="0"
-                  value={formData.barridaFinal}
-                  onChange={(e) =>
-                    setFormData({ ...formData, barridaFinal: e.target.value })
+              <Input
+                id="barridaFinal"
+                type="number"
+                min="0"
+                value={formData.barridaFinal}
+                onChange={(e) =>
+                    (setFormData({ ...formData, barridaFinal: e.target.value }), setErrors((prev) => ({ ...prev, barridaFinal: "" })))
                   }
-                  disabled={isSubmitting}
-                  required
-                />
-              </div>
+                disabled={isSubmitting}
+                required
+              />
+              {errors.barridaFinal && (
+                <p className="text-xs text-red-600">{errors.barridaFinal}</p>
+              )}
+            </div>
             </div>
           </div>
 

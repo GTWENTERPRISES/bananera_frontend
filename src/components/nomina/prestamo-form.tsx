@@ -30,6 +30,7 @@ export function PrestamoForm() {
   const { addPrestamo, empleados } = useApp();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     empleadoId: "",
     monto: "",
@@ -54,7 +55,13 @@ export function PrestamoForm() {
       motivo: formData.motivo || undefined,
     });
     if (!parsed.success) {
-      toast({ title: "Datos inválidos", description: parsed.error.errors[0]?.message || "Revisa los campos", variant: "destructive" });
+      const flat = parsed.error.flatten();
+      const fieldErrors: Record<string, string> = {};
+      Object.entries(flat.fieldErrors).forEach(([k, v]) => {
+        if (v && v.length) fieldErrors[k] = String(v[0]);
+      });
+      setErrors(fieldErrors);
+      toast({ title: "Datos inválidos", description: Object.values(fieldErrors)[0] || "Revisa los campos", variant: "destructive" });
       setIsSubmitting(false);
       return;
     }
@@ -97,6 +104,7 @@ export function PrestamoForm() {
       fechaDesembolso: new Date().toISOString().split("T")[0],
       motivo: "",
     });
+    setErrors({});
     setIsSubmitting(false);
   };
 
@@ -113,7 +121,7 @@ export function PrestamoForm() {
               <Select
                 value={formData.empleadoId}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, empleadoId: value })
+                  (setFormData({ ...formData, empleadoId: value }), setErrors((prev) => ({ ...prev, empleadoId: "" })))
                 }
                 disabled={isSubmitting}
               >
@@ -131,6 +139,9 @@ export function PrestamoForm() {
                     ))}
                 </SelectContent>
               </Select>
+              {errors.empleadoId && (
+                <p className="text-xs text-red-600">{errors.empleadoId}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -142,11 +153,14 @@ export function PrestamoForm() {
                 min="0"
                 value={formData.monto}
                 onChange={(e) =>
-                  setFormData({ ...formData, monto: e.target.value })
+                  (setFormData({ ...formData, monto: e.target.value }), setErrors((prev) => ({ ...prev, monto: "" })))
                 }
                 disabled={isSubmitting}
                 required
               />
+              {errors.monto && (
+                <p className="text-xs text-red-600">{errors.monto}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -158,11 +172,14 @@ export function PrestamoForm() {
                 min="1"
                 value={formData.numeroCuotas}
                 onChange={(e) =>
-                  setFormData({ ...formData, numeroCuotas: e.target.value })
+                  (setFormData({ ...formData, numeroCuotas: e.target.value }), setErrors((prev) => ({ ...prev, numeroCuotas: "" })))
                 }
                 disabled={isSubmitting}
                 required
               />
+              {errors.numeroCuotas && (
+                <p className="text-xs text-red-600">{errors.numeroCuotas}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -173,11 +190,14 @@ export function PrestamoForm() {
                 type="date"
                 value={formData.fechaDesembolso}
                 onChange={(e) =>
-                  setFormData({ ...formData, fechaDesembolso: e.target.value })
+                  (setFormData({ ...formData, fechaDesembolso: e.target.value }), setErrors((prev) => ({ ...prev, fechaDesembolso: "" })))
                 }
                 disabled={isSubmitting}
                 required
               />
+              {errors.fechaDesembolso && (
+                <p className="text-xs text-red-600">{errors.fechaDesembolso}</p>
+              )}
             </div>
 
             <div className="col-span-2 space-y-2">
@@ -187,11 +207,14 @@ export function PrestamoForm() {
                 id="motivo"
                 value={formData.motivo}
                 onChange={(e) =>
-                  setFormData({ ...formData, motivo: e.target.value })
+                  (setFormData({ ...formData, motivo: e.target.value }), setErrors((prev) => ({ ...prev, motivo: "" })))
                 }
                 placeholder="Ej: Emergencia médica, educación, etc."
                 disabled={isSubmitting}
               />
+              {errors.motivo && (
+                <p className="text-xs text-red-600">{errors.motivo}</p>
+              )}
             </div>
           </div>
 

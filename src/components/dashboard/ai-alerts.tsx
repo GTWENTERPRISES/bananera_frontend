@@ -26,27 +26,29 @@ export function AIAlerts() {
 
   const getAlertHref = (a: { modulo: string; finca?: string; titulo?: string }) => {
     let base = "/dashboard";
-    if (a.modulo === "Inventario") base = "/inventario/alertas";
-    else if (a.modulo === "Producción") {
+    const modulo = (a.modulo || "").toLowerCase();
+    if (modulo === "inventario") base = "/inventario/alertas";
+    else if (modulo === "producción" || modulo === "produccion") {
       const t = a.titulo?.toLowerCase() || "";
       base = t.includes("recuperación") ? "/produccion/recuperacion" : "/produccion/cosechas";
     }
-    else if (a.modulo === "Nómina") {
+    else if (modulo === "nómina" || modulo === "nomina") {
       const t = a.titulo?.toLowerCase() || "";
       base = t.includes("roles de pago") ? "/nomina/roles" : "/nomina/empleados";
     }
-    else if (a.modulo === "Analytics") base = "/analytics/predictivo";
-    else if (a.modulo === "Seguridad") base = "/configuracion/permisos";
-    else if (a.modulo === "Sistema") base = "/dashboard";
+    else if (modulo === "analytics") base = "/analytics/predictivo";
+    else if (modulo === "seguridad") base = "/configuracion/permisos";
+    else if (modulo === "sistema") base = "/dashboard";
     const qp = a.finca ? `?finca=${encodeURIComponent(a.finca)}` : "";
     return `${base}${qp}`;
   };
 
   const getIcon = (modulo: string) => {
-    switch (modulo) {
-      case "Inventario":
+    switch ((modulo || "").toLowerCase()) {
+      case "inventario":
         return Package;
-      case "Producción":
+      case "producción":
+      case "produccion":
         return TrendingUp;
       default:
         return Info;

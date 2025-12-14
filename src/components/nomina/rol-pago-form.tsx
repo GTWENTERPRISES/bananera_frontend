@@ -25,6 +25,7 @@ export function RolPagoForm() {
   const { addRolPago, empleados } = useApp();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     empleadoId: "",
     semana: "",
@@ -72,7 +73,13 @@ export function RolPagoForm() {
       prestamos: formData.prestamos || undefined,
     });
     if (!parsed.success) {
-      toast({ title: "Datos inválidos", description: parsed.error.errors[0]?.message || "Revisa los campos", variant: "destructive" });
+      const flat = parsed.error.flatten();
+      const fieldErrors: Record<string, string> = {};
+      Object.entries(flat.fieldErrors).forEach(([k, v]) => {
+        if (v && v.length) fieldErrors[k] = String(v[0]);
+      });
+      setErrors(fieldErrors);
+      toast({ title: "Datos inválidos", description: Object.values(fieldErrors)[0] || "Revisa los campos", variant: "destructive" });
       setIsSubmitting(false);
       return;
     }
@@ -128,6 +135,7 @@ export function RolPagoForm() {
       multas: "",
       prestamos: "",
     });
+    setErrors({});
     setIsSubmitting(false);
   };
 
@@ -144,7 +152,7 @@ export function RolPagoForm() {
               <Select
                 value={formData.empleadoId}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, empleadoId: value })
+                  (setFormData({ ...formData, empleadoId: value }), setErrors((prev) => ({ ...prev, empleadoId: "" })))
                 }
                 disabled={isSubmitting}
               >
@@ -159,6 +167,9 @@ export function RolPagoForm() {
                   ))}
                 </SelectContent>
               </Select>
+              {errors.empleadoId && (
+                <p className="text-xs text-red-600">{errors.empleadoId}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -170,11 +181,14 @@ export function RolPagoForm() {
                 max="52"
                 value={formData.semana}
                 onChange={(e) =>
-                  setFormData({ ...formData, semana: e.target.value })
+                  (setFormData({ ...formData, semana: e.target.value }), setErrors((prev) => ({ ...prev, semana: "" })))
                 }
                 disabled={isSubmitting}
                 required
               />
+              {errors.semana && (
+                <p className="text-xs text-red-600">{errors.semana}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -186,11 +200,14 @@ export function RolPagoForm() {
                 max="7"
                 value={formData.diasLaborados}
                 onChange={(e) =>
-                  setFormData({ ...formData, diasLaborados: e.target.value })
+                  (setFormData({ ...formData, diasLaborados: e.target.value }), setErrors((prev) => ({ ...prev, diasLaborados: "" })))
                 }
                 disabled={isSubmitting}
                 required
               />
+              {errors.diasLaborados && (
+                <p className="text-xs text-red-600">{errors.diasLaborados}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -202,10 +219,13 @@ export function RolPagoForm() {
                 min="0"
                 value={formData.horasExtras}
                 onChange={(e) =>
-                  setFormData({ ...formData, horasExtras: e.target.value })
+                  (setFormData({ ...formData, horasExtras: e.target.value }), setErrors((prev) => ({ ...prev, horasExtras: "" })))
                 }
                 disabled={isSubmitting}
               />
+              {errors.horasExtras && (
+                <p className="text-xs text-red-600">{errors.horasExtras}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -217,10 +237,13 @@ export function RolPagoForm() {
                 min="0"
                 value={formData.cosecha}
                 onChange={(e) =>
-                  setFormData({ ...formData, cosecha: e.target.value })
+                  (setFormData({ ...formData, cosecha: e.target.value }), setErrors((prev) => ({ ...prev, cosecha: "" })))
                 }
                 disabled={isSubmitting}
               />
+              {errors.cosecha && (
+                <p className="text-xs text-red-600">{errors.cosecha}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -232,10 +255,13 @@ export function RolPagoForm() {
                 min="0"
                 value={formData.tareasEspeciales}
                 onChange={(e) =>
-                  setFormData({ ...formData, tareasEspeciales: e.target.value })
+                  (setFormData({ ...formData, tareasEspeciales: e.target.value }), setErrors((prev) => ({ ...prev, tareasEspeciales: "" })))
                 }
                 disabled={isSubmitting}
               />
+              {errors.tareasEspeciales && (
+                <p className="text-xs text-red-600">{errors.tareasEspeciales}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -247,10 +273,13 @@ export function RolPagoForm() {
                 min="0"
                 value={formData.multas}
                 onChange={(e) =>
-                  setFormData({ ...formData, multas: e.target.value })
+                  (setFormData({ ...formData, multas: e.target.value }), setErrors((prev) => ({ ...prev, multas: "" })))
                 }
                 disabled={isSubmitting}
               />
+              {errors.multas && (
+                <p className="text-xs text-red-600">{errors.multas}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -262,10 +291,13 @@ export function RolPagoForm() {
                 min="0"
                 value={formData.prestamos}
                 onChange={(e) =>
-                  setFormData({ ...formData, prestamos: e.target.value })
+                  (setFormData({ ...formData, prestamos: e.target.value }), setErrors((prev) => ({ ...prev, prestamos: "" })))
                 }
                 disabled={isSubmitting}
               />
+              {errors.prestamos && (
+                <p className="text-xs text-red-600">{errors.prestamos}</p>
+              )}
             </div>
           </div>
 

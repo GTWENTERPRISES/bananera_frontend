@@ -32,6 +32,7 @@ export function EnfundeForm() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     finca: undefined as FincaName | undefined,
     semana: "",
@@ -62,7 +63,13 @@ export function EnfundeForm() {
       fecha: formData.fecha,
     });
     if (!parsed.success) {
-      toast({ title: "Datos inválidos", description: parsed.error.errors[0]?.message || "Revisa los campos", variant: "destructive" });
+      const flat = parsed.error.flatten();
+      const fieldErrors: Record<string, string> = {};
+      Object.entries(flat.fieldErrors).forEach(([k, v]) => {
+        if (v && v.length) fieldErrors[k] = String(v[0]);
+      });
+      setErrors(fieldErrors);
+      toast({ title: "Datos inválidos", description: Object.values(fieldErrors)[0] || "Revisa los campos", variant: "destructive" });
       setIsSubmitting(false);
       return;
     }
@@ -94,6 +101,7 @@ export function EnfundeForm() {
       matasCaidas: "",
       fecha: new Date().toISOString().split("T")[0],
     });
+    setErrors({});
     setIsSubmitting(false);
   };
 
@@ -137,6 +145,9 @@ export function EnfundeForm() {
                   <SelectItem value="MARAVILLA">MARAVILLA</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.finca && (
+                <p className="text-xs text-red-600">{errors.finca}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -148,11 +159,14 @@ export function EnfundeForm() {
                 max="52"
                 value={formData.semana}
                 onChange={(e) =>
-                  setFormData({ ...formData, semana: e.target.value })
+                  (setFormData({ ...formData, semana: e.target.value }), setErrors((prev) => ({ ...prev, semana: "" })))
                 }
                 disabled={isSubmitting}
                 required
               />
+              {errors.semana && (
+                <p className="text-xs text-red-600">{errors.semana}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -160,7 +174,7 @@ export function EnfundeForm() {
               <Select
                 value={formData.colorCinta}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, colorCinta: value })
+                  (setFormData({ ...formData, colorCinta: value }), setErrors((prev) => ({ ...prev, colorCinta: "" })))
                 }
                 disabled={isSubmitting}
                 required
@@ -177,6 +191,9 @@ export function EnfundeForm() {
                   <SelectItem value="Naranja">Naranja</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.colorCinta && (
+                <p className="text-xs text-red-600">{errors.colorCinta}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -187,11 +204,14 @@ export function EnfundeForm() {
                 min="0"
                 value={formData.cantidadEnfundes}
                 onChange={(e) =>
-                  setFormData({ ...formData, cantidadEnfundes: e.target.value })
+                  (setFormData({ ...formData, cantidadEnfundes: e.target.value }), setErrors((prev) => ({ ...prev, cantidadEnfundes: "" })))
                 }
                 disabled={isSubmitting}
                 required
               />
+              {errors.cantidadEnfundes && (
+                <p className="text-xs text-red-600">{errors.cantidadEnfundes}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -202,11 +222,14 @@ export function EnfundeForm() {
                 min="0"
                 value={formData.matasCaidas}
                 onChange={(e) =>
-                  setFormData({ ...formData, matasCaidas: e.target.value })
+                  (setFormData({ ...formData, matasCaidas: e.target.value }), setErrors((prev) => ({ ...prev, matasCaidas: "" })))
                 }
                 disabled={isSubmitting}
                 required
               />
+              {errors.matasCaidas && (
+                <p className="text-xs text-red-600">{errors.matasCaidas}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -216,11 +239,14 @@ export function EnfundeForm() {
                 type="date"
                 value={formData.fecha}
                 onChange={(e) =>
-                  setFormData({ ...formData, fecha: e.target.value })
+                  (setFormData({ ...formData, fecha: e.target.value }), setErrors((prev) => ({ ...prev, fecha: "" })))
                 }
                 disabled={isSubmitting}
                 required
               />
+              {errors.fecha && (
+                <p className="text-xs text-red-600">{errors.fecha}</p>
+              )}
             </div>
           </div>
 
