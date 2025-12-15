@@ -103,7 +103,7 @@ export default function FincasPage() {
 
   const totalHectareas = state.fincas.reduce((sum, f) => sum + f.hectareas, 0);
   const totalPlantas = state.fincas.reduce(
-    (sum, f) => sum + f.plantasTotales,
+    (sum, f) => sum + (typeof f.plantasTotales === "number" ? f.plantasTotales : 0),
     0
   );
   const fincasActivas = state.fincas.length;

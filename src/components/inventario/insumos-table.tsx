@@ -22,6 +22,8 @@ import { useApp } from "@/src/contexts/app-context"; // Corregida la importació
 import type { Insumo } from "@/src/lib/types";
 import { useState } from "react";
 import { Input } from "@/src/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/src/components/ui/pagination";
 
 export function InsumosTable() {
   const { insumos } = useApp();
@@ -33,6 +35,14 @@ export function InsumosTable() {
       insumo.categoria.toLowerCase().includes(searchTerm.toLowerCase()) ||
       insumo.proveedor.toLowerCase().includes(searchTerm.toLowerCase()) // Cambiado de codigo a proveedor
   );
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const total = filteredInsumos.length;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const startIdx = (page - 1) * pageSize;
+  const endIdx = Math.min(startIdx + pageSize, total);
+  const paginated = filteredInsumos.slice(startIdx, endIdx);
 
   const totalValor = filteredInsumos.reduce(
     (sum, i) => sum + i.stockActual * i.precioUnitario,
@@ -94,6 +104,8 @@ export function InsumosTable() {
           ]}
           title="Inventario de Insumos"
           filename="inventario-insumos"
+          enableFilter
+          dateField="fechaVencimiento"
         />
       </CardHeader>
       <CardContent>
@@ -131,6 +143,20 @@ export function InsumosTable() {
               className="pl-9"
             />
           </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Ver</span>
+            <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
+              <SelectTrigger className="w-[90px]">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground">por página</span>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -150,7 +176,7 @@ export function InsumosTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredInsumos.map((insumo) => {
+              {paginated.map((insumo) => {
                 // Cambiado de insumos a filteredInsumos
                 const status = getStockStatus(insumo);
                 const valorTotal = insumo.stockActual * insumo.precioUnitario;
@@ -199,6 +225,26 @@ export function InsumosTable() {
               })}
             </TableBody>
           </Table>
+        </div>
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-sm text-muted-foreground">Mostrando {total === 0 ? 0 : startIdx + 1}-{endIdx} de {total}</p>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious href="#" size="default" onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)); }} />
+              </PaginationItem>
+              {Array.from({ length: pageCount }).map((_, i) => (
+                <PaginationItem key={i}>
+                  <PaginationLink href="#" isActive={page === i + 1} size="icon" onClick={(e) => { e.preventDefault(); setPage(i + 1); }}>
+                    {i + 1}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext href="#" size="default" onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(pageCount, p + 1)); }} />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       </CardContent>
     </Card>

@@ -78,11 +78,11 @@ export const exportToPDF = async ({
     },
     margin: { left: 14, right: 14 },
     didDrawPage: (dataArg: any) => {
-      const pageNumber = doc.internal.getNumberOfPages();
+      const pageNumber = (doc as any).internal.getNumberOfPages();
       doc.setFontSize(10);
       doc.text(`Página ${dataArg.pageNumber} de ${pageNumber}`,
-        doc.internal.pageSize.getWidth() - 14,
-        doc.internal.pageSize.getHeight() - 10,
+        (doc as any).internal.pageSize.getWidth() - 14,
+        (doc as any).internal.pageSize.getHeight() - 10,
         { align: 'right' }
       );
     },
@@ -153,7 +153,7 @@ export const exportToCSV = async ({
   
   // Convertir a formato CSV con escape de comillas y saltos de línea
   const csvContent = csvData
-    .map(row => row.map((cell) => {
+    .map(row => (row as unknown[]).map((cell: unknown) => {
       const value = cell === null || cell === undefined ? '' : String(cell);
       const escaped = value.replace(/"/g, '""');
       return value.includes(delimiter) || /[\n\r]/.test(value) || value.includes('"')

@@ -8,27 +8,55 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/src/components/ui/avatar"
 import { Label } from "@/src/components/ui/label";
 import { useApp } from "@/src/contexts/app-context";
 import { useToast } from "@/src/hooks/use-toast";
-import { isValidEcuadorPhone } from "@/src/lib/validation";
+import { isValidEcuadorPhone, UsuarioSchema } from "@/src/lib/validation";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/src/components/ui/dialog";
 
 export default function PerfilPage() {
-  const { currentUser, setCurrentUser } = useApp();
+  const { currentUser, setCurrentUser, updateUsuario } = useApp();
   const { toast } = useToast();
   const [nombre, setNombre] = useState(currentUser?.nombre || "");
+  const [email, setEmail] = useState(currentUser?.email || "");
   const [telefono, setTelefono] = useState(currentUser?.telefono || "");
   const [avatar, setAvatar] = useState(currentUser?.avatar || "");
+  const [password, setPassword] = useState("");
+  const [avatarFileName, setAvatarFileName] = useState<string>("");
 
   const save = () => {
     if (!currentUser) return;
-    if (!nombre.trim()) {
-      toast({ title: "Nombre requerido", description: "Ingresa tu nombre", variant: "destructive" });
-      return;
+    try {
+      const validated = UsuarioSchema.parse({
+        nombre,
+        email,
+        password: password || undefined,
+        rol: currentUser.rol,
+        fincaAsignada: currentUser.fincaAsignada,
+        telefono,
+        activo: currentUser.activo,
+      });
+
+      updateUsuario(currentUser.id, {
+        nombre: validated.nombre,
+        email: validated.email,
+        telefono: validated.telefono,
+        avatar,
+        password: validated.password,
+      });
+      setCurrentUser({ ...currentUser, nombre: validated.nombre, email: validated.email, telefono: validated.telefono, avatar, password: validated.password || currentUser.password });
+      toast({ title: "Perfil actualizado", description: "Tus cambios se guardaron correctamente" });
+    } catch (err) {
+      toast({ title: "Datos inválidos", description: "Verifica los campos ingresados", variant: "destructive" });
     }
-    if (telefono && !isValidEcuadorPhone(telefono)) {
-      toast({ title: "Teléfono inválido", description: "Debe ser un número de Ecuador", variant: "destructive" });
-      return;
-    }
-    setCurrentUser({ ...currentUser, nombre, telefono, avatar });
-    toast({ title: "Perfil actualizado", description: "Tus cambios se guardaron correctamente" });
+  };
+
+  const onAvatarFileChange = (file?: File) => {
+    if (!file) return;
+    setAvatarFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setAvatar(result);
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -62,12 +90,39 @@ export default function PerfilPage() {
               <Input id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="telefono">Teléfono</Label>
               <Input id="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="avatar">Avatar URL</Label>
               <Input id="avatar" value={avatar} onChange={(e) => setAvatar(e.target.value)} placeholder="https://..." />
+              <div className="flex items-center gap-2 mt-2">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline">Cambiar imagen</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Seleccionar imagen de perfil</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-3">
+                      <Input type="file" accept="image/*" onChange={(e) => onAvatarFileChange(e.target.files?.[0])} />
+                      {avatarFileName && <p className="text-sm text-muted-foreground">{avatarFileName}</p>}
+                      <div className="flex justify-end">
+                        <Button onClick={() => toast({ title: "Imagen cargada", description: "Se actualizó la imagen de perfil" })}>Usar esta imagen</Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="password">Contraseña (opcional)</Label>
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres" />
             </div>
           </div>
 

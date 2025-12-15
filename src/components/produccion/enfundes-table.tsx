@@ -22,6 +22,8 @@ import { useSearchParams } from "next/navigation";
 import { Input } from "@/src/components/ui/input";
 import { Button } from "@/src/components/ui/button";
 import { Search, Edit, Trash2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/src/components/ui/pagination";
 
 // Extender Date para getWeek si no existe
 declare global {
@@ -81,6 +83,14 @@ export function EnfundesTable() {
     });
   }, [enfundes, searchTerm, fincaFilter]);
 
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const total = filteredEnfundes.length;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const startIdx = (page - 1) * pageSize;
+  const endIdx = Math.min(startIdx + pageSize, total);
+  const paginated = filteredEnfundes.slice(startIdx, endIdx);
+
   const totalEnfundes = enfundes.reduce(
     (sum, e) => sum + e.cantidadEnfundes,
     0
@@ -126,6 +136,10 @@ export function EnfundesTable() {
           ]}
           title="Registro de Enfundes"
           filename="registro-enfundes"
+          enableFilter
+          dateField="fecha"
+          weekField="semana"
+          yearField="año"
         />
       </CardHeader>
       <CardContent>
@@ -160,6 +174,20 @@ export function EnfundesTable() {
               className="pl-9"
             />
           </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Ver</span>
+            <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
+              <SelectTrigger className="w-[90px]">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground">por página</span>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -178,7 +206,7 @@ export function EnfundesTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredEnfundes.map((enfunde) => {
+              {paginated.map((enfunde) => {
                 const fincaInfo = getFincaInfo(enfunde.finca);
                 return (
                   <TableRow key={enfunde.id}>
@@ -217,6 +245,26 @@ export function EnfundesTable() {
               })}
             </TableBody>
           </Table>
+        </div>
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-sm text-muted-foreground">Mostrando {total === 0 ? 0 : startIdx + 1}-{endIdx} de {total}</p>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)); }} />
+              </PaginationItem>
+              {Array.from({ length: pageCount }).map((_, i) => (
+                <PaginationItem key={i}>
+                  <PaginationLink href="#" isActive={page === i + 1} size="icon" onClick={(e) => { e.preventDefault(); setPage(i + 1); }}>
+                    {i + 1}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext href="#" size="default" onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(pageCount, p + 1)); }} />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       </CardContent>
     </Card>

@@ -20,6 +20,9 @@ import { useMemo } from "react";
 import { Badge } from "@/src/components/ui/badge";
 import { ExportButton } from "@/src/components/shared/export-button";
 import { cn } from "@/src/lib/utils";
+import { useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/src/components/ui/pagination";
 
 export function RecuperacionTable() {
   const { recuperacionCintas } = useApp();
@@ -31,6 +34,14 @@ export function RecuperacionTable() {
       fincaFilter ? r.finca === fincaFilter : true
     );
   }, [recuperacionCintas, fincaFilter]);
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const total = filtered.length;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const startIdx = (page - 1) * pageSize;
+  const endIdx = Math.min(startIdx + pageSize, total);
+  const paginated = filtered.slice(startIdx, endIdx);
 
   const avgRecuperacion =
     filtered.reduce((sum, r) => sum + r.porcentajeRecuperacion, 0) /
@@ -70,6 +81,9 @@ export function RecuperacionTable() {
           ]}
           title="Historial de Recuperación"
           filename="recuperacion-cintas"
+          enableFilter
+          weekField="semana"
+          yearField="año"
         />
       </CardHeader>
       <CardContent>
@@ -83,6 +97,23 @@ export function RecuperacionTable() {
           >
             {avgRecuperacion.toFixed(1)}%
           </p>
+        </div>
+
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Ver</span>
+            <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
+              <SelectTrigger className="w-[90px]">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground">por página</span>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -100,7 +131,7 @@ export function RecuperacionTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((rec) => (
+              {paginated.map((rec) => (
                 <TableRow key={rec.id}>
                   <TableCell className="font-medium">{rec.finca}</TableCell>
                   <TableCell>S{rec.semana}</TableCell>
@@ -137,6 +168,26 @@ export function RecuperacionTable() {
               ))}
             </TableBody>
           </Table>
+        </div>
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-sm text-muted-foreground">Mostrando {total === 0 ? 0 : startIdx + 1}-{endIdx} de {total}</p>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious href="#" size="default" onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)); }} />
+              </PaginationItem>
+              {Array.from({ length: pageCount }).map((_, i) => (
+                <PaginationItem key={i}>
+                  <PaginationLink href="#" isActive={page === i + 1} size="icon" onClick={(e) => { e.preventDefault(); setPage(i + 1); }}>
+                    {i + 1}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext href="#" size="default" onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(pageCount, p + 1)); }} />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       </CardContent>
     </Card>

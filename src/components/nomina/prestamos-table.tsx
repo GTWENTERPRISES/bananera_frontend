@@ -21,9 +21,19 @@ import { ExportButton } from "@/src/components/shared/export-button";
 import { DollarSign } from "lucide-react";
 import { Progress } from "@/src/components/ui/progress";
 import { cn } from "@/src/lib/utils";
+import { useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/src/components/ui/pagination";
 
 export function PrestamosTable() {
   const { prestamos, updatePrestamo } = useApp();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const total = prestamos.length;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const startIdx = (page - 1) * pageSize;
+  const endIdx = Math.min(startIdx + pageSize, total);
+  const paginated = prestamos.slice(startIdx, endIdx);
 
   const totalPrestado = prestamos.reduce((sum, p) => sum + p.monto, 0);
   const totalPendiente = prestamos.reduce(
@@ -65,7 +75,7 @@ export function PrestamosTable() {
             cuotasPagadas: p.cuotasPagadas,
             numeroCuotas: p.numeroCuotas,
             saldoPendiente: p.saldoPendiente,
-            fechaDesembolso: new Date(p.fechaDesembolso).toLocaleDateString("es-ES"),
+            fechaDesembolso: p.fechaDesembolso,
             estado: p.estado === "activo" ? "Activo" : "Finalizado",
           }))}
           headers={[
@@ -90,6 +100,8 @@ export function PrestamosTable() {
           ]}
           title="Gestión de Préstamos"
           filename="prestamos"
+          enableFilter
+          dateField="fechaDesembolso"
         />
       </CardHeader>
       <CardContent>
@@ -112,6 +124,23 @@ export function PrestamosTable() {
           </div>
         </div>
 
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Ver</span>
+            <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
+              <SelectTrigger className="w-[90px]">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground">por página</span>
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -127,7 +156,7 @@ export function PrestamosTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {prestamos.map((prestamo) => {
+              {paginated.map((prestamo) => {
                 const progreso =
                   (prestamo.cuotasPagadas / prestamo.numeroCuotas) * 100;
                 return (
@@ -188,6 +217,26 @@ export function PrestamosTable() {
               })}
             </TableBody>
           </Table>
+        </div>
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-sm text-muted-foreground">Mostrando {total === 0 ? 0 : startIdx + 1}-{endIdx} de {total}</p>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)); }} />
+              </PaginationItem>
+              {Array.from({ length: pageCount }).map((_, i) => (
+                <PaginationItem key={i}>
+                  <PaginationLink href="#" isActive={page === i + 1} onClick={(e) => { e.preventDefault(); setPage(i + 1); }}>
+                    {i + 1}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(pageCount, p + 1)); }} />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       </CardContent>
     </Card>

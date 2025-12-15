@@ -20,6 +20,8 @@ import { ExportButton } from "@/src/components/shared/export-button";
 import { ArrowDownCircle, ArrowUpCircle, Search } from "lucide-react";
 import { useState } from "react";
 import { Input } from "../ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/src/components/ui/pagination";
 
 export function MovimientosTable() {
   const { movimientosInventario, insumos } = useApp(); // Agregué insumos
@@ -58,41 +60,50 @@ export function MovimientosTable() {
     );
   });
 
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const total = filteredMovimientos.length;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const startIdx = (page - 1) * pageSize;
+  const endIdx = Math.min(startIdx + pageSize, total);
+  const paginated = filteredMovimientos.slice(startIdx, endIdx);
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Historial de Movimientos</CardTitle>
         <ExportButton
           data={filteredMovimientos.map((mov) => ({
-            Fecha: new Date(mov.fecha).toLocaleDateString("es-ES", {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-            }),
-            Insumo: getInsumoNombre(mov.insumoId),
-            Tipo: mov.tipo === "entrada" ? "Entrada" : "Salida",
-            Cantidad: `${mov.cantidad} ${getInsumoUnidad(mov.insumoId)}`,
-            Responsable: mov.responsable,
-            Motivo: mov.motivo,
+            fecha: mov.fecha,
+            insumo: getInsumoNombre(mov.insumoId),
+            tipo: mov.tipo,
+            cantidad: mov.cantidad,
+            unidad: getInsumoUnidad(mov.insumoId),
+            responsable: mov.responsable,
+            motivo: mov.motivo,
           }))}
           headers={[
             "Fecha",
             "Insumo",
             "Tipo",
             "Cantidad",
+            "Unidad",
             "Responsable",
             "Motivo",
           ]}
           keys={[
-            "Fecha",
-            "Insumo",
-            "Tipo",
-            "Cantidad",
-            "Responsable",
-            "Motivo",
+            "fecha",
+            "insumo",
+            "tipo",
+            "cantidad",
+            "unidad",
+            "responsable",
+            "motivo",
           ]}
           title="Historial de Movimientos"
           filename="movimientos-inventario"
+          enableFilter
+          dateField="fecha"
         />
       </CardHeader>
       <CardContent>
@@ -123,6 +134,20 @@ export function MovimientosTable() {
               className="pl-9"
             />
           </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Ver</span>
+            <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
+              <SelectTrigger className="w-[90px]">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground">por página</span>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -138,7 +163,7 @@ export function MovimientosTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredMovimientos.map((mov) => (
+              {paginated.map((mov) => (
                 <TableRow key={mov.id}>
                   <TableCell className="font-medium">
                     {getInsumoNombre(mov.insumoId)}
@@ -180,6 +205,26 @@ export function MovimientosTable() {
               ))}
             </TableBody>
           </Table>
+        </div>
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-sm text-muted-foreground">Mostrando {total === 0 ? 0 : startIdx + 1}-{endIdx} de {total}</p>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)); }} />
+              </PaginationItem>
+              {Array.from({ length: pageCount }).map((_, i) => (
+                <PaginationItem key={i}>
+                  <PaginationLink href="#" isActive={page === i + 1} onClick={(e) => { e.preventDefault(); setPage(i + 1); }}>
+                    {i + 1}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(pageCount, p + 1)); }} />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       </CardContent>
     </Card>

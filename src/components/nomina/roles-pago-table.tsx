@@ -14,9 +14,19 @@ import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { ExportButton } from "@/src/components/shared/export-button";
 import { CheckCircle2, Clock } from "lucide-react";
+import { useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/src/components/ui/pagination";
 
 export function RolesPagoTable() {
   const { rolesPago, updateRolPagoEstado } = useApp();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const total = rolesPago?.length || 0;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const startIdx = (page - 1) * pageSize;
+  const endIdx = Math.min(startIdx + pageSize, total);
+  const paginated = (rolesPago || []).slice(startIdx, endIdx);
 
   const totalNomina =
     rolesPago?.reduce((sum, r) => sum + (r.netoAPagar || 0), 0) || 0;
@@ -32,6 +42,7 @@ export function RolesPagoTable() {
           data={rolesPago?.map((rol) => ({
             empleado: rol.empleado?.nombre || "N/A",
             semana: rol.semana,
+            año: rol.año,
             diasLaborados: rol.diasLaborados || 0,
             horasExtras: rol.horasExtras || 0,
             totalIngresos: rol.totalIngresos || 0,
@@ -42,6 +53,7 @@ export function RolesPagoTable() {
           headers={[
             "Empleado",
             "Semana",
+            "Año",
             "Días",
             "H. Extras",
             "Ingresos",
@@ -52,6 +64,7 @@ export function RolesPagoTable() {
           keys={[
             "empleado",
             "semana",
+            "año",
             "diasLaborados",
             "horasExtras",
             "totalIngresos",
@@ -61,6 +74,9 @@ export function RolesPagoTable() {
           ]}
           title="Roles de Pago"
           filename="roles-pago"
+          enableFilter
+          weekField="semana"
+          yearField="año"
         />
       </CardHeader>
       <CardContent>
@@ -81,6 +97,23 @@ export function RolesPagoTable() {
           </div>
         </div>
 
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Ver</span>
+            <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
+              <SelectTrigger className="w-[90px]">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground">por página</span>
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -97,7 +130,7 @@ export function RolesPagoTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rolesPago?.map((rol) => (
+              {paginated.map((rol) => (
                 <TableRow key={rol.id}>
                   <TableCell className="font-medium">
                     {rol.empleado?.nombre || "N/A"}
@@ -155,6 +188,26 @@ export function RolesPagoTable() {
               ))}
             </TableBody>
           </Table>
+        </div>
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-sm text-muted-foreground">Mostrando {total === 0 ? 0 : startIdx + 1}-{endIdx} de {total}</p>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)); }} />
+              </PaginationItem>
+              {Array.from({ length: pageCount }).map((_, i) => (
+                <PaginationItem key={i}>
+                  <PaginationLink href="#" isActive={page === i + 1} onClick={(e) => { e.preventDefault(); setPage(i + 1); }}>
+                    {i + 1}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(pageCount, p + 1)); }} />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       </CardContent>
     </Card>

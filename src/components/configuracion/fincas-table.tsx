@@ -42,6 +42,21 @@ import { useState } from "react";
 import { Input } from "@/src/components/ui/input";
 import { ExportButton } from "@/src/components/shared/export-button";
 import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/src/components/ui/select";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/src/components/ui/pagination";
 
 interface FincasTableProps {
   fincas: Finca[];
@@ -66,11 +81,21 @@ export function FincasTable({
   const filteredFincas = fincas.filter(
     (finca) =>
       finca.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (finca.ubicacion || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (finca.ubicacion || "")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
       (finca.responsable &&
         finca.responsable.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (finca.variedad || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const total = filteredFincas.length;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const startIdx = (page - 1) * pageSize;
+  const endIdx = Math.min(startIdx + pageSize, total);
+  const paginated = filteredFincas.slice(startIdx, endIdx);
 
   const handleDeleteClick = (finca: Finca) => {
     // Verificar si la finca tiene registros asociados
@@ -209,7 +234,7 @@ export function FincasTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredFincas.length === 0 ? (
+              {paginated.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={8}
@@ -225,7 +250,7 @@ export function FincasTable({
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredFincas.map((finca) => {
+                paginated.map((finca) => {
                   const tieneRegistros = tieneRegistrosAsociados(finca.id);
                   const puedeEliminar = canDeleteFincas && !tieneRegistros;
 
@@ -247,7 +272,8 @@ export function FincasTable({
                               <div>
                                 {typeof finca.plantasTotales === "number"
                                   ? finca.plantasTotales.toLocaleString()
-                                  : "-"} plantas
+                                  : "-"}{" "}
+                                plantas
                               </div>
                               <div>{getEstadoBadge(finca.estado)}</div>
                               {tieneRegistros && (
@@ -338,6 +364,67 @@ export function FincasTable({
               )}
             </TableBody>
           </Table>
+        </div>
+        <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Ver</span>
+            <Select
+              value={String(pageSize)}
+              onValueChange={(v) => {
+                setPageSize(Number(v));
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[90px]">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground">por página</span>
+          </div>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  size="default"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setPage((p) => Math.max(1, p - 1));
+                  }}
+                />
+              </PaginationItem>
+              {Array.from({ length: pageCount }).map((_, i) => (
+                <PaginationItem key={i}>
+                  <PaginationLink
+                    href="#"
+                    isActive={page === i + 1}
+                    size="icon"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPage(i + 1);
+                    }}
+                  >
+                    {i + 1}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  size="default"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setPage((p) => Math.min(pageCount, p + 1));
+                  }}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       </div>
 
