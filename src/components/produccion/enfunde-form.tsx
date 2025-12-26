@@ -28,7 +28,7 @@ import { EnfundeSchema } from "@/src/lib/validation";
 import { Spinner } from "@/src/components/ui/spinner";
 
 export function EnfundeForm() {
-  const { addEnfunde } = useApp();
+  const { addEnfunde, enfundes } = useApp();
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -85,6 +85,15 @@ export function EnfundeForm() {
       fecha: formData.fecha,
     };
 
+    const dup = enfundes.some(
+      (e) => e.finca === newEnfunde.finca && e.semana === newEnfunde.semana && e.año === newEnfunde.año
+    );
+    if (dup) {
+      toast({ title: "Registro duplicado", description: "Ya existe un enfunde para esa finca/semana/año", variant: "destructive" });
+      setIsSubmitting(false);
+      return;
+    }
+
     addEnfunde(newEnfunde);
     toast({
       title: "Enfunde registrado",
@@ -120,13 +129,13 @@ export function EnfundeForm() {
   };
 
   return (
-    <Card>
+    <Card className="responsive-card">
       <CardHeader>
         <CardTitle>Registrar Enfunde</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="responsive-form">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="finca">Finca</Label>
               <Select
@@ -135,7 +144,7 @@ export function EnfundeForm() {
                 disabled={isSubmitting}
                 required
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-11">
                   <SelectValue placeholder="Seleccionar finca" />
                 </SelectTrigger>
                 <SelectContent>
@@ -163,6 +172,7 @@ export function EnfundeForm() {
                 }
                 disabled={isSubmitting}
                 required
+                className="h-11"
               />
               {errors.semana && (
                 <p className="text-xs text-red-600">{errors.semana}</p>
@@ -179,7 +189,7 @@ export function EnfundeForm() {
                 disabled={isSubmitting}
                 required
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-11">
                   <SelectValue placeholder="Seleccionar color" />
                 </SelectTrigger>
                 <SelectContent>
@@ -208,6 +218,7 @@ export function EnfundeForm() {
                 }
                 disabled={isSubmitting}
                 required
+                className="h-11"
               />
               {errors.cantidadEnfundes && (
                 <p className="text-xs text-red-600">{errors.cantidadEnfundes}</p>
@@ -226,6 +237,7 @@ export function EnfundeForm() {
                 }
                 disabled={isSubmitting}
                 required
+                className="h-11"
               />
               {errors.matasCaidas && (
                 <p className="text-xs text-red-600">{errors.matasCaidas}</p>
@@ -243,6 +255,7 @@ export function EnfundeForm() {
                 }
                 disabled={isSubmitting}
                 required
+                className="h-11"
               />
               {errors.fecha && (
                 <p className="text-xs text-red-600">{errors.fecha}</p>
@@ -250,7 +263,7 @@ export function EnfundeForm() {
             </div>
           </div>
 
-          <Button type="submit" className="w-full gap-2" disabled={isSubmitting}>
+          <Button type="submit" className="w-full gap-2 h-11 text-base" disabled={isSubmitting}>
             {isSubmitting ? <Spinner className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
             Registrar Enfunde
           </Button>

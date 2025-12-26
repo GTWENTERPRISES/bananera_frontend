@@ -5,14 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/ca
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import { Button } from "@/src/components/ui/button";
-// import { MapGeneral } from "@/src/components/geo/map-general";
 import dynamic from "next/dynamic";
 import { Loader2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/src/components/ui/table";
 import { Badge } from "@/src/components/ui/badge";
 import { cn } from "@/src/lib/utils";
-const MapGeneral = dynamic(
-  () => import("@/src/components/geo/map-general").then((m) => m.MapGeneral),
+const MiniMap = dynamic(
+  () => import("@/src/components/geo/mini-map").then((m) => m.MiniMap),
   {
     ssr: false,
     loading: () => (
@@ -110,119 +109,38 @@ function FincaDetailInner({ selectedFinca }: { selectedFinca: string }) {
 
           <div className="mt-4">
             <div className="mb-2 text-sm text-muted-foreground">Últimas cosechas</div>
-            <div className="w-full overflow-x-auto">
-              <Table className="text-xs">
-                <TableHeader>
+            {cosechasFinca.length === 0 ? (
+              <div className="rounded-md border border-dashed border-border p-6 text-center text-xs text-muted-foreground">No hay cosechas para esta finca.</div>
+            ) : (
+              <div className="w-full overflow-x-auto overflow-y-auto max-h-[320px] rounded-md border border-border">
+                <Table className="text-xs min-w-[800px]">
+                  <TableHeader className="sticky top-0 z-10 bg-background shadow-sm">
                   <TableRow>
-                    <TableHead>Semana</TableHead>
-                    <TableHead>Año</TableHead>
-                    <TableHead>Cajas</TableHead>
-                    <TableHead>Ratio</TableHead>
-                    <TableHead>Merma</TableHead>
-                    <TableHead>Calibración</TableHead>
+                    <TableHead className="text-right">Semana</TableHead>
+                    <TableHead className="text-right">Año</TableHead>
+                    <TableHead className="text-right">Cajas</TableHead>
+                    <TableHead className="text-right">Ratio</TableHead>
+                    <TableHead className="text-right">Merma</TableHead>
+                    <TableHead className="text-right">Calibración</TableHead>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {cosechasFinca.slice(0, 8).map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell>{c.semana}</TableCell>
-                      <TableCell>{c.año}</TableCell>
-                      <TableCell>{c.cajasProducidas.toLocaleString()}</TableCell>
-                      <TableCell>{c.ratio.toFixed(2)}</TableCell>
-                      <TableCell>
-                        <Badge variant={c.merma < 3.5 ? "default" : "destructive"}>{c.merma.toFixed(1)}%</Badge>
-                      </TableCell>
-                      <TableCell>{c.calibracion}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-function GeoReportsInner() {
-  const { fincas, cosechas, empleados, insumos } = useApp();
-  const latestByFinca = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const c of cosechas) {
-      m.set(c.finca, Math.max(m.get(c.finca) ?? 0, c.cajasProducidas));
-    }
-    return m;
-  }, [cosechas]);
-
-  const datos = useMemo(() => {
-    return fincas.filter((f) => !!f.geom).map((f) => {
-      const cajas = latestByFinca.get(f.nombre) ?? 0;
-      const rendimiento = f.hectareas ? cajas / f.hectareas : 0;
-      const cuadrillas = empleados.filter((e) => e.activo && e.labor === "Enfunde" && e.finca === f.nombre).length;
-      const stockBajo = insumos.filter((i) => i.finca === f.nombre && i.stockActual < i.stockMinimo).length;
-      return { finca: f.nombre, hectareas: f.hectareas, cajas, rendimiento, cuadrillas, stockBajo };
-    });
-  }, [fincas, latestByFinca, empleados, insumos]);
-
-  const top = [...datos].sort((a, b) => b.rendimiento - a.rendimiento).slice(0, 3);
-  const low = [...datos].sort((a, b) => a.rendimiento - b.rendimiento).slice(0, 3);
-
-  return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Rendimiento por Finca</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="w-full overflow-x-auto">
-            <Table className="text-xs">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Finca</TableHead>
-                  <TableHead>Hectáreas</TableHead>
-                  <TableHead>Cajas (última semana)</TableHead>
-                  <TableHead>Cajas/ha</TableHead>
-                  <TableHead>Cuadrillas</TableHead>
-                  <TableHead>Insumos en alerta</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {datos.map((d) => (
-                  <TableRow key={d.finca}>
-                    <TableCell>{d.finca}</TableCell>
-                    <TableCell>{d.hectareas}</TableCell>
-                    <TableCell>{d.cajas.toLocaleString()}</TableCell>
-                    <TableCell>{d.rendimiento.toFixed(2)}</TableCell>
-                    <TableCell>{d.cuadrillas}</TableCell>
-                    <TableCell>
-                      <Badge variant={d.stockBajo > 0 ? "destructive" : "default"}>{d.stockBajo}</Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2 mt-4">
-            <div className="rounded-lg border bg-muted/40 p-3">
-              <p className="text-sm font-medium mb-2">Top rendimiento</p>
-              {top.map((t) => (
-                <div key={t.finca} className="flex items-center justify-between text-sm">
-                  <span>{t.finca}</span>
-                  <span className="font-semibold">{t.rendimiento.toFixed(2)} cajas/ha</span>
-                </div>
-              ))}
-            </div>
-            <div className="rounded-lg border bg-muted/40 p-3">
-              <p className="text-sm font-medium mb-2">Rendimiento más bajo</p>
-              {low.map((t) => (
-                <div key={t.finca} className="flex items-center justify-between text-sm">
-                  <span>{t.finca}</span>
-                  <span className="font-semibold">{t.rendimiento.toFixed(2)} cajas/ha</span>
-                </div>
-              ))}
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {cosechasFinca.slice(0, 8).map((c) => (
+                      <TableRow key={c.id} className="odd:bg-muted/50 hover:bg-muted transition-colors">
+                        <TableCell className="text-right tabular-nums whitespace-nowrap">{c.semana}</TableCell>
+                        <TableCell className="text-right tabular-nums whitespace-nowrap">{c.año}</TableCell>
+                        <TableCell className="text-right tabular-nums whitespace-nowrap">{c.cajasProducidas.toLocaleString()}</TableCell>
+                        <TableCell className="text-right tabular-nums whitespace-nowrap">{c.ratio.toFixed(2)}</TableCell>
+                        <TableCell className="text-right tabular-nums whitespace-nowrap">
+                          <Badge variant={c.merma < 3.5 ? "default" : "destructive"}>{c.merma.toFixed(1)}%</Badge>
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums whitespace-nowrap">{c.calibracion}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -231,7 +149,6 @@ function GeoReportsInner() {
 }
 
 const FincaDetail = dynamic(() => Promise.resolve(FincaDetailInner), { ssr: false });
-const GeoReports = dynamic(() => Promise.resolve(GeoReportsInner), { ssr: false });
 
 export default function GeovisualizacionPage() {
   const { fincas, cosechas } = useApp();
@@ -309,7 +226,7 @@ export default function GeovisualizacionPage() {
           </CardHeader>
           <CardContent>
               <ErrorBoundary>
-                <MapGeneral selectedFinca={selectedFinca} />
+                <MiniMap />
               </ErrorBoundary>
           </CardContent>
         </Card>
@@ -363,18 +280,7 @@ export default function GeovisualizacionPage() {
         </Card>
       </div>
 
-      <Tabs defaultValue="detalle" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="detalle">Detalle por Finca</TabsTrigger>
-          <TabsTrigger value="reportes">Reportes Geoespaciales</TabsTrigger>
-        </TabsList>
-        <TabsContent value="detalle">
-          <FincaDetail selectedFinca={selectedFinca} />
-        </TabsContent>
-        <TabsContent value="reportes">
-          <GeoReports />
-        </TabsContent>
-      </Tabs>
+      <FincaDetail selectedFinca={selectedFinca} />
     </div>
   );
 }

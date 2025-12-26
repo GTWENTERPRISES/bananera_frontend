@@ -158,14 +158,19 @@ export function UsuariosTable({
           />
         </div>
 
-        <div
-          className={cn(
-            "border rounded-lg overflow-x-auto",
-            isMobile && "pb-4"
-          )}
-        >
-          <Table>
-            <TableHeader>
+        {paginated.length === 0 ? (
+          <div className="flex items-center justify-center rounded-md border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+            No se encontraron usuarios.
+          </div>
+        ) : (
+          <div
+            className={cn(
+              "border rounded-lg overflow-x-auto overflow-y-auto max-h-[540px] animate-in fade-in duration-200",
+              isMobile && "pb-4"
+            )}
+          >
+            <Table className="text-sm min-w-[1000px]">
+              <TableHeader className="sticky top-0 z-10 bg-background shadow-sm">
               <TableRow>
                 <TableHead>Usuario</TableHead>
                 <TableHead className={cn(isMobile && "hidden md:table-cell")}>
@@ -183,20 +188,10 @@ export function UsuariosTable({
                 </TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginated.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="text-center text-muted-foreground"
-                  >
-                    No se encontraron usuarios
-                  </TableCell>
-                </TableRow>
-              ) : (
-                paginated.map((usuario) => (
-                  <TableRow key={usuario.id}>
+              </TableHeader>
+              <TableBody className="animate-in fade-in duration-200">
+                {paginated.map((usuario) => (
+                  <TableRow key={usuario.id} className="odd:bg-muted/50 hover:bg-muted transition-colors">
                     <TableCell className="font-medium">
                       {usuario.nombre}
                     </TableCell>
@@ -255,11 +250,11 @@ export function UsuariosTable({
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
         <div className="flex items-center justify-between mt-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Ver</span>
@@ -278,7 +273,7 @@ export function UsuariosTable({
           <Pagination>
             <PaginationContent>
               <PaginationItem>
-                <PaginationPrevious href="#" size="default" onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)); }} />
+                <PaginationPrevious href="#" size="default" disabled={page <= 1} onClick={(e) => { e.preventDefault(); if (page > 1) setPage((p) => Math.max(1, p - 1)); }} />
               </PaginationItem>
               {Array.from({ length: pageCount }).map((_, i) => (
                 <PaginationItem key={i}>
@@ -288,7 +283,7 @@ export function UsuariosTable({
                 </PaginationItem>
               ))}
               <PaginationItem>
-                <PaginationNext href="#" size="default" onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(pageCount, p + 1)); }} />
+                <PaginationNext href="#" size="default" disabled={page >= pageCount} onClick={(e) => { e.preventDefault(); if (page < pageCount) setPage((p) => Math.min(pageCount, p + 1)); }} />
               </PaginationItem>
             </PaginationContent>
           </Pagination>

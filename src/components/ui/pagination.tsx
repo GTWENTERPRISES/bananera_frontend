@@ -39,18 +39,21 @@ function PaginationItem({ ...props }: React.ComponentProps<"li">) {
 
 type PaginationLinkProps = {
   isActive?: boolean;
+  disabled?: boolean;
 } & Pick<React.ComponentProps<typeof Button>, "size"> &
   React.ComponentProps<"a">;
 
 function PaginationLink({
   className,
   isActive,
+  disabled,
   size = "icon",
   ...props
 }: PaginationLinkProps) {
   return (
     <a
       aria-current={isActive ? "page" : undefined}
+      aria-disabled={disabled ? true : undefined}
       data-slot="pagination-link"
       data-active={isActive}
       className={cn(
@@ -58,6 +61,7 @@ function PaginationLink({
           variant: isActive ? "outline" : "ghost",
           size,
         }),
+        disabled && "pointer-events-none opacity-50 cursor-not-allowed",
         className
       )}
       {...props}
@@ -71,13 +75,13 @@ function PaginationPrevious({
 }: React.ComponentProps<typeof PaginationLink>) {
   return (
     <PaginationLink
-      aria-label="Go to previous page"
+      aria-label="Ir a la página anterior"
       size="default"
       className={cn("gap-1 px-2.5 sm:pl-2.5", className)}
       {...props}
     >
       <ChevronLeftIcon />
-      <span className="hidden sm:block">Previous</span>
+      <span className="hidden sm:block">Anterior</span>
     </PaginationLink>
   );
 }
@@ -88,12 +92,12 @@ function PaginationNext({
 }: React.ComponentProps<typeof PaginationLink>) {
   return (
     <PaginationLink
-      aria-label="Go to next page"
+      aria-label="Ir a la página siguiente"
       size="default"
       className={cn("gap-1 px-2.5 sm:pr-2.5", className)}
       {...props}
     >
-      <span className="hidden sm:block">Next</span>
+      <span className="hidden sm:block">Siguiente</span>
       <ChevronRightIcon />
     </PaginationLink>
   );
@@ -111,7 +115,7 @@ function PaginationEllipsis({
       {...props}
     >
       <MoreHorizontalIcon className="size-4" />
-      <span className="sr-only">More pages</span>
+      <span className="sr-only">Más páginas</span>
     </span>
   );
 }

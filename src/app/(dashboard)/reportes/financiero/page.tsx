@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
@@ -12,10 +12,15 @@ import { Download, Filter, Calendar, DollarSign, TrendingUp, TrendingDown } from
 import { useIsMobile } from "@/src/hooks/use-mobile";
 import { cn } from "@/src/lib/utils";
 import { useApp } from "@/src/contexts/app-context";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/src/components/ui/dialog";
+import { Label } from "@/src/components/ui/label";
 
+type IngresoMensual = { mes: string; ingresos: number; costos: number; beneficio: number };
+type DistribucionCosto = { name: string; value: number };
+type PrecioMercado = { mes: string; precio: number };
 
 // Datos de ejemplo para los gráficos
-const ingresosMensuales = [
+const ingresosMensuales: IngresoMensual[] = [
   { mes: "Ene", ingresos: 45000, costos: 32000, beneficio: 13000 },
   { mes: "Feb", ingresos: 48000, costos: 33000, beneficio: 15000 },
   { mes: "Mar", ingresos: 52000, costos: 35000, beneficio: 17000 },
@@ -24,7 +29,7 @@ const ingresosMensuales = [
   { mes: "Jun", ingresos: 62000, costos: 40000, beneficio: 22000 },
 ];
 
-const distribucionCostos = [
+const distribucionCostos: DistribucionCosto[] = [
   { name: "Mano de Obra", value: 40 },
   { name: "Insumos", value: 25 },
   { name: "Logística", value: 15 },
@@ -33,8 +38,7 @@ const distribucionCostos = [
 ];
 
 const COLORS = ["#4f46e5", "#06b6d4", "#10b981", "#f59e0b", "#ef4444"];
-
-const preciosMercado = [
+const preciosFallback: PrecioMercado[] = [
   { mes: "Ene", precio: 6.2 },
   { mes: "Feb", precio: 6.5 },
   { mes: "Mar", precio: 6.8 },
@@ -58,6 +62,52 @@ export default function ReportesFinancieroPage() {
   const chartHeight = isMobile ? 300 : 400;
   const { state } = useApp();
   const [tab, setTab] = useState("ingresos");
+  const [preciosMercado, setPreciosMercado] = useState<PrecioMercado[]>(preciosFallback);
+  const [cargandoPrecios, setCargandoPrecios] = useState(false);
+  const [errorPrecios, setErrorPrecios] = useState<string | null>(null);
+  const pollRef = useRef<NodeJS.Timeout | null>(null);
+  const [periodoOpen, setPeriodoOpen] = useState(false);
+  const [filtrosOpen, setFiltrosOpen] = useState(false);
+  const [commodity, setCommodity] = useState("banana");
+  const [currency, setCurrency] = useState("USD");
+  const [unit, setUnit] = useState("caja");
+  const [market, setMarket] = useState("EC");
+  const [range, setRange] = useState("6m");
+
+  const currencySymbol = currency === "USD" ? "$" : currency === "EUR" ? "€" : currency;
+  const precioActual = Number(preciosMercado.at(-1)?.precio ?? 0);
+  const precioAnterior = Number(preciosMercado.at(-2)?.precio ?? precioActual);
+  const variacionMes = precioAnterior ? ((precioActual - precioAnterior) / precioAnterior) * 100 : 0;
+  const promedio = preciosMercado.reduce((s, x) => s + x.precio, 0) / (preciosMercado.length || 1);
+
+  useEffect(() => {
+    const fetchPrecios = async () => {
+      setCargandoPrecios(true);
+      setErrorPrecios(null);
+      try {
+        const query = new URLSearchParams({ commodity, currency, unit, range, market }).toString();
+        const res = await fetch(`/api/precios?${query}`, {
+          cache: "no-store",
+        });
+        const json = await res.json();
+        const data = (json?.data ?? preciosFallback) as PrecioMercado[];
+        setPreciosMercado(data);
+      } catch (e) {
+        setErrorPrecios("No se pudo obtener precios en tiempo real");
+        setPreciosMercado(preciosFallback);
+      } finally {
+        setCargandoPrecios(false);
+      }
+    };
+
+    // Carga inicial
+    fetchPrecios();
+    // Polling cada 60 segundos
+    pollRef.current = setInterval(fetchPrecios, 60_000);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [commodity, currency, unit, range, market]);
   
   return (
     <div className={cn("space-y-6", isMobile && "px-2")}>
@@ -81,12 +131,12 @@ export default function ReportesFinancieroPage() {
             </SelectContent>
           </Select>
           
-          <Button variant="outline" size={isMobile ? "sm" : "default"}>
+          <Button variant="outline" size={isMobile ? "sm" : "default"} onClick={() => setPeriodoOpen(true)}>
             <Calendar className="h-4 w-4 mr-2" />
             Periodo
           </Button>
           
-          <Button variant="outline" size={isMobile ? "sm" : "default"}>
+          <Button variant="outline" size={isMobile ? "sm" : "default"} onClick={() => setFiltrosOpen(true)}>
             <Filter className="h-4 w-4 mr-2" />
             Filtros
           </Button>
@@ -109,10 +159,84 @@ export default function ReportesFinancieroPage() {
                 ? "Distribución de Costos Operativos"
                 : "Evolución de Precios de Mercado"}
             filename="reportes-financieros"
+            disabled={tab === "precios" && cargandoPrecios}
           />
         </div>
       </div>
       
+      {/* Dialog Periodo */}
+      <Dialog open={periodoOpen} onOpenChange={setPeriodoOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Periodo de precios</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Rango</Label>
+              <Select value={range} onValueChange={setRange}>
+                <SelectTrigger><SelectValue placeholder="Rango" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="3m">3 meses</SelectItem>
+                  <SelectItem value="6m">6 meses</SelectItem>
+                  <SelectItem value="12m">12 meses</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Mercado</Label>
+              <Select value={market} onValueChange={setMarket}>
+                <SelectTrigger><SelectValue placeholder="Mercado" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="EC">Ecuador</SelectItem>
+                  <SelectItem value="EU">Unión Europea</SelectItem>
+                  <SelectItem value="US">Estados Unidos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Filtros */}
+      <Dialog open={filtrosOpen} onOpenChange={setFiltrosOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Filtros de precios</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Producto</Label>
+              <Select value={commodity} onValueChange={setCommodity}>
+                <SelectTrigger><SelectValue placeholder="Producto" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="banana">Banano</SelectItem>
+                  <SelectItem value="plantain">Plátano</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Moneda</Label>
+              <Select value={currency} onValueChange={setCurrency}>
+                <SelectTrigger><SelectValue placeholder="Moneda" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USD">USD</SelectItem>
+                  <SelectItem value="EUR">EUR</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Unidad</Label>
+              <Select value={unit} onValueChange={setUnit}>
+                <SelectTrigger><SelectValue placeholder="Unidad" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="caja">Caja</SelectItem>
+                  <SelectItem value="kg">Kg</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-2">
@@ -252,26 +376,40 @@ export default function ReportesFinancieroPage() {
                 >
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="mes" />
-                  <YAxis domain={[5, 8]} />
-                  <Tooltip formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Precio por caja']} />
+                  <YAxis domain={[
+                    Math.max(0, Math.min(...preciosMercado.map((d) => d.precio)) - 0.5),
+                    Math.max(...preciosMercado.map((d) => d.precio)) + 0.5,
+                  ]} />
+                  <Tooltip formatter={(value) => [`${currencySymbol}${Number(value).toFixed(2)}`, `Precio por ${unit}`]} />
                   <Legend />
-                  <Line type="monotone" dataKey="precio" name="Precio por caja" stroke="#4f46e5" strokeWidth={2} />
+                  <Line type="monotone" dataKey="precio" name={`Precio por ${unit}`} stroke="#4f46e5" strokeWidth={2} />
                 </LineChart>
               </ResponsiveContainer>
               
+              {cargandoPrecios && (
+                <div className="text-sm text-muted-foreground mt-2">Actualizando precios…</div>
+              )}
+              {errorPrecios && (
+                <div className="text-sm text-red-500 mt-2">{errorPrecios}</div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
                 <div className="border rounded-lg p-4">
                   <div className="text-sm text-muted-foreground mb-1">Precio Actual</div>
-                  <div className="text-2xl font-bold">$7.10</div>
-                  <div className="text-sm text-red-500 mt-1 flex items-center">
-                    <TrendingDown className="h-3 w-3 mr-1" />
-                    -1.4% vs mes anterior
+                  <div className="text-2xl font-bold">{currencySymbol}{precioActual.toFixed(2)}</div>
+                  <div className={`text-sm mt-1 flex items-center ${variacionMes >= 0 ? "text-green-500" : "text-red-500"}`}>
+                    {variacionMes >= 0 ? (
+                      <TrendingUp className="h-3 w-3 mr-1" />
+                    ) : (
+                      <TrendingDown className="h-3 w-3 mr-1" />
+                    )}
+                    {variacionMes >= 0 ? "+" : ""}{variacionMes.toFixed(1)}% vs mes anterior
                   </div>
                 </div>
                 
                 <div className="border rounded-lg p-4">
                   <div className="text-sm text-muted-foreground mb-1">Precio Promedio</div>
-                  <div className="text-2xl font-bold">$6.80</div>
+                  <div className="text-2xl font-bold">{currencySymbol}{promedio.toFixed(2)}</div>
                   <div className="text-sm text-green-500 mt-1 flex items-center">
                     <TrendingUp className="h-3 w-3 mr-1" />
                     +5.2% vs año anterior
@@ -280,7 +418,9 @@ export default function ReportesFinancieroPage() {
                 
                 <div className="border rounded-lg p-4">
                   <div className="text-sm text-muted-foreground mb-1">Precio Proyectado</div>
-                  <div className="text-2xl font-bold">$7.30</div>
+                  <div className="text-2xl font-bold">{currencySymbol}{(
+                    (preciosMercado.at(-1)?.precio || 0) * 1.03
+                  ).toFixed(2)}</div>
                   <div className="text-sm text-green-500 mt-1 flex items-center">
                     <TrendingUp className="h-3 w-3 mr-1" />
                     +2.8% próximo trimestre

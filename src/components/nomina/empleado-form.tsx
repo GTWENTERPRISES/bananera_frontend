@@ -27,7 +27,7 @@ import { EmpleadoSchema } from "@/src/lib/validation";
 import { Spinner } from "@/src/components/ui/spinner";
 
 export function EmpleadoForm() {
-  const { addEmpleado, canAccess } = useApp();
+  const { addEmpleado, canAccess, fincas } = useApp();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -80,8 +80,8 @@ export function EmpleadoForm() {
       telefono: formData.telefono,
       activo: formData.activo,
       lote: formData.lote || undefined,
-      direccion: formData.direccion || undefined,
-      cuentaBancaria: formData.cuentaBancaria || undefined,
+      direccion: formData.direccion,
+      cuentaBancaria: formData.cuentaBancaria,
     });
     if (!parsed.success) {
       const flat = parsed.error.flatten();
@@ -105,9 +105,9 @@ export function EmpleadoForm() {
       fechaIngreso: formData.fechaIngreso,
       telefono: formData.telefono,
       activo: formData.activo, // Cambiado de "estado" a "activo" (boolean)
-      lote: formData.lote || undefined, // Opcional
-      direccion: formData.direccion || undefined, // Opcional
-      cuentaBancaria: formData.cuentaBancaria || undefined, // Opcional
+      lote: formData.lote || undefined,
+      direccion: formData.direccion,
+      cuentaBancaria: formData.cuentaBancaria,
     };
 
     addEmpleado(newEmpleado);
@@ -262,15 +262,25 @@ export function EmpleadoForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="lote">Lote (Opcional)</Label> {/* Nuevo campo */}
-              <Input
-                id="lote"
+              <Label htmlFor="lote">Lote</Label>
+              <Select
                 value={formData.lote}
-                onChange={(e) =>
-                  setFormData({ ...formData, lote: e.target.value })
-                }
-                disabled={isSubmitting || !allowEdit}
-              />
+                onValueChange={(value) => setFormData({ ...formData, lote: value })}
+                disabled={isSubmitting || !allowEdit || !formData.finca}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar lote" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(() => {
+                    const f = fincas.find((x) => x.nombre === formData.finca);
+                    const keys = f?.lotes ? Object.keys(f.lotes) : ["A","B","C","D","E"];
+                    return keys.map((k) => (
+                      <SelectItem key={k} value={k}>{k}</SelectItem>
+                    ));
+                  })()}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -289,29 +299,35 @@ export function EmpleadoForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="direccion">Dirección (Opcional)</Label>{" "}
-              {/* Nuevo campo */}
+              <Label htmlFor="direccion">Dirección</Label>
               <Input
                 id="direccion"
                 value={formData.direccion}
                 onChange={(e) =>
-                  setFormData({ ...formData, direccion: e.target.value })
+                  (setFormData({ ...formData, direccion: e.target.value }), setErrors((prev) => ({ ...prev, direccion: "" })))
                 }
                 disabled={isSubmitting || !allowEdit}
+                required
               />
+              {errors.direccion && (
+                <p className="text-xs text-red-600">{errors.direccion}</p>
+              )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cuentaBancaria">Cuenta Bancaria (Opcional)</Label>{" "}
-              {/* Nuevo campo */}
+              <Label htmlFor="cuentaBancaria">Cuenta Bancaria</Label>
               <Input
                 id="cuentaBancaria"
                 value={formData.cuentaBancaria}
                 onChange={(e) =>
-                  setFormData({ ...formData, cuentaBancaria: e.target.value })
+                  (setFormData({ ...formData, cuentaBancaria: e.target.value }), setErrors((prev) => ({ ...prev, cuentaBancaria: "" })))
                 }
                 disabled={isSubmitting || !allowEdit}
+                required
               />
+              {errors.cuentaBancaria && (
+                <p className="text-xs text-red-600">{errors.cuentaBancaria}</p>
+              )}
             </div>
 
             <div className="space-y-2">

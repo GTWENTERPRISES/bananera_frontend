@@ -78,8 +78,8 @@ export const EmpleadoSchema = z.object({
     .refine((v) => !v || isValidEcuadorPhone(v)),
   activo: z.boolean(),
   lote: z.string().optional(),
-  direccion: z.string().optional(),
-  cuentaBancaria: z.string().optional(),
+  direccion: nonEmpty,
+  cuentaBancaria: nonEmpty,
 });
 
 export const InsumoSchema = z.object({
@@ -107,10 +107,10 @@ export const EnfundeSchema = z.object({
   finca: FincaEnum,
   semana: intString.refine((v) => {
     const n = Number(v);
-    return n >= 1 && n <= 52;
+    return n >= 1 && n <= 53;
   }),
   año: intString,
-  colorCinta: nonEmpty,
+  colorCinta: z.enum(["Azul", "Rojo", "Verde", "Amarillo", "Blanco", "Naranja"]),
   cantidadEnfundes: intString.refine((v) => Number(v) >= 0),
   matasCaidas: intString.refine((v) => Number(v) >= 0),
   fecha: dateString,
@@ -120,7 +120,7 @@ export const CosechaSchema = z.object({
   finca: FincaEnum,
   semana: intString.refine((v) => {
     const n = Number(v);
-    return n >= 1 && n <= 52;
+    return n >= 1 && n <= 53;
   }),
   año: intString,
   racimosCorta: intString.refine((v) => Number(v) >= 0),
@@ -135,9 +135,10 @@ export const RecuperacionCintaSchema = z.object({
   finca: FincaEnum,
   semana: intString.refine((v) => {
     const n = Number(v);
-    return n >= 1 && n <= 52;
+    return n >= 1 && n <= 53;
   }),
   año: intString,
+  colorCinta: z.enum(["Azul", "Rojo", "Verde", "Amarillo", "Blanco", "Naranja"]),
   enfundesIniciales: intString.refine((v) => Number(v) >= 0),
   primeraCalCosecha: intString.refine((v) => Number(v) >= 0),
   segundaCalCosecha: intString.refine((v) => Number(v) >= 0),
@@ -157,7 +158,7 @@ export const RolPagoInputSchema = z.object({
   empleadoId: nonEmpty,
   semana: intString.refine((v) => {
     const n = Number(v);
-    return n >= 1 && n <= 52;
+    return n >= 1 && n <= 53;
   }),
   año: intString,
   diasLaborados: intString.refine((v) => {

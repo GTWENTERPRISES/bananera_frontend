@@ -99,11 +99,11 @@ export function AnalyticsCharts() {
   ];
 
   const COLORS = [
-    "hsl(var(--chart-1))",
-    "hsl(var(--chart-2))",
-    "hsl(var(--chart-3))",
-    "hsl(var(--chart-4))",
-    "hsl(var(--chart-5))",
+    "var(--chart-1)",
+    "var(--chart-2)",
+    "var(--chart-3)",
+    "var(--chart-4)",
+    "var(--chart-5)",
   ];
 
   return (
@@ -115,28 +115,25 @@ export function AnalyticsCharts() {
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={produccionPorFinca}>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="hsl(var(--border))"
-              />
-              <XAxis dataKey="finca" stroke="hsl(var(--muted-foreground))" />
-              <YAxis stroke="hsl(var(--muted-foreground))" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="finca" stroke="var(--muted-foreground)" />
+              <YAxis stroke="var(--muted-foreground)" />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "hsl(var(--background))",
-                  border: "1px solid hsl(var(--border))",
+                  backgroundColor: "var(--background)",
+                  border: "1px solid var(--border)",
                   borderRadius: "8px",
                 }}
               />
               <Legend />
               <Bar
                 dataKey="enfundes"
-                fill="hsl(var(--chart-1))"
+                fill="var(--chart-1)"
                 name="Enfundes"
               />
               <Bar
                 dataKey="cosechas"
-                fill="hsl(var(--chart-2))"
+                fill="var(--chart-2)"
                 name="Cajas Producidas"
               />
             </BarChart>
@@ -170,8 +167,8 @@ export function AnalyticsCharts() {
               </Pie>
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "hsl(var(--background))",
-                  border: "1px solid hsl(var(--border))",
+                  backgroundColor: "var(--background)",
+                  border: "1px solid var(--border)",
                   borderRadius: "8px",
                 }}
               />
@@ -187,16 +184,13 @@ export function AnalyticsCharts() {
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={tendenciaSemanal}>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="hsl(var(--border))"
-              />
-              <XAxis dataKey="semana" stroke="hsl(var(--muted-foreground))" />
-              <YAxis stroke="hsl(var(--muted-foreground))" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="semana" stroke="var(--muted-foreground)" />
+              <YAxis stroke="var(--muted-foreground)" />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "hsl(var(--background))",
-                  border: "1px solid hsl(var(--border))",
+                  backgroundColor: "var(--background)",
+                  border: "1px solid var(--border)",
                   borderRadius: "8px",
                 }}
               />
@@ -204,8 +198,9 @@ export function AnalyticsCharts() {
               <Line
                 type="monotone"
                 dataKey="produccion"
-                stroke="hsl(var(--chart-1))"
+                stroke="var(--chart-1)"
                 strokeWidth={2}
+                dot={{ r: 3, stroke: "var(--chart-1)", fill: "var(--chart-1)" }}
                 name="Producción (Cajas)"
               />
             </LineChart>

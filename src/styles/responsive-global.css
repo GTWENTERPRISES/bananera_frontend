@@ -5,6 +5,18 @@ html.is-mobile .responsive-container {
   padding: var(--responsive-padding, 0.75rem);
 }
 
+@media (min-width: 320px) and (max-width: 480px) {
+  html.is-mobile .responsive-container {
+    padding: var(--responsive-padding, 0.5rem);
+  }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  html.is-mobile .responsive-container {
+    padding: var(--responsive-padding, 0.75rem);
+  }
+}
+
 html.is-desktop .responsive-container {
   padding: var(--responsive-padding, 1.5rem);
 }
@@ -13,6 +25,18 @@ html.is-desktop .responsive-container {
 html.is-mobile .responsive-grid {
   grid-template-columns: 1fr;
   gap: var(--responsive-gap, 0.5rem);
+}
+
+@media (min-width: 320px) and (max-width: 480px) {
+  html.is-mobile .responsive-grid {
+    gap: var(--responsive-gap, 0.5rem);
+  }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  html.is-mobile .responsive-grid {
+    gap: var(--responsive-gap, 0.75rem);
+  }
 }
 
 html.is-desktop .responsive-grid {
@@ -34,6 +58,18 @@ html.is-mobile .responsive-form {
   display: flex;
   flex-direction: column;
   gap: var(--responsive-gap, 0.5rem);
+}
+
+@media (min-width: 320px) and (max-width: 480px) {
+  html.is-mobile .responsive-form {
+    gap: var(--responsive-gap, 0.5rem);
+  }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  html.is-mobile .responsive-form {
+    gap: var(--responsive-gap, 0.75rem);
+  }
 }
 
 html.is-desktop .responsive-form-row {

@@ -202,14 +202,19 @@ export function FincasTable({
           </div>
         )}
 
-        <div
-          className={cn(
-            "border rounded-lg overflow-x-auto",
-            isMobile && "pb-4"
-          )}
-        >
-          <Table>
-            <TableHeader>
+        {paginated.length === 0 ? (
+          <div className="rounded-md border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+            No se encontraron fincas. Intenta con otros términos de búsqueda.
+          </div>
+        ) : (
+          <div
+            className={cn(
+              "border rounded-lg overflow-x-auto overflow-y-auto max-h-[540px]",
+              isMobile && "pb-4"
+            )}
+          >
+            <Table className="text-sm min-w-[1100px]">
+              <TableHeader className="sticky top-0 z-10 bg-background shadow-sm">
               <TableRow>
                 <TableHead>Finca</TableHead>
                 <TableHead className={cn(isMobile && "hidden md:table-cell")}>
@@ -232,30 +237,14 @@ export function FincasTable({
                 </TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginated.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={8}
-                    className="text-center text-muted-foreground py-8"
-                  >
-                    <div className="flex flex-col items-center gap-2">
-                      <MapPin className="h-8 w-8 text-muted-foreground" />
-                      <p>No se encontraron fincas</p>
-                      <p className="text-sm">
-                        Intenta con otros términos de búsqueda
-                      </p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                paginated.map((finca) => {
+              </TableHeader>
+              <TableBody className="animate-in fade-in duration-200">
+                {paginated.map((finca) => {
                   const tieneRegistros = tieneRegistrosAsociados(finca.id);
                   const puedeEliminar = canDeleteFincas && !tieneRegistros;
 
                   return (
-                    <TableRow key={finca.id}>
+                    <TableRow key={finca.id} className="odd:bg-muted/50 hover:bg-muted transition-colors">
                       <TableCell className="font-medium">
                         <div className="flex flex-col">
                           <Badge
@@ -289,14 +278,14 @@ export function FincasTable({
                       <TableCell
                         className={cn(isMobile && "hidden md:table-cell")}
                       >
-                        {finca.hectareas} ha
+                        <span className="tabular-nums whitespace-nowrap">{finca.hectareas} ha</span>
                       </TableCell>
                       <TableCell
                         className={cn(isMobile && "hidden md:table-cell")}
                       >
-                        {typeof finca.plantasTotales === "number"
+                        <span className="tabular-nums whitespace-nowrap">{typeof finca.plantasTotales === "number"
                           ? finca.plantasTotales.toLocaleString()
-                          : "-"}
+                          : "-"}</span>
                       </TableCell>
                       <TableCell
                         className={cn(isMobile && "hidden md:table-cell")}
@@ -360,11 +349,11 @@ export function FincasTable({
                       </TableCell>
                     </TableRow>
                   );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
         <div className="flex items-center justify-between mt-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Ver</span>
@@ -392,9 +381,10 @@ export function FincasTable({
                 <PaginationPrevious
                   href="#"
                   size="default"
+                  disabled={page <= 1}
                   onClick={(e) => {
                     e.preventDefault();
-                    setPage((p) => Math.max(1, p - 1));
+                    if (page > 1) setPage((p) => Math.max(1, p - 1));
                   }}
                 />
               </PaginationItem>
@@ -417,9 +407,10 @@ export function FincasTable({
                 <PaginationNext
                   href="#"
                   size="default"
+                  disabled={page >= pageCount}
                   onClick={(e) => {
                     e.preventDefault();
-                    setPage((p) => Math.min(pageCount, p + 1));
+                    if (page < pageCount) setPage((p) => Math.min(pageCount, p + 1));
                   }}
                 />
               </PaginationItem>

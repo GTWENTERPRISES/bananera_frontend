@@ -15,6 +15,14 @@ export interface Finca {
     type: "Polygon" | "MultiPolygon";
     coordinates: any;
   };
+  // Coordenadas de lotes (centroides aproximados) A–E
+  lotes?: {
+    A?: { lat: number; lng: number };
+    B?: { lat: number; lng: number };
+    C?: { lat: number; lng: number };
+    D?: { lat: number; lng: number };
+    E?: { lat: number; lng: number };
+  };
 }
 
 export type FincaName = "BABY" | "SOLO" | "LAURITA" | "MARAVILLA";
@@ -54,6 +62,7 @@ export interface Cosecha {
   finca: FincaName;
   semana: number;
   año: number;
+  fecha?: string;
   racimosCorta: number;
   racimosRechazados: number;
   racimosRecuperados: number;
@@ -63,6 +72,14 @@ export interface Cosecha {
   numeroManos: number;
   ratio: number;
   merma: number;
+  // Producción por lote en cajas (opcional)
+  cajasPorLote?: {
+    A?: number;
+    B?: number;
+    C?: number;
+    D?: number;
+    E?: number;
+  };
 }
 
 export interface Empleado {
@@ -87,6 +104,7 @@ export interface RolPago {
   finca: FincaName;
   semana: number;
   año: number;
+  fecha?: string;
   diasLaborados: number;
   horasExtras?: number;
   sueldoBase: number;
@@ -99,6 +117,7 @@ export interface RolPago {
   totalEgresos: number;
   netoAPagar: number;
   estado: "pendiente" | "pagado";
+  prestamoAplicado?: boolean;
 }
 
 export interface Prestamo {
@@ -150,6 +169,7 @@ export interface Alerta {
   accionRequerida?: string;
   finca?: FincaName;
   rolesPermitidos: UserRole[];
+  metadata?: Record<string, string>;
 }
 
 export interface KPI {
@@ -165,6 +185,8 @@ export interface RecuperacionCinta {
   finca: FincaName;
   semana: number;
   año: number;
+  fecha?: string;
+  colorCinta?: string;
   enfundesIniciales: number;
   primeraCalCosecha: number;
   primeraCalSaldo: number;

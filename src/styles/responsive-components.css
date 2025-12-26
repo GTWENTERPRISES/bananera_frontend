@@ -1,44 +1,87 @@
 /* Estilos responsivos para todos los componentes */
 
+/* Imágenes responsivas */
+.responsive-image,
+.img-fluid {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Contenedores de imagen con ajuste */
+.responsive-image-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.responsive-image-contain {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 /* Tablas responsivas */
 .responsive-table {
   width: 100%;
   overflow-x: auto;
 }
 
-@media (max-width: 768px) {
-  .responsive-table table th:not(:first-child):not(:last-child),
-  .responsive-table table td:not(:first-child):not(:last-child) {
+/* Móviles pequeños: 320-480 */
+@media (min-width: 320px) and (max-width: 480px) {
+  .responsive-table table {
+    table-layout: auto;
+  }
+  .responsive-table table th,
+  .responsive-table table td {
+    padding: 0.375rem;
+  }
+
+  /* Variante MD: mantén las primeras 4 columnas visibles (p.ej. Fecha, Semana, Año, Finca) */
+  .responsive-table-md th:nth-child(n+5),
+  .responsive-table-md td:nth-child(n+5) {
     display: none;
   }
-  
-  .responsive-table-md th:nth-child(n+4),
-  .responsive-table-md td:nth-child(n+4) {
-    display: none;
-  }
-  
+
+  /* Variante SM: mantén las primeras 2 columnas visibles */
   .responsive-table-sm th:nth-child(n+3),
   .responsive-table-sm td:nth-child(n+3) {
     display: none;
   }
-  
+
   .mobile-info {
     display: block;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: var(--muted-foreground);
     margin-top: 0.25rem;
   }
 }
 
+/* Móviles medianos: 481-768 */
+@media (min-width: 481px) and (max-width: 768px) {
+  .responsive-table table th,
+  .responsive-table table td {
+    padding: 0.5rem;
+  }
+}
+
+/* Tablet: 769-1024, muestra hasta 6 columnas cuando se usa la variante MD */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .responsive-table-md th:nth-child(n+7),
+  .responsive-table-md td:nth-child(n+7) {
+    display: none;
+  }
+}
+
 /* Formularios responsivos */
-@media (max-width: 768px) {
+@media (min-width: 320px) and (max-width: 768px) {
   .responsive-form .form-row {
     flex-direction: column;
   }
   
   .responsive-form .form-col {
     width: 100%;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
   }
 }
 
@@ -47,7 +90,7 @@
   width: 100%;
 }
 
-@media (max-width: 768px) {
+@media (min-width: 320px) and (max-width: 768px) {
   .responsive-card {
     padding: 1rem;
   }
@@ -58,14 +101,38 @@
   width: 100%;
 }
 
-@media (max-width: 768px) {
+@media (min-width: 320px) and (max-width: 768px) {
   .responsive-chart {
     height: 250px !important;
   }
 }
 
+/* Mapas responsivos */
+.responsive-map {
+  width: 100%;
+  height: 320px;
+}
+
+@media (min-width: 320px) and (max-width: 480px) {
+  .responsive-map {
+    height: 240px;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .responsive-map {
+    height: 280px;
+  }
+}
+
+@media (min-width: 769px) {
+  .responsive-map {
+    height: 360px;
+  }
+}
+
 /* Clases de utilidad para visibilidad */
-@media (max-width: 768px) {
+@media (min-width: 320px) and (max-width: 768px) {
   .hide-on-mobile {
     display: none !important;
   }

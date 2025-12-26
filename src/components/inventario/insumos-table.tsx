@@ -28,6 +28,8 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 export function InsumosTable() {
   const { insumos } = useApp();
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState<string>("");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const filteredInsumos = insumos.filter(
     (insumo) =>
@@ -42,7 +44,29 @@ export function InsumosTable() {
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const startIdx = (page - 1) * pageSize;
   const endIdx = Math.min(startIdx + pageSize, total);
-  const paginated = filteredInsumos.slice(startIdx, endIdx);
+  const sorted = (() => {
+    const data = [...filteredInsumos];
+    if (!sortBy) return data;
+    return data.sort((a, b) => {
+      const dir = sortDir === "asc" ? 1 : -1;
+      switch (sortBy) {
+        case "nombre":
+          return a.nombre.localeCompare(b.nombre) * dir;
+        case "categoria":
+          return a.categoria.localeCompare(b.categoria) * dir;
+        case "stockActual":
+          return (a.stockActual - b.stockActual) * dir;
+        case "fechaVencimiento": {
+          const av = a.fechaVencimiento ? new Date(a.fechaVencimiento).getTime() : 0;
+          const bv = b.fechaVencimiento ? new Date(b.fechaVencimiento).getTime() : 0;
+          return (av - bv) * dir;
+        }
+        default:
+          return 0;
+      }
+    });
+  })();
+  const paginated = sorted.slice(startIdx, endIdx);
 
   const totalValor = filteredInsumos.reduce(
     (sum, i) => sum + i.stockActual * i.precioUnitario,
@@ -90,6 +114,7 @@ export function InsumosTable() {
             "Stock Máximo",
             "Precio Unitario",
             "Proveedor",
+            "Vencimiento",
             "Estado",
           ]} // Actualizados los headers
           keys={[
@@ -100,6 +125,7 @@ export function InsumosTable() {
             "stockMaximo",
             "precioUnitario",
             "proveedor",
+            "fechaVencimiento",
             "estado",
           ]}
           title="Inventario de Insumos"
@@ -133,7 +159,7 @@ export function InsumosTable() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex flex-col md:flex-row md:items-center gap-2 mb-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -156,12 +182,39 @@ export function InsumosTable() {
               </SelectContent>
             </Select>
             <span className="text-sm text-muted-foreground">por página</span>
+            <span className="ml-4 text-sm text-muted-foreground">Ordenar</span>
+            <Select value={sortBy} onValueChange={(v) => { setSortBy(v === "none" ? "" : v); setPage(1); }}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Sin orden" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin orden</SelectItem>
+                <SelectItem value="nombre">Nombre</SelectItem>
+                <SelectItem value="categoria">Categoría</SelectItem>
+                <SelectItem value="stockActual">Stock</SelectItem>
+                <SelectItem value="fechaVencimiento">Vencimiento</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sortDir} onValueChange={(v) => { setSortDir(v as any); setPage(1); }}>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue placeholder="Desc" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="asc">Asc</SelectItem>
+                <SelectItem value="desc">Desc</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
+        {paginated.length === 0 ? (
+          <div className="flex items-center justify-center rounded-md border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+            No hay insumos que coincidan con tu búsqueda.
+          </div>
+        ) : (
+          <div key={`${searchTerm}-${pageSize}-${page}`} className="overflow-x-auto overflow-y-auto max-h-[540px] animate-in fade-in duration-200 rounded-md border border-border responsive-table px-1">
+            <Table className="text-sm table-auto md:table-fixed min-w-[1000px]">
+              <TableHeader className="sticky top-0 z-10 bg-background shadow-sm text-xs md:text-sm">
               <TableRow>
                 <TableHead>Insumo</TableHead>
                 <TableHead>Categoría</TableHead>
@@ -172,17 +225,18 @@ export function InsumosTable() {
                 <TableHead className="text-right">Precio Unit.</TableHead>
                 <TableHead className="text-right">Valor Total</TableHead>
                 <TableHead>Proveedor</TableHead>
+                <TableHead>Vencimiento</TableHead>
                 <TableHead>Estado</TableHead>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginated.map((insumo) => {
-                // Cambiado de insumos a filteredInsumos
-                const status = getStockStatus(insumo);
-                const valorTotal = insumo.stockActual * insumo.precioUnitario;
-                return (
-                  <TableRow key={insumo.id}>
-                    <TableCell className="font-medium">
+              </TableHeader>
+              <TableBody className="animate-in fade-in duration-200">
+                {paginated.map((insumo) => {
+                  // Cambiado de insumos a filteredInsumos
+                  const status = getStockStatus(insumo);
+                  const valorTotal = insumo.stockActual * insumo.precioUnitario;
+                  return (
+                  <TableRow key={insumo.id} className="odd:bg-muted/50 hover:bg-muted transition-colors">
+                    <TableCell className="font-medium truncate max-w-[180px]">
                       <div className="flex items-center gap-2">
                         {insumo.stockActual < insumo.stockMinimo && (
                           <AlertTriangle className="h-4 w-4 text-yellow-600" />
@@ -198,40 +252,46 @@ export function InsumosTable() {
                         {insumo.categoria}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right tabular-nums whitespace-nowrap">
                       <span className={cn(status.color)}>
                         {insumo.stockActual} {insumo.unidadMedida}
                       </span>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right tabular-nums whitespace-nowrap">
                       {insumo.stockMinimo} {insumo.unidadMedida}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right tabular-nums whitespace-nowrap">
                       {/* Nueva columna */}
                       {insumo.stockMaximo} {insumo.unidadMedida}
                     </TableCell>
-                    <TableCell className="text-right">
-                      ${insumo.precioUnitario.toFixed(2)}
+                    <TableCell className="text-right tabular-nums whitespace-nowrap">
+                      ${insumo.precioUnitario.toLocaleString("es-EC", { minimumFractionDigits: 2 })}
                     </TableCell>
-                    <TableCell className="text-right font-medium">
-                      ${valorTotal.toFixed(2)}
+                    <TableCell className="text-right font-medium tabular-nums whitespace-nowrap">
+                      ${valorTotal.toLocaleString("es-EC", { minimumFractionDigits: 2 })}
                     </TableCell>
-                    <TableCell>{insumo.proveedor}</TableCell>
+                    <TableCell className="truncate max-w-[160px]">{insumo.proveedor}</TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {insumo.fechaVencimiento
+                        ? new Date(insumo.fechaVencimiento).toLocaleDateString("es-ES", { year: "numeric", month: "short", day: "numeric" })
+                        : "-"}
+                    </TableCell>
                     <TableCell>
                       <Badge variant={status.variant}>{status.label}</Badge>
                     </TableCell>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
         <div className="flex items-center justify-between mt-4">
           <p className="text-sm text-muted-foreground">Mostrando {total === 0 ? 0 : startIdx + 1}-{endIdx} de {total}</p>
           <Pagination>
             <PaginationContent>
               <PaginationItem>
-                <PaginationPrevious href="#" size="default" onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)); }} />
+                <PaginationPrevious href="#" size="default" disabled={page <= 1} onClick={(e) => { e.preventDefault(); if (page > 1) setPage((p) => Math.max(1, p - 1)); }} />
               </PaginationItem>
               {Array.from({ length: pageCount }).map((_, i) => (
                 <PaginationItem key={i}>
@@ -241,7 +301,7 @@ export function InsumosTable() {
                 </PaginationItem>
               ))}
               <PaginationItem>
-                <PaginationNext href="#" size="default" onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(pageCount, p + 1)); }} />
+                <PaginationNext href="#" size="default" disabled={page >= pageCount} onClick={(e) => { e.preventDefault(); if (page < pageCount) setPage((p) => Math.min(pageCount, p + 1)); }} />
               </PaginationItem>
             </PaginationContent>
           </Pagination>

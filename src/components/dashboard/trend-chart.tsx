@@ -41,27 +41,27 @@ export function TrendChart() {
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-            <XAxis dataKey="semana" className="text-xs" />
-            <YAxis className="text-xs" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+            <XAxis dataKey="semana" stroke="var(--muted-foreground)" />
+            <YAxis stroke="var(--muted-foreground)" />
             <Tooltip
               contentStyle={{
-                backgroundColor: "hsl(var(--card))",
-                border: "1px solid hsl(var(--border))",
+                backgroundColor: "var(--card)",
+                border: "1px solid var(--border)",
                 borderRadius: "8px",
               }}
             />
             <Line
               type="monotone"
               dataKey="ratio"
-              stroke="hsl(var(--chart-1))"
+              stroke="var(--chart-1)"
               strokeWidth={2}
               name="Ratio"
             />
             <Line
               type="monotone"
               dataKey="merma"
-              stroke="hsl(var(--chart-3))"
+              stroke="var(--chart-3)"
               strokeWidth={2}
               name="Merma %"
             />

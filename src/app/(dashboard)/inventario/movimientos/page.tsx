@@ -3,12 +3,12 @@ import { MovimientosTable } from "@/src/components/inventario/movimientos-table"
 
 export default function MovimientosPage() {
   return (
-    <div className="space-y-6">
+    <div className="responsive-container space-y-4 md:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">
+        <h1 className="text-2xl md:text-3xl font-bold text-foreground">
           Movimientos de Inventario
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-sm md:text-base text-muted-foreground">
           Registro de entradas y salidas con trazabilidad completa
         </p>
       </div>

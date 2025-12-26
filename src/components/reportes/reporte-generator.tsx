@@ -20,11 +20,11 @@ import { FileText, Download } from "lucide-react";
 import { useToast } from "@/src/hooks/use-toast";
 import type { FincaName } from "@/src/lib/types"; // Cambia Finca por FincaName
 import { useApp } from "@/src/contexts/app-context";
-import { exportData } from "@/src/lib/export-utils";
+import { exportData, exportProduccionPDFInstitucional } from "@/src/lib/export-utils";
 
 export function ReporteGenerator() {
   const { toast } = useToast();
-  const { enfundes, cosechas, rolesPago, movimientosInventario, insumos } = useApp();
+  const { enfundes, cosechas, rolesPago, movimientosInventario, insumos, fincas, currentUser } = useApp();
   const [formData, setFormData] = useState({
     tipo: "",
     finca: "" as FincaName | "todas", // Usa FincaName en lugar de Finca
@@ -201,8 +201,23 @@ export function ReporteGenerator() {
     }
 
     try {
-      const prepared = data.map((item) => keys.map((k) => item[k]));
-      await exportData(fmt, prepared, headers, title, filename);
+      if (fmt === "pdf" && formData.tipo === "produccion" && formData.finca && formData.finca !== "todas") {
+        const fincaInfo = fincas.find((f) => f.nombre === formData.finca);
+        const years = data.filter((d) => d.finca === formData.finca).map((d) => d.año);
+        const añoSel = years.length > 0 ? Math.max(...years) : new Date().getFullYear();
+        await exportProduccionPDFInstitucional({
+          finca: formData.finca,
+          año: añoSel,
+          productor: currentUser?.nombre,
+          variedad: fincaInfo?.variedad,
+          superficie: fincaInfo?.hectareas,
+          cosechas,
+          filename,
+        });
+      } else {
+        const prepared = data.map((item) => keys.map((k) => item[k]));
+        await exportData(fmt, prepared, headers, title, filename);
+      }
       toast({ title: "Reporte generado", description: `${title} en ${formData.formato.toUpperCase()}` });
     } catch (e) {
       toast({ title: "Error al exportar", description: "Intenta nuevamente" });

@@ -19,42 +19,197 @@ import { Badge } from "@/src/components/ui/badge";
 import { ExportButton } from "@/src/components/shared/export-button";
 import { cn } from "@/src/lib/utils";
 import { useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { Edit, Search, Trash2 } from "lucide-react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { Edit, Search, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/src/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/src/components/ui/select";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/src/components/ui/pagination";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/src/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/src/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 export function CosechasTable() {
-  const { cosechas, fincas } = useApp();
+  const { cosechas, fincas, updateCosecha, deleteCosecha } = useApp();
   const [searchTerm, setSearchTerm] = useState("");
   const searchParams = useSearchParams();
   const fincaFilter = searchParams.get("finca") || "";
+  const [fincaSel, setFincaSel] = useState(fincaFilter);
+  const router = useRouter();
+  const pathname = usePathname();
+  const [weekFilter, setWeekFilter] = useState(
+    searchParams.get("semana") || ""
+  );
+  const [yearFilter, setYearFilter] = useState(searchParams.get("anio") || "");
+  const [sortBy, setSortBy] = useState<
+    | "fecha"
+    | "semana"
+    | "año"
+    | "finca"
+    | "racimosCorta"
+    | "racimosRechazados"
+    | "racimosRecuperados"
+    | "cajasProducidas"
+    | "pesoPromedio"
+    | "calibracion"
+    | "numeroManos"
+    | "ratio"
+    | "merma"
+    | "responsable"
+  >("fecha");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const latestRecord = useMemo(() => {
+    let best: (typeof cosechas)[number] | null = null;
+    for (const c of cosechas) {
+      if (!best) best = c;
+      else if (
+        c.año > best.año ||
+        (c.año === best.año && c.semana > best.semana)
+      )
+        best = c;
+    }
+    return best;
+  }, [cosechas]);
+
+  const years = useMemo(() => {
+    return Array.from(new Set(cosechas.map((c) => c.año))).sort(
+      (a, b) => a - b
+    );
+  }, [cosechas]);
+
+  const fincaOptions = useMemo(() => {
+    return Array.from(new Set(fincas.map((f) => f.nombre)));
+  }, [fincas]);
 
   // Función para obtener información de la finca
   const getFincaInfo = (fincaName: string) => {
     return fincas.find((f) => f.nombre === fincaName);
+  };
+  const getDateFromYearSemana = (year: number, week: number) => {
+    const simple = new Date(year, 0, 1 + (week - 1) * 7);
+    const dayOfWeek = simple.getDay();
+    const ISOweekStart = new Date(simple);
+    if (dayOfWeek <= 4)
+      ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1);
+    else ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay());
+    return ISOweekStart;
   };
 
   const filteredCosechas = useMemo(() => {
     return cosechas.filter((cosecha) => {
       const matchesSearch =
         cosecha.finca.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (getFincaInfo(cosecha.finca)?.responsable?.toLowerCase() || "")
-          .includes(searchTerm.toLowerCase());
-      const matchesFinca = fincaFilter ? cosecha.finca === fincaFilter : true;
-      return matchesSearch && matchesFinca;
+        (
+          getFincaInfo(cosecha.finca)?.responsable?.toLowerCase() || ""
+        ).includes(searchTerm.toLowerCase());
+      const matchesFinca = fincaSel ? cosecha.finca === fincaSel : true;
+      const matchesWeek = weekFilter
+        ? cosecha.semana === Number(weekFilter)
+        : true;
+      const matchesYear = yearFilter
+        ? cosecha.año === Number(yearFilter)
+        : true;
+      return matchesSearch && matchesFinca && matchesWeek && matchesYear;
     });
-  }, [cosechas, searchTerm, fincaFilter]);
+  }, [cosechas, searchTerm, fincaSel, weekFilter, yearFilter]);
 
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(() => {
+    const v = searchParams.get("pageSize");
+    const n = v ? Number(v) : 10;
+    return [10, 20, 50].includes(n) ? n : 10;
+  });
   const total = filteredCosechas.length;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const startIdx = (page - 1) * pageSize;
   const endIdx = Math.min(startIdx + pageSize, total);
-  const paginated = filteredCosechas.slice(startIdx, endIdx);
+  const sortedCosechas = useMemo(() => {
+    const getValue = (c: (typeof cosechas)[number]) => {
+      if (sortBy === "fecha")
+        return (
+          c.fecha ? new Date(c.fecha) : getDateFromYearSemana(c.año, c.semana)
+        ).getTime();
+      if (sortBy === "semana") return c.semana;
+      if (sortBy === "año") return c.año;
+      if (sortBy === "finca") return c.finca.toLowerCase();
+      if (sortBy === "racimosCorta") return c.racimosCorta;
+      if (sortBy === "racimosRechazados") return c.racimosRechazados;
+      if (sortBy === "racimosRecuperados") return c.racimosRecuperados;
+      if (sortBy === "cajasProducidas") return c.cajasProducidas;
+      if (sortBy === "pesoPromedio") return c.pesoPromedio;
+      if (sortBy === "calibracion") return String(c.calibracion).toLowerCase();
+      if (sortBy === "numeroManos") return c.numeroManos;
+      if (sortBy === "ratio") return c.ratio;
+      if (sortBy === "merma") return c.merma;
+      if (sortBy === "responsable")
+        return (getFincaInfo(c.finca)?.responsable || "").toLowerCase();
+      return 0;
+    };
+    const arr = [...filteredCosechas];
+    arr.sort((a, b) => {
+      const va = getValue(a);
+      const vb = getValue(b);
+      let cmp = 0;
+      if (typeof va === "number" && typeof vb === "number") cmp = va - vb;
+      else cmp = String(va).localeCompare(String(vb));
+      if (sortBy === "año" && cmp === 0) {
+        cmp = a.semana - b.semana;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return arr;
+  }, [filteredCosechas, sortBy, sortDir]);
+
+  const paginated = sortedCosechas.slice(startIdx, endIdx);
+  const applyLatestFilters = () => {
+    if (!latestRecord) return;
+    const nextWeek = String(latestRecord.semana);
+    const nextYear = String(latestRecord.año);
+    setWeekFilter(nextWeek);
+    setYearFilter(nextYear);
+    const params = new URLSearchParams();
+    for (const [key, value] of (searchParams as any).entries?.() || [])
+      params.set(key, value);
+    params.set("semana", nextWeek);
+    params.set("anio", nextYear);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    setPage(1);
+  };
+
+  const toggleSort = (key: typeof sortBy) => {
+    if (sortBy === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortBy(key);
+      setSortDir(key === "año" || key === "fecha" ? "desc" : "asc");
+    }
+    setPage(1);
+  };
 
   const totalCajas = filteredCosechas.reduce(
     (sum, c) => sum + c.cajasProducidas,
@@ -71,10 +226,113 @@ export function CosechasTable() {
         filteredCosechas.length
       : 0;
 
+  const pageTotals = useMemo(() => {
+    const arr = paginated;
+    const totals = {
+      racimosCorta: 0,
+      racimosRechazados: 0,
+      racimosRecuperados: 0,
+      cajasProducidas: 0,
+      pesoPromedio: 0,
+      calibracion: 0,
+      numeroManos: 0,
+      ratio: 0,
+      merma: 0,
+      count: arr.length,
+    };
+    for (const c of arr) {
+      totals.racimosCorta += c.racimosCorta;
+      totals.racimosRechazados += c.racimosRechazados;
+      totals.racimosRecuperados += c.racimosRecuperados;
+      totals.cajasProducidas += c.cajasProducidas;
+      totals.pesoPromedio += c.pesoPromedio;
+      totals.calibracion += c.calibracion;
+      totals.numeroManos += c.numeroManos;
+      totals.ratio += c.ratio;
+      totals.merma += c.merma;
+    }
+    const avg = (v: number) => (totals.count ? v / totals.count : 0);
+    return {
+      racimosCorta: totals.racimosCorta,
+      racimosRechazados: totals.racimosRechazados,
+      racimosRecuperados: totals.racimosRecuperados,
+      cajasProducidas: totals.cajasProducidas,
+      pesoPromedio: avg(totals.pesoPromedio),
+      calibracion: avg(totals.calibracion),
+      numeroManos: avg(totals.numeroManos),
+      ratio: avg(totals.ratio),
+      merma: avg(totals.merma),
+    };
+  }, [paginated]);
+
   const getMermaColor = (merma: number) => {
     if (merma < 3) return "text-green-600";
     if (merma < 4) return "text-yellow-600";
     return "text-red-600";
+  };
+
+  const [editing, setEditing] = useState<null | (typeof cosechas)[number]>(
+    null
+  );
+  const [editForm, setEditForm] = useState({
+    racimosCorta: "",
+    racimosRechazados: "",
+    cajasProducidas: "",
+    pesoPromedio: "",
+    calibracion: "",
+    numeroManos: "",
+  });
+  const [toDelete, setToDelete] = useState<null | (typeof cosechas)[number]>(
+    null
+  );
+
+  const openEdit = (c: (typeof cosechas)[number]) => {
+    setEditing(c);
+    setEditForm({
+      racimosCorta: String(c.racimosCorta),
+      racimosRechazados: String(c.racimosRechazados),
+      cajasProducidas: String(c.cajasProducidas),
+      pesoPromedio: String(c.pesoPromedio),
+      calibracion: String(c.calibracion),
+      numeroManos: String(c.numeroManos),
+    });
+  };
+
+  const saveEdit = () => {
+    if (!editing) return;
+    const racimosCorta = Number.parseInt(editForm.racimosCorta || "0");
+    const racimosRechazados = Number.parseInt(
+      editForm.racimosRechazados || "0"
+    );
+    const racimosRecuperados = Math.max(0, racimosCorta - racimosRechazados);
+    const cajasProducidas = Number.parseInt(editForm.cajasProducidas || "0");
+    const pesoPromedio = Number.parseFloat(editForm.pesoPromedio || "0");
+    const calibracion = Number.parseFloat(editForm.calibracion || "0");
+    const numeroManos = Number.parseFloat(editForm.numeroManos || "0");
+    const ratio =
+      racimosRecuperados > 0 ? cajasProducidas / racimosRecuperados : 0;
+    const merma =
+      racimosCorta > 0 ? (racimosRechazados / racimosCorta) * 100 : 0;
+    updateCosecha(editing.id, {
+      racimosCorta,
+      racimosRechazados,
+      racimosRecuperados,
+      cajasProducidas,
+      pesoPromedio,
+      calibracion,
+      numeroManos,
+      ratio,
+      merma,
+    });
+    toast.success("Cosecha actualizada");
+    setEditing(null);
+  };
+
+  const confirmDelete = () => {
+    if (!toDelete) return;
+    deleteCosecha(toDelete.id);
+    toast.success("Cosecha eliminada");
+    setToDelete(null);
   };
 
   return (
@@ -119,6 +377,21 @@ export function CosechasTable() {
         />
       </CardHeader>
       <CardContent>
+        {latestRecord && (
+          <div className="mb-4 rounded-lg border border-border bg-muted/40 p-3 flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              Último registro:{" "}
+              <span className="font-medium text-foreground">
+                {latestRecord.finca}
+              </span>{" "}
+              · S{latestRecord.semana} · {latestRecord.año} · Cajas{" "}
+              {latestRecord.cajasProducidas.toLocaleString()}
+            </div>
+            <Button variant="outline" size="sm" onClick={applyLatestFilters}>
+              Ver
+            </Button>
+          </div>
+        )}
         <div className="mb-4 grid gap-4 md:grid-cols-3">
           <div className="rounded-lg border border-border bg-muted/50 p-4">
             <p className="text-sm text-muted-foreground">Total Cajas</p>
@@ -139,8 +412,120 @@ export function CosechasTable() {
             </p>
           </div>
         </div>
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Semana</span>
+            <Input
+              type="number"
+              min="1"
+              max="53"
+              value={weekFilter}
+              onChange={(e) => {
+                const next = e.target.value;
+                setWeekFilter(next);
+                const params = new URLSearchParams();
+                for (const [key, value] of (searchParams as any).entries?.() ||
+                  []) {
+                  params.set(key, value);
+                }
+                if (next) params.set("semana", next);
+                else params.delete("semana");
+                router.replace(`${pathname}?${params.toString()}`, {
+                  scroll: false,
+                });
+                setPage(1);
+              }}
+              className="w-[100px]"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Año</span>
+            <Select
+              value={yearFilter}
+              onValueChange={(v) => {
+                const next = v;
+                setYearFilter(next);
+                const params = new URLSearchParams();
+                for (const [key, value] of (searchParams as any).entries?.() ||
+                  []) {
+                  params.set(key, value);
+                }
+                if (next) params.set("anio", next);
+                else params.delete("anio");
+                router.replace(`${pathname}?${params.toString()}`, {
+                  scroll: false,
+                });
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[100px]">
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                {years.map((y) => (
+                  <SelectItem key={y} value={String(y)}>
+                    {y}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setWeekFilter("");
+              setYearFilter("");
+              const params = new URLSearchParams();
+              for (const [key, value] of (searchParams as any).entries?.() ||
+                []) {
+                params.set(key, value);
+              }
+              params.delete("semana");
+              params.delete("anio");
+              router.replace(`${pathname}?${params.toString()}`, {
+                scroll: false,
+              });
+              setPage(1);
+            }}
+          >
+            Limpiar filtros
+          </Button>
+        </div>
 
         <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Finca</span>
+            <Select
+              value={fincaSel}
+              onValueChange={(v) => {
+                const next = v === "todas" ? "" : v;
+                setFincaSel(next);
+                const params = new URLSearchParams();
+                for (const [key, value] of (searchParams as any).entries?.() ||
+                  []) {
+                  params.set(key, value);
+                }
+                if (next) params.set("finca", next);
+                else params.delete("finca");
+                router.replace(`${pathname}?${params.toString()}`, {
+                  scroll: false,
+                });
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Todas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas</SelectItem>
+                {fincaOptions.map((n) => (
+                  <SelectItem key={n} value={n}>
+                    {n}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -152,7 +537,23 @@ export function CosechasTable() {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Ver</span>
-            <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
+            <Select
+              value={String(pageSize)}
+              onValueChange={(v) => {
+                const next = Number(v);
+                setPageSize(next);
+                const params = new URLSearchParams();
+                for (const [key, value] of (searchParams as any).entries?.() ||
+                  []) {
+                  params.set(key, value);
+                }
+                params.set("pageSize", String(next));
+                router.replace(`${pathname}?${params.toString()}`, {
+                  scroll: false,
+                });
+                setPage(1);
+              }}
+            >
               <SelectTrigger className="w-[90px]">
                 <SelectValue placeholder="10" />
               </SelectTrigger>
@@ -166,64 +567,273 @@ export function CosechasTable() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
+        {paginated.length === 0 ? (
+          <div className="flex items-center justify-center rounded-md border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+            No hay registros de cosechas para los filtros actuales.
+          </div>
+        ) : (
+          <div
+            key={`${fincaSel}-${weekFilter}-${yearFilter}`}
+            className="overflow-x-auto overflow-y-auto max-h-[540px] animate-in fade-in duration-200 rounded-md border border-border responsive-table"
+          >
+            <Table className="text-sm table-auto md:table-fixed min-w-[1000px] md:min-w-[1100px] lg:min-w-[1200px]">
+              <TableHeader className="sticky top-0 z-10 bg-background shadow-sm text-xs md:text-sm">
               <TableRow>
-                <TableHead>Semana</TableHead>
-                <TableHead>Año</TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center gap-1"
+                    onClick={() => toggleSort("fecha")}
+                  >
+                    Fecha{" "}
+                    {sortBy === "fecha" ? (
+                      sortDir === "asc" ? (
+                        <ChevronUp className="h-3 w-3" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3" />
+                      )
+                    ) : null}
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center gap-1"
+                    onClick={() => toggleSort("semana")}
+                  >
+                    Semana{" "}
+                    {sortBy === "semana" ? (
+                      sortDir === "asc" ? (
+                        <ChevronUp className="h-3 w-3" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3" />
+                      )
+                    ) : null}
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center gap-1"
+                    onClick={() => toggleSort("año")}
+                  >
+                    Año{" "}
+                    {sortBy === "año" ? (
+                      sortDir === "asc" ? (
+                        <ChevronUp className="h-3 w-3" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3" />
+                      )
+                    ) : null}
+                  </button>
+                </TableHead>
                 <TableHead>Finca</TableHead>
-                <TableHead>Racimos Cortados</TableHead>
-                <TableHead>Racimos Rechazados</TableHead>
-                <TableHead>Racimos Recuperados</TableHead>
-                <TableHead>Cajas</TableHead>
-                <TableHead>Peso Prom.</TableHead>
-                <TableHead>Calib.</TableHead>
-                <TableHead>Manos</TableHead>
-                <TableHead>Ratio</TableHead>
-                <TableHead>Merma</TableHead>
-                <TableHead>Responsable</TableHead>
-                <TableHead>Acciones</TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center gap-1"
+                    onClick={() => toggleSort("racimosCorta")}
+                  >
+                    Racimos Cortados{" "}
+                    {sortBy === "racimosCorta" ? (
+                      sortDir === "asc" ? (
+                        <ChevronUp className="h-3 w-3" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3" />
+                      )
+                    ) : null}
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center gap-1"
+                    onClick={() => toggleSort("racimosRechazados")}
+                  >
+                    Racimos Rechazados{" "}
+                    {sortBy === "racimosRechazados" ? (
+                      sortDir === "asc" ? (
+                        <ChevronUp className="h-3 w-3" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3" />
+                      )
+                    ) : null}
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center gap-1"
+                    onClick={() => toggleSort("racimosRecuperados")}
+                  >
+                    Racimos Recuperados{" "}
+                    {sortBy === "racimosRecuperados" ? (
+                      sortDir === "asc" ? (
+                        <ChevronUp className="h-3 w-3" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3" />
+                      )
+                    ) : null}
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center gap-1"
+                    onClick={() => toggleSort("cajasProducidas")}
+                  >
+                    Cajas{" "}
+                    {sortBy === "cajasProducidas" ? (
+                      sortDir === "asc" ? (
+                        <ChevronUp className="h-3 w-3" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3" />
+                      )
+                    ) : null}
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center gap-1"
+                    onClick={() => toggleSort("pesoPromedio")}
+                  >
+                    Peso Prom.{" "}
+                    {sortBy === "pesoPromedio" ? (
+                      sortDir === "asc" ? (
+                        <ChevronUp className="h-3 w-3" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3" />
+                      )
+                    ) : null}
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center gap-1"
+                    onClick={() => toggleSort("calibracion")}
+                  >
+                    Calib.{" "}
+                    {sortBy === "calibracion" ? (
+                      sortDir === "asc" ? (
+                        <ChevronUp className="h-3 w-3" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3" />
+                      )
+                    ) : null}
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center gap-1"
+                    onClick={() => toggleSort("numeroManos")}
+                  >
+                    Manos{" "}
+                    {sortBy === "numeroManos" ? (
+                      sortDir === "asc" ? (
+                        <ChevronUp className="h-3 w-3" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3" />
+                      )
+                    ) : null}
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center gap-1"
+                    onClick={() => toggleSort("ratio")}
+                  >
+                    Ratio{" "}
+                    {sortBy === "ratio" ? (
+                      sortDir === "asc" ? (
+                        <ChevronUp className="h-3 w-3" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3" />
+                      )
+                    ) : null}
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center gap-1"
+                    onClick={() => toggleSort("merma")}
+                  >
+                    Merma{" "}
+                    {sortBy === "merma" ? (
+                      sortDir === "asc" ? (
+                        <ChevronUp className="h-3 w-3" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3" />
+                      )
+                    ) : null}
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center gap-1"
+                    onClick={() => toggleSort("responsable")}
+                  >
+                    Responsable{" "}
+                    {sortBy === "responsable" ? (
+                      sortDir === "asc" ? (
+                        <ChevronUp className="h-3 w-3" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3" />
+                      )
+                    ) : null}
+                  </button>
+                </TableHead>
+                <TableHead className="w-[84px] text-right">Acciones</TableHead>
               </TableRow>
-            </TableHeader>
-            <TableBody>
+              </TableHeader>
+              <TableBody className="animate-in fade-in duration-200">
               {paginated.map((cosecha) => {
                 const fincaInfo = getFincaInfo(cosecha.finca);
                 return (
-                  <TableRow key={cosecha.id}>
-                    <TableCell>{cosecha.semana}</TableCell>
-                    <TableCell>{cosecha.año}</TableCell>
-                    <TableCell>{cosecha.finca}</TableCell>
+                  <TableRow key={cosecha.id} className="odd:bg-muted/50 hover:bg-muted transition-colors">
                     <TableCell>
+                      {(cosecha.fecha
+                        ? new Date(cosecha.fecha)
+                        : getDateFromYearSemana(cosecha.año, cosecha.semana)
+                      ).toLocaleDateString("es-ES", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums whitespace-nowrap">{cosecha.semana}</TableCell>
+                    <TableCell className="text-right tabular-nums whitespace-nowrap">{cosecha.año}</TableCell>
+                    <TableCell className="truncate max-w-[160px]">{cosecha.finca}</TableCell>
+                    <TableCell className="text-right tabular-nums whitespace-nowrap">
                       {cosecha.racimosCorta.toLocaleString()}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-right tabular-nums whitespace-nowrap">
                       {cosecha.racimosRechazados.toLocaleString()}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-right tabular-nums whitespace-nowrap">
                       {cosecha.racimosRecuperados.toLocaleString()}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-right tabular-nums whitespace-nowrap">
                       {cosecha.cajasProducidas.toLocaleString()}
                     </TableCell>
-                    <TableCell>{cosecha.pesoPromedio.toFixed(1)} lb</TableCell>
-                    <TableCell>{cosecha.calibracion}</TableCell>
-                    <TableCell>{cosecha.numeroManos.toFixed(1)}</TableCell>
-                    <TableCell>{cosecha.ratio.toFixed(2)}</TableCell>
+                    <TableCell className="text-right tabular-nums whitespace-nowrap">{cosecha.pesoPromedio.toFixed(1)} lb</TableCell>
+                    <TableCell className="text-right tabular-nums whitespace-nowrap">{cosecha.calibracion}</TableCell>
+                    <TableCell className="text-right tabular-nums whitespace-nowrap">{cosecha.numeroManos.toFixed(1)}</TableCell>
+                    <TableCell className="text-right tabular-nums whitespace-nowrap">{cosecha.ratio.toFixed(2)}</TableCell>
                     <TableCell>
                       <span className={getMermaColor(cosecha.merma)}>
                         {cosecha.merma.toFixed(2)}%
                       </span>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="truncate max-w-[140px] whitespace-nowrap">
                       {fincaInfo?.responsable || "No asignado"}
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon">
+                    <TableCell className="w-[84px] text-right">
+                      <div className="inline-flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEdit(cosecha)}
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setToDelete(cosecha)}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -231,25 +841,195 @@ export function CosechasTable() {
                   </TableRow>
                 );
               })}
-            </TableBody>
-          </Table>
-        </div>
+              <TableRow className="bg-muted/50">
+                <TableCell className="font-semibold">TOTAL</TableCell>
+                <TableCell>-</TableCell>
+                <TableCell>-</TableCell>
+                <TableCell>-</TableCell>
+                <TableCell className="text-right tabular-nums whitespace-nowrap">
+                  {pageTotals.racimosCorta.toLocaleString()}
+                </TableCell>
+                <TableCell className="text-right tabular-nums whitespace-nowrap">
+                  {pageTotals.racimosRechazados.toLocaleString()}
+                </TableCell>
+                <TableCell className="text-right tabular-nums whitespace-nowrap">
+                  {pageTotals.racimosRecuperados.toLocaleString()}
+                </TableCell>
+                <TableCell className="text-right tabular-nums whitespace-nowrap">
+                  {pageTotals.cajasProducidas.toLocaleString()}
+                </TableCell>
+                <TableCell className="text-right tabular-nums whitespace-nowrap">{pageTotals.pesoPromedio.toFixed(1)} lb</TableCell>
+                <TableCell className="text-right tabular-nums whitespace-nowrap">{pageTotals.calibracion.toFixed(0)}</TableCell>
+                <TableCell className="text-right tabular-nums whitespace-nowrap">{pageTotals.numeroManos.toFixed(1)}</TableCell>
+                <TableCell className="text-right tabular-nums whitespace-nowrap">{pageTotals.ratio.toFixed(2)}</TableCell>
+                <TableCell>
+                  <span className="font-medium">
+                    {pageTotals.merma.toFixed(2)}%
+                  </span>
+                </TableCell>
+                <TableCell>-</TableCell>
+              </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+        )}
+        <Dialog open={!!editing} onOpenChange={() => setEditing(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Cosecha</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-2">
+                <span className="text-sm text-muted-foreground">
+                  Racimos Cortados
+                </span>
+                <Input
+                  className="h-11"
+                  type="number"
+                  value={editForm.racimosCorta}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, racimosCorta: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <span className="text-sm text-muted-foreground">
+                  Racimos Rechazados
+                </span>
+                <Input
+                  className="h-11"
+                  type="number"
+                  value={editForm.racimosRechazados}
+                  onChange={(e) =>
+                    setEditForm({
+                      ...editForm,
+                      racimosRechazados: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <span className="text-sm text-muted-foreground">
+                  Cajas Producidas
+                </span>
+                <Input
+                  className="h-11"
+                  type="number"
+                  value={editForm.cajasProducidas}
+                  onChange={(e) =>
+                    setEditForm({
+                      ...editForm,
+                      cajasProducidas: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <span className="text-sm text-muted-foreground">
+                  Peso Promedio
+                </span>
+                <Input
+                  className="h-11"
+                  type="number"
+                  step="0.1"
+                  value={editForm.pesoPromedio}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, pesoPromedio: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <span className="text-sm text-muted-foreground">
+                  Calibración
+                </span>
+                <Input
+                  className="h-11"
+                  type="number"
+                  value={editForm.calibracion}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, calibracion: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <span className="text-sm text-muted-foreground">
+                  Número de Manos
+                </span>
+                <Input
+                  className="h-11"
+                  type="number"
+                  step="0.1"
+                  value={editForm.numeroManos}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, numeroManos: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+            <div className="flex flex-col md:flex-row justify-end gap-2 mt-4">
+              <Button className="h-11" variant="secondary" onClick={() => setEditing(null)}>
+                Cancelar
+              </Button>
+              <Button className="h-11" onClick={saveEdit}>Guardar</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+        <AlertDialog open={!!toDelete} onOpenChange={() => setToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Eliminar registro</AlertDialogTitle>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete}>
+                Eliminar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         <div className="flex items-center justify-between mt-4">
-          <p className="text-sm text-muted-foreground">Mostrando {total === 0 ? 0 : startIdx + 1}-{endIdx} de {total}</p>
+          <p className="text-sm text-muted-foreground">
+            Mostrando {total === 0 ? 0 : startIdx + 1}-{endIdx} de {total}
+          </p>
           <Pagination>
             <PaginationContent>
               <PaginationItem>
-                <PaginationPrevious href="#" size="default" onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)); }} />
+                <PaginationPrevious
+                  href="#"
+                  size="default"
+                  disabled={page <= 1}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (page > 1) setPage((p) => Math.max(1, p - 1));
+                  }}
+                />
               </PaginationItem>
               {Array.from({ length: pageCount }).map((_, i) => (
                 <PaginationItem key={i}>
-                  <PaginationLink href="#" isActive={page === i + 1} size="icon" onClick={(e) => { e.preventDefault(); setPage(i + 1); }}>
+                  <PaginationLink
+                    href="#"
+                    isActive={page === i + 1}
+                    size="icon"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPage(i + 1);
+                    }}
+                  >
                     {i + 1}
                   </PaginationLink>
                 </PaginationItem>
               ))}
               <PaginationItem>
-                <PaginationNext href="#" size="default" onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(pageCount, p + 1)); }} />
+                <PaginationNext
+                  href="#"
+                  size="default"
+                  disabled={page >= pageCount}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (page < pageCount)
+                      setPage((p) => Math.min(pageCount, p + 1));
+                  }}
+                />
               </PaginationItem>
             </PaginationContent>
           </Pagination>

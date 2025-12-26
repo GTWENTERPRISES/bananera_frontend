@@ -112,9 +112,9 @@ export function PermisosMatrix() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="border rounded-lg overflow-x-auto">
-          <Table>
-            <TableHeader>
+        <div className="border rounded-lg overflow-x-auto overflow-y-auto max-h-[540px]">
+          <Table className="text-sm min-w-[900px]">
+            <TableHeader className="sticky top-0 z-10 bg-background shadow-sm">
               <TableRow>
                 <TableHead className="w-[250px]">Módulo / Acción</TableHead>
                 <TableHead className="text-center">
@@ -136,7 +136,7 @@ export function PermisosMatrix() {
             </TableHeader>
             <TableBody>
               {permisos.map((permiso, index) => (
-                <TableRow key={index}>
+                <TableRow key={index} className="odd:bg-muted/50 hover:bg-muted transition-colors">
                   <TableCell className="font-medium">
                     {permiso.modulo}
                   </TableCell>

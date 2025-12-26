@@ -43,6 +43,7 @@ export function MovimientoForm() {
   });
 
   const insumo = insumos.find((i) => i.id === formData.insumoId);
+  const isDiscreteUnit = /rollo|unidad|par|caja|pieza/i.test(insumo?.unidadMedida || "");
 
   // Función helper para validar el tipo FincaName
   const isValidFinca = (value: string): value is FincaName => {
@@ -244,11 +245,11 @@ export function MovimientoForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cantidad">Cantidad</Label>
+              <Label htmlFor="cantidad">Cantidad {insumo ? `(${insumo.unidadMedida})` : ""}</Label>
               <Input
                 id="cantidad"
                 type="number"
-                step="0.01"
+                step={isDiscreteUnit ? 1 : 0.01}
                 min="0"
                 value={formData.cantidad}
                 onChange={(e) =>
@@ -256,6 +257,7 @@ export function MovimientoForm() {
                 }
                 disabled={isSubmitting || !allowEdit}
                 required
+                placeholder={insumo ? (isDiscreteUnit ? `Ej: 10 ${insumo.unidadMedida}` : `Ej: 0.5 ${insumo.unidadMedida}`) : "Ej: cantidad"}
               />
               {errors.cantidad && (
                 <p className="text-xs text-red-600">{errors.cantidad}</p>

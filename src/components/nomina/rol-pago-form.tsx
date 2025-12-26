@@ -22,7 +22,7 @@ import { RolPagoInputSchema } from "@/src/lib/validation";
 import { Spinner } from "@/src/components/ui/spinner";
 
 export function RolPagoForm() {
-  const { addRolPago, empleados } = useApp();
+  const { addRolPago, empleados, prestamos, updatePrestamo } = useApp();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -52,8 +52,8 @@ export function RolPagoForm() {
 
   const iess = totalIngresos * 0.0512; // 5.12% IESS
   const multas = Number.parseFloat(formData.multas || "0");
-  const prestamos = Number.parseFloat(formData.prestamos || "0");
-  const totalEgresos = iess + multas + prestamos;
+  const descuentoPrestamos = Number.parseFloat(formData.prestamos || "0");
+  const totalEgresos = iess + multas + descuentoPrestamos;
 
   const netoAPagar = totalIngresos - totalEgresos;
 
@@ -101,6 +101,7 @@ export function RolPagoForm() {
       finca: empleado.finca,
       semana: Number.parseInt(formData.semana),
       año: Number.parseInt(formData.año),
+      fecha: new Date().toISOString(),
       diasLaborados: diasLaborados,
       horasExtras: horasExtras,
       sueldoBase: Number.parseFloat(sueldoBase.toFixed(2)),
@@ -109,10 +110,11 @@ export function RolPagoForm() {
       totalIngresos: Number.parseFloat(totalIngresos.toFixed(2)),
       iess: Number.parseFloat(iess.toFixed(2)),
       multas: multas,
-      prestamos: prestamos,
+      prestamos: descuentoPrestamos,
       totalEgresos: Number.parseFloat(totalEgresos.toFixed(2)),
       netoAPagar: Number.parseFloat(netoAPagar.toFixed(2)),
       estado: "pendiente",
+      prestamoAplicado: false,
     };
 
     addRolPago(newRolPago);
@@ -151,9 +153,12 @@ export function RolPagoForm() {
               <Label htmlFor="empleado">Empleado</Label>
               <Select
                 value={formData.empleadoId}
-                onValueChange={(value) =>
-                  (setFormData({ ...formData, empleadoId: value }), setErrors((prev) => ({ ...prev, empleadoId: "" })))
-                }
+                onValueChange={(value) => {
+                  const p = prestamos.find((x) => x.empleadoId === value && x.estado === "activo");
+                  const cuota = p ? String(Number(p.valorCuota.toFixed(2))) : "";
+                  setFormData({ ...formData, empleadoId: value, prestamos: cuota });
+                  setErrors((prev) => ({ ...prev, empleadoId: "" }));
+                }}
                 disabled={isSubmitting}
               >
                 <SelectTrigger>
@@ -342,6 +347,16 @@ export function RolPagoForm() {
                     ${iess.toFixed(2)}
                   </p>
                 </div>
+                {(() => {
+                  const p = prestamos.find((x) => x.empleadoId === formData.empleadoId && x.estado === "activo");
+                  if (!p) return null;
+                  return (
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Préstamo activo</p>
+                      <p className="text-sm font-medium text-foreground">Saldo ${p.saldoPendiente.toFixed(2)} · Cuota ${p.valorCuota.toFixed(2)}</p>
+                    </div>
+                  );
+                })()}
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Total Egresos</p>
                   <p className="text-sm font-medium text-red-600">

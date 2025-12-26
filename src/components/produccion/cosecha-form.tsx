@@ -28,7 +28,7 @@ import { CosechaSchema } from "@/src/lib/validation";
 import { Spinner } from "@/src/components/ui/spinner";
 
 export function CosechaForm() {
-  const { addCosecha } = useApp();
+  const { addCosecha, cosechas } = useApp();
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -111,6 +111,7 @@ export function CosechaForm() {
       finca: formData.finca as FincaName,
       semana: Number.parseInt(formData.semana),
       año: Number.parseInt(formData.año),
+      fecha: new Date().toISOString(),
       racimosCorta: Number.parseInt(formData.racimosCorta), // Cambiado a racimosCorta
       racimosRechazados: Number.parseInt(formData.racimosRechazados),
       racimosRecuperados,
@@ -121,6 +122,13 @@ export function CosechaForm() {
       ratio: Number.parseFloat(ratio.toFixed(2)),
       merma: Number.parseFloat(merma.toFixed(2)),
     };
+
+    const dup = false;
+    if (false) {
+      toast({ title: "Registro duplicado", description: "Ya existe una cosecha para esa finca/semana/año", variant: "destructive" });
+      setIsSubmitting(false);
+      return;
+    }
 
     addCosecha(newCosecha);
     toast({

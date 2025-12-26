@@ -168,96 +168,104 @@ export function InsumoForm() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Registrar Insumo</CardTitle>
+    <Card className="responsive-card w-full sm:max-w-[700px] mx-auto">
+      <CardHeader className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+        <CardTitle className="text-base sm:text-lg md:text-xl">Registrar Insumo</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="responsive-form px-4 sm:px-6">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="nombre">Nombre del Insumo</Label>
-              <Input
-                id="nombre"
-                value={formData.nombre}
-                onChange={(e) =>
-                  (setFormData({ ...formData, nombre: e.target.value }), setErrors((prev) => ({ ...prev, nombre: "" })))
-                }
-                disabled={isSubmitting || !allowEdit}
-                required
-              />
-              {errors.nombre && (
-                <p className="text-xs text-red-600">{errors.nombre}</p>
-              )}
+          <div className="space-y-3 md:space-y-4">
+            <div className="grid grid-cols-1 xl:grid-cols-[1.6fr_1fr] gap-3 md:gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="nombre" className="font-medium">Nombre del Insumo</Label>
+                <Input
+                  id="nombre"
+                  className="h-11 w-full"
+                  value={formData.nombre}
+                  onChange={(e) =>
+                    (setFormData({ ...formData, nombre: e.target.value }), setErrors((prev) => ({ ...prev, nombre: "" })))
+                  }
+                  disabled={isSubmitting || !allowEdit}
+                  required
+                />
+                {errors.nombre && (
+                  <p className="text-xs text-red-600">{errors.nombre}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="categoria" className="font-medium">Categoría</Label>
+                <Select
+                  value={formData.categoria}
+                  onValueChange={handleCategoriaChange}
+                  disabled={isSubmitting || !allowEdit}
+                  required
+                >
+                  <SelectTrigger className="h-11 w-full max-w-[280px] xl:max-w-none">
+                    <SelectValue placeholder="Seleccionar categoría" />
+                  </SelectTrigger>
+                  <SelectContent side="bottom" align="start" position="popper" className="w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-24px)] sm:max-w-[95vw] max-h-[60vh] sm:max-h-[70vh]">
+                    <SelectItem value="fertilizante">Fertilizante</SelectItem>
+                    <SelectItem value="protector">Protector</SelectItem>
+                    <SelectItem value="herramienta">Herramienta</SelectItem>
+                    <SelectItem value="empaque">Empaque</SelectItem>
+                    <SelectItem value="otro">Otro</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.categoria && (
+                  <p className="text-xs text-red-600">{errors.categoria}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-3 md:gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="unidadMedida" className="font-medium">Unidad de Medida</Label>
+                <Input
+                  id="unidadMedida"
+                  className="h-11 w-full"
+                  value={formData.unidadMedida}
+                  onChange={(e) =>
+                    (setFormData({ ...formData, unidadMedida: e.target.value }), setErrors((prev) => ({ ...prev, unidadMedida: "" })))
+                  }
+                  placeholder="Ej: kg, L, unidades, rollos, etc."
+                  disabled={isSubmitting || !allowEdit}
+                  required
+                />
+                {errors.unidadMedida && (
+                  <p className="text-xs text-red-600">{errors.unidadMedida}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="stockActual" className="font-medium">Stock Actual</Label>
+                <Input
+                  id="stockActual"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="h-11 w-[160px] sm:w-[180px] xl:w-full"
+                  value={formData.stockActual}
+                  onChange={(e) =>
+                    (setFormData({ ...formData, stockActual: e.target.value }), setErrors((prev) => ({ ...prev, stockActual: "" })))
+                  }
+                  disabled={isSubmitting || !allowEdit}
+                  required
+                />
+                {errors.stockActual && (
+                  <p className="text-xs text-red-600">{errors.stockActual}</p>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="categoria">Categoría</Label>
-              <Select
-                value={formData.categoria}
-                onValueChange={handleCategoriaChange}
-                disabled={isSubmitting || !allowEdit}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar categoría" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="fertilizante">Fertilizante</SelectItem>
-                  <SelectItem value="protector">Protector</SelectItem>
-                  <SelectItem value="herramienta">Herramienta</SelectItem>
-                  <SelectItem value="empaque">Empaque</SelectItem>
-                  <SelectItem value="otro">Otro</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.categoria && (
-                <p className="text-xs text-red-600">{errors.categoria}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="unidadMedida">Unidad de Medida</Label>
-              <Input
-                id="unidadMedida"
-                value={formData.unidadMedida}
-                onChange={(e) =>
-                  (setFormData({ ...formData, unidadMedida: e.target.value }), setErrors((prev) => ({ ...prev, unidadMedida: "" })))
-                }
-                placeholder="Ej: kg, L, unidades, rollos, etc."
-                disabled={isSubmitting || !allowEdit}
-                required
-              />
-              {errors.unidadMedida && (
-                <p className="text-xs text-red-600">{errors.unidadMedida}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="stockActual">Stock Actual</Label>
-              <Input
-                id="stockActual"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.stockActual}
-                onChange={(e) =>
-                  (setFormData({ ...formData, stockActual: e.target.value }), setErrors((prev) => ({ ...prev, stockActual: "" })))
-                }
-                disabled={isSubmitting || !allowEdit}
-                required
-              />
-              {errors.stockActual && (
-                <p className="text-xs text-red-600">{errors.stockActual}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="stockMinimo">Stock Mínimo</Label>
+              <Label htmlFor="stockMinimo" className="font-medium">Stock Mínimo</Label>
               <Input
                 id="stockMinimo"
                 type="number"
                 step="0.01"
                 min="0"
+                className="h-11 w-[160px] sm:w-[180px] xl:w-full"
                 value={formData.stockMinimo}
                 onChange={(e) =>
                   (setFormData({ ...formData, stockMinimo: e.target.value }), setErrors((prev) => ({ ...prev, stockMinimo: "" })))
@@ -271,13 +279,14 @@ export function InsumoForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="stockMaximo">Stock Máximo</Label>{" "}
+              <Label htmlFor="stockMaximo" className="font-medium">Stock Máximo</Label>
               {/* Nuevo campo */}
               <Input
                 id="stockMaximo"
                 type="number"
                 step="0.01"
                 min="0"
+                className="h-11 w-[160px] sm:w-[180px] xl:w-full"
                 value={formData.stockMaximo}
                 onChange={(e) =>
                   (setFormData({ ...formData, stockMaximo: e.target.value }), setErrors((prev) => ({ ...prev, stockMaximo: "" })))
@@ -291,12 +300,13 @@ export function InsumoForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="precioUnitario">Precio Unitario ($)</Label>
+              <Label htmlFor="precioUnitario" className="font-medium">Precio Unitario ($)</Label>
               <Input
                 id="precioUnitario"
                 type="number"
                 step="0.01"
                 min="0"
+                className="h-11 w-[160px] sm:w-[180px] xl:w-full"
                 value={formData.precioUnitario}
                 onChange={(e) =>
                   (setFormData({ ...formData, precioUnitario: e.target.value }), setErrors((prev) => ({ ...prev, precioUnitario: "" })))
@@ -310,9 +320,10 @@ export function InsumoForm() {
             </div>
 
             <div className="col-span-2 space-y-2">
-              <Label htmlFor="proveedor">Proveedor</Label>
+              <Label htmlFor="proveedor" className="font-medium">Proveedor</Label>
               <Input
                 id="proveedor"
+                className="h-11"
                 value={formData.proveedor}
                 onChange={(e) =>
                   (setFormData({ ...formData, proveedor: e.target.value }), setErrors((prev) => ({ ...prev, proveedor: "" })))
@@ -325,8 +336,8 @@ export function InsumoForm() {
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="finca">Finca Asociada</Label>
+            <div className="space-y-2 lg:col-span-2">
+              <Label htmlFor="finca" className="font-medium">Finca Asociada</Label>
               <Select
                 value={formData.finca}
                 onValueChange={(value) =>
@@ -334,10 +345,10 @@ export function InsumoForm() {
                 }
                 disabled={isSubmitting || !allowEdit}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-11 w-full">
                   <SelectValue placeholder="Seleccionar finca (opcional)" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent side="bottom" align="start" position="popper" className="w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-24px)] sm:max-w-[95vw] max-h-[60vh] sm:max-h-[70vh]">
                   {fincas.map((f) => (
                     <SelectItem key={f.id} value={f.nombre as FincaName}>
                       {f.nombre}
@@ -351,7 +362,7 @@ export function InsumoForm() {
             </div>
           </div>
 
-          <Button type="submit" className="w-full gap-2" disabled={!allowEdit || isSubmitting}>
+          <Button type="submit" className="w-full gap-2 h-11 text-base" disabled={!allowEdit || isSubmitting}>
             {isSubmitting ? <Spinner className="h-4 w-4" /> : <Package className="h-4 w-4" />}
             Registrar Insumo
           </Button>

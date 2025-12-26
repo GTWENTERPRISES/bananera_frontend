@@ -26,6 +26,7 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 export function MovimientosTable() {
   const { movimientosInventario, insumos } = useApp(); // Agregué insumos
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const entradas = movimientosInventario.filter(
     (m) => m.tipo === "entrada"
@@ -66,7 +67,15 @@ export function MovimientosTable() {
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const startIdx = (page - 1) * pageSize;
   const endIdx = Math.min(startIdx + pageSize, total);
-  const paginated = filteredMovimientos.slice(startIdx, endIdx);
+  const sorted = (() => {
+    const data = [...filteredMovimientos];
+    return data.sort((a, b) => {
+      const av = new Date(a.fecha).getTime();
+      const bv = new Date(b.fecha).getTime();
+      return sortDir === "asc" ? av - bv : bv - av;
+    });
+  })();
+  const paginated = sorted.slice(startIdx, endIdx);
 
   return (
     <Card>
@@ -124,7 +133,7 @@ export function MovimientosTable() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex flex-col md:flex-row md:items-center gap-2 mb-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -147,25 +156,40 @@ export function MovimientosTable() {
               </SelectContent>
             </Select>
             <span className="text-sm text-muted-foreground">por página</span>
+            <span className="ml-4 text-sm text-muted-foreground">Orden</span>
+            <Select value={sortDir} onValueChange={(v) => { setSortDir(v as any); setPage(1); }}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Más recientes" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="desc">Más recientes</SelectItem>
+                <SelectItem value="asc">Más antiguos</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
+        {paginated.length === 0 ? (
+          <div className="flex items-center justify-center rounded-md border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+            No hay movimientos que coincidan con tu búsqueda.
+          </div>
+        ) : (
+          <div className="overflow-x-auto overflow-y-auto max-h-[540px] rounded-md border border-border responsive-table px-1">
+            <Table className="text-sm table-auto md:table-fixed min-w-[950px]">
+              <TableHeader className="sticky top-0 z-10 bg-background shadow-sm text-xs md:text-sm">
               <TableRow>
-                <TableHead>Insumo</TableHead>
+                <TableHead className="truncate max-w-[160px]">Insumo</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead className="text-right">Cantidad</TableHead>
-                <TableHead>Responsable</TableHead>
+                <TableHead className="truncate max-w-[160px]">Responsable</TableHead>
                 <TableHead>Motivo</TableHead>
                 <TableHead>Fecha</TableHead>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginated.map((mov) => (
-                <TableRow key={mov.id}>
-                  <TableCell className="font-medium">
+              </TableHeader>
+              <TableBody>
+                {paginated.map((mov) => (
+                <TableRow key={mov.id} className="odd:bg-muted/50 hover:bg-muted transition-colors">
+                  <TableCell className="font-medium truncate max-w-[160px]">
                     {getInsumoNombre(mov.insumoId)}
                   </TableCell>
                   <TableCell>
@@ -187,14 +211,14 @@ export function MovimientosTable() {
                       </div>
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right font-medium">
+                  <TableCell className="text-right font-medium tabular-nums whitespace-nowrap">
                     {mov.cantidad} {getInsumoUnidad(mov.insumoId)}
                   </TableCell>
-                  <TableCell>{mov.responsable}</TableCell>
+                  <TableCell className="truncate max-w-[160px]">{mov.responsable}</TableCell>
                   <TableCell className="max-w-xs truncate" title={mov.motivo}>
                     {mov.motivo}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     {new Date(mov.fecha).toLocaleDateString("es-ES", {
                       year: "numeric",
                       month: "short",
@@ -203,15 +227,16 @@ export function MovimientosTable() {
                   </TableCell>
                 </TableRow>
               ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableBody>
+            </Table>
+          </div>
+        )}
         <div className="flex items-center justify-between mt-4">
           <p className="text-sm text-muted-foreground">Mostrando {total === 0 ? 0 : startIdx + 1}-{endIdx} de {total}</p>
           <Pagination>
             <PaginationContent>
               <PaginationItem>
-                <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)); }} />
+                <PaginationPrevious href="#" disabled={page <= 1} onClick={(e) => { e.preventDefault(); if (page > 1) setPage((p) => Math.max(1, p - 1)); }} />
               </PaginationItem>
               {Array.from({ length: pageCount }).map((_, i) => (
                 <PaginationItem key={i}>
@@ -221,7 +246,7 @@ export function MovimientosTable() {
                 </PaginationItem>
               ))}
               <PaginationItem>
-                <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(pageCount, p + 1)); }} />
+                <PaginationNext href="#" disabled={page >= pageCount} onClick={(e) => { e.preventDefault(); if (page < pageCount) setPage((p) => Math.min(pageCount, p + 1)); }} />
               </PaginationItem>
             </PaginationContent>
           </Pagination>

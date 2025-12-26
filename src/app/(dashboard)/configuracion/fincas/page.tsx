@@ -109,18 +109,18 @@ export default function FincasPage() {
   const fincasActivas = state.fincas.length;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="responsive-container space-y-4 md:space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
             Gestión de Fincas
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm md:text-base text-muted-foreground">
             Administra las fincas y sus características
           </p>
         </div>
         {!showForm && (
-          <Button onClick={handleNewFinca}>
+          <Button onClick={handleNewFinca} className="w-full md:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             Nueva Finca
           </Button>
@@ -128,7 +128,7 @@ export default function FincasPage() {
       </div>
 
       {/* Estadísticas */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium">Total Fincas</CardTitle>

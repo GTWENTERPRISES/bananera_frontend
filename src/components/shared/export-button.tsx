@@ -29,6 +29,7 @@ interface ExportButtonProps {
   dateField?: string; // campo de fecha (YYYY-MM-DD)
   weekField?: string; // campo de semana (número)
   yearField?: string; // campo de año (número)
+  disabled?: boolean;
 }
 
 export function ExportButton({
@@ -44,6 +45,7 @@ export function ExportButton({
   dateField,
   weekField,
   yearField,
+  disabled,
 }: ExportButtonProps) {
   const [open, setOpen] = useState(false);
   const [filterMode, setFilterMode] = useState<"todo" | "fecha" | "semana">("todo");
@@ -119,7 +121,7 @@ export function ExportButton({
     return (
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button variant="outline" className="gap-2 bg-transparent">
+          <Button variant="outline" className="gap-2 bg-transparent" disabled={!!disabled}>
             <Download className="h-4 w-4" />
             Exportar
           </Button>
@@ -195,7 +197,7 @@ export function ExportButton({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="gap-2 bg-transparent">
+        <Button variant="outline" className="gap-2 bg-transparent" disabled={!!disabled}>
           <Download className="h-4 w-4" />
           Exportar
         </Button>

@@ -1,7 +1,7 @@
 "use client";
 
 import { Bell, Search, Moon, Sun, User, LogOut, Menu } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import {
@@ -20,6 +20,7 @@ import { cn } from "@/src/lib/utils";
 
 export function AppHeader() {
   const router = useRouter();
+  const pathname = usePathname();
   const { currentUser, theme, toggleTheme, alertas, fincas, logout, canAccess, marcarAlertaLeida } = useApp();
   const isMobile = useIsMobile();
   const fincaAsignadaNombre = (() => {
@@ -40,18 +41,19 @@ export function AppHeader() {
 
   const getAlertHref = (a: { modulo: string; finca?: string; titulo?: string }) => {
     let base = "/dashboard";
-    if (a.modulo === "Inventario") base = "/inventario/alertas";
-    else if (a.modulo === "Producción") {
+    const modulo = (a.modulo || "").toLowerCase();
+    if (modulo === "inventario") base = "/inventario/alertas";
+    else if (modulo === "producción" || modulo === "produccion") {
       const t = a.titulo?.toLowerCase() || "";
       base = t.includes("recuperación") ? "/produccion/recuperacion" : "/produccion/cosechas";
     }
-    else if (a.modulo === "Nómina") {
+    else if (modulo === "nómina" || modulo === "nomina") {
       const t = a.titulo?.toLowerCase() || "";
       base = t.includes("roles de pago") ? "/nomina/roles" : "/nomina/empleados";
     }
-    else if (a.modulo === "Analytics") base = "/analytics/predictivo";
-    else if (a.modulo === "Seguridad") base = "/configuracion/permisos";
-    else if (a.modulo === "Sistema") base = "/dashboard";
+    else if (modulo === "analytics") base = "/analytics/predictivo";
+    else if (modulo === "seguridad") base = "/configuracion/permisos";
+    else if (modulo === "sistema") base = "/dashboard";
     const qp = a.finca ? `?finca=${encodeURIComponent(a.finca)}` : "";
     return `${base}${qp}`;
   };
@@ -107,9 +109,10 @@ export function AppHeader() {
               {alertasNoLeidas > 0 && (
                 <Badge
                   variant="destructive"
-                  className="absolute -right-1 -top-1 h-5 w-5 rounded-full p-0 text-xs"
+                  aria-label={`Notificaciones: ${alertasNoLeidas}`}
+                  className="absolute -right-1 -top-1 h-5 min-w-5 rounded-full px-1 text-xs"
                 >
-                  {alertasNoLeidas}
+                  {alertasNoLeidas > 99 ? "99+" : alertasNoLeidas}
                 </Badge>
               )}
             </Button>
@@ -136,6 +139,15 @@ export function AppHeader() {
                 </DropdownMenuItem>
               ))}
             </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => {
+                const qp = currentUser?.rol === "supervisor_finca" && fincaAsignadaNombre ? `?finca=${encodeURIComponent(fincaAsignadaNombre)}` : "";
+                router.push(`/inventario/alertas${qp}`);
+              }}
+            >
+              Ver todas las alertas
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 

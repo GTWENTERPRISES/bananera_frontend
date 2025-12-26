@@ -130,6 +130,19 @@ export function MapGeneral({ selectedFinca }: { selectedFinca?: string }) {
     }));
   }, [insumos, fincas]);
 
+  const lotMarkers = useMemo(() => {
+    const markers: { finca: string; lote: string; position: [number, number] }[] = [];
+    for (const f of fincas) {
+      const l = f.lotes;
+      if (!l) continue;
+      for (const key of ["A","B","C","D","E"] as const) {
+        const pos = l[key];
+        if (pos) markers.push({ finca: f.nombre, lote: key, position: [pos.lat, pos.lng] });
+      }
+    }
+    return markers;
+  }, [fincas]);
+
   const featureCollection = useMemo(() => ({
     type: "FeatureCollection",
     features: features,
@@ -251,7 +264,11 @@ export function MapGeneral({ selectedFinca }: { selectedFinca?: string }) {
       const marker = new gl.Marker({ color }).setLngLat([b.position[1], b.position[0]]).setPopup(new gl.Popup().setHTML(`<div class="text-sm"><div class="font-semibold">${b.nombre}</div><div>Insumos con stock bajo: ${b.stockBajo}</div></div>`)).addTo(map);
       markersRef.current.push(marker);
     });
-  }, [crewMarkers, bodegaMarkers]);
+    lotMarkers.forEach((l) => {
+      const marker = new gl.Marker({ color: '#2e7d32' }).setLngLat([l.position[1], l.position[0]]).setPopup(new gl.Popup().setHTML(`<div class="text-sm"><div class="font-semibold">${l.finca}</div><div>Lote ${l.lote}</div></div>`)).addTo(map);
+      markersRef.current.push(marker);
+    });
+  }, [crewMarkers, bodegaMarkers, lotMarkers]);
 
   useEffect(() => {
     const map = mapInstance.current;

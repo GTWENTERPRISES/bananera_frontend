@@ -29,7 +29,7 @@ import { useApp } from "@/src/contexts/app-context";
 import { Spinner } from "@/src/components/ui/spinner";
 
 export function RecuperacionForm() {
-  const { addRecuperacionCinta, canAccess } = useApp();
+  const { addRecuperacionCinta, canAccess, recuperacionCintas } = useApp();
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,6 +38,7 @@ export function RecuperacionForm() {
     finca: undefined as FincaName | undefined,
     semana: "",
     año: "2025",
+    colorCinta: "",
     enfundesIniciales: "",
     primeraCalCosecha: "",
     segundaCalCosecha: "",
@@ -102,6 +103,7 @@ export function RecuperacionForm() {
       finca: formData.finca || "",
       semana: formData.semana,
       año: formData.año,
+      colorCinta: formData.colorCinta,
       enfundesIniciales: formData.enfundesIniciales,
       primeraCalCosecha: formData.primeraCalCosecha,
       segundaCalCosecha: formData.segundaCalCosecha,
@@ -126,6 +128,8 @@ export function RecuperacionForm() {
       finca: formData.finca as FincaName,
       semana: Number.parseInt(formData.semana),
       año: Number.parseInt(formData.año),
+      fecha: new Date().toISOString(),
+      colorCinta: formData.colorCinta,
       enfundesIniciales: Number.parseInt(formData.enfundesIniciales),
       primeraCalCosecha: Number.parseInt(formData.primeraCalCosecha),
       primeraCalSaldo,
@@ -139,7 +143,15 @@ export function RecuperacionForm() {
       ),
     };
 
-    // Agregar al contexto (necesitarás agregar esta función a tu app-context)
+    const dup = recuperacionCintas.some(
+      (r) => r.finca === newRecuperacion.finca && r.semana === newRecuperacion.semana && r.año === newRecuperacion.año
+    );
+    if (dup) {
+      toast({ title: "Registro duplicado", description: "Ya existe una recuperación para esa finca/semana/año", variant: "destructive" });
+      setIsSubmitting(false);
+      return;
+    }
+
     addRecuperacionCinta(newRecuperacion);
 
     if (porcentajeRecuperacion < 80) {
@@ -162,6 +174,7 @@ export function RecuperacionForm() {
       finca: undefined as FincaName | undefined,
       semana: "",
       año: "2025",
+      colorCinta: "",
       enfundesIniciales: "",
       primeraCalCosecha: "",
       segundaCalCosecha: "",
@@ -219,6 +232,33 @@ export function RecuperacionForm() {
               />
               {errors.semana && (
                 <p className="text-xs text-red-600">{errors.semana}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="colorCinta">Color de Cinta</Label>
+              <Select
+                value={formData.colorCinta}
+                onValueChange={(value) =>
+                  (setFormData({ ...formData, colorCinta: value }), setErrors((prev) => ({ ...prev, colorCinta: "" })))
+                }
+                disabled={isSubmitting}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar color" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Azul">Azul</SelectItem>
+                  <SelectItem value="Rojo">Rojo</SelectItem>
+                  <SelectItem value="Verde">Verde</SelectItem>
+                  <SelectItem value="Amarillo">Amarillo</SelectItem>
+                  <SelectItem value="Blanco">Blanco</SelectItem>
+                  <SelectItem value="Naranja">Naranja</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.colorCinta && (
+                <p className="text-xs text-red-600">{errors.colorCinta}</p>
               )}
             </div>
 

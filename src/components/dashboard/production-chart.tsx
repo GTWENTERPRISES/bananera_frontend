@@ -37,28 +37,20 @@ export function ProductionChart() {
       <CardContent>
         <ResponsiveContainer width="100%" height={isMobile ? 200 : 300}>
           <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-            <XAxis dataKey="finca" className="text-xs" tick={{ fontSize: isMobile ? 10 : 12 }} />
-            <YAxis className="text-xs" tick={{ fontSize: isMobile ? 10 : 12 }} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+            <XAxis dataKey="finca" stroke="var(--muted-foreground)" tick={{ fontSize: isMobile ? 10 : 12 }} />
+            <YAxis stroke="var(--muted-foreground)" tick={{ fontSize: isMobile ? 10 : 12 }} />
             <Tooltip
               contentStyle={{
-                backgroundColor: "hsl(var(--card))",
-                border: "1px solid hsl(var(--border))",
+                backgroundColor: "var(--card)",
+                border: "1px solid var(--border)",
                 borderRadius: "8px",
                 fontSize: isMobile ? "12px" : "14px",
               }}
             />
             <Legend wrapperStyle={{ fontSize: isMobile ? "12px" : "14px" }} />
-            <Bar
-              dataKey="cajas"
-              fill="hsl(var(--chart-1))"
-              name="Cajas Producidas"
-            />
-            <Bar
-              dataKey="racimos"
-              fill="hsl(var(--chart-2))"
-              name="Racimos Recuperados"
-            />
+            <Bar dataKey="cajas" fill="var(--chart-1)" name="Cajas Producidas" />
+            <Bar dataKey="racimos" fill="var(--chart-2)" name="Racimos Recuperados" />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

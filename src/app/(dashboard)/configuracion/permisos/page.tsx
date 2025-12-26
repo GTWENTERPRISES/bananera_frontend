@@ -4,10 +4,10 @@ import { Shield } from "lucide-react"
 
 export default function PermisosPage() {
   return (
-    <div className="space-y-6">
+    <div className="responsive-container space-y-4 md:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Permisos y Roles</h1>
-        <p className="text-muted-foreground">Configuración de permisos por rol de usuario</p>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Permisos y Roles</h1>
+        <p className="text-sm md:text-base text-muted-foreground">Configuración de permisos por rol de usuario</p>
       </div>
 
       <Card>
@@ -19,7 +19,7 @@ export default function PermisosPage() {
           <CardDescription>El sistema implementa control de acceso basado en roles (RBAC)</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
             <div className="space-y-2">
               <h3 className="font-semibold">Características de Seguridad:</h3>
               <ul className="space-y-1 text-sm text-muted-foreground list-disc list-inside">
