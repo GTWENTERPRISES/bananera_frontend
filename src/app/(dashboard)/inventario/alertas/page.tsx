@@ -105,9 +105,13 @@ export default function AlertasInventarioPage() {
   const getTipoText = (alerta: any) => {
     switch (alerta.tipo) {
       case "stock_bajo":
-        return `Stock bajo: ${alerta.cantidad}/${alerta.minimo} unidades`;
+        return alerta.cantidad != null && alerta.minimo != null
+          ? `Stock bajo: ${alerta.cantidad}/${alerta.minimo} unidades`
+          : "Stock bajo";
       case "caducidad":
-        return `Caducidad: ${alerta.diasRestantes} días restantes`;
+        return alerta.diasRestantes != null
+          ? `Caducidad: ${alerta.diasRestantes} días restantes`
+          : "Caducidad próxima";
       default:
         return "Alerta general";
     }

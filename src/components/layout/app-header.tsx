@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Search, Moon, Sun, User, LogOut, Menu } from "lucide-react";
+import { Bell, Search, Moon, Sun, User, LogOut, Menu, AlertCircle, AlertTriangle, Info } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/src/components/ui/dropdown-menu";
 import { Badge } from "@/src/components/ui/badge";
+import { ScrollArea } from "@/src/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/src/components/ui/avatar";
 import { useApp } from "@/src/contexts/app-context";
 import { useIsMobile } from "@/src/hooks/use-mobile";
@@ -36,8 +37,15 @@ export function AppHeader() {
     const fincaOk = !aplicaFinca || !a.finca || a.finca === fincaAsignadaNombre;
     return rolPermitido && fincaOk;
   });
+  const inventarioVisibles = alertasVisibles.filter((a) => (a.modulo || "").toLowerCase() === "inventario");
+  const alertasCount = inventarioVisibles.length;
 
-  const alertasNoLeidas = alertasVisibles.filter((a) => !a.leida).length || 0;
+  const MAX_VISIBLE = isMobile ? 5 : 8;
+  const totalVisibles = inventarioVisibles.length;
+  const extraCount = Math.max(totalVisibles - MAX_VISIBLE, 0);
+  const countCritico = inventarioVisibles.filter((a) => a.tipo === "critico").length;
+  const countAdvertencia = inventarioVisibles.filter((a) => a.tipo === "advertencia").length;
+  const countInfo = inventarioVisibles.filter((a) => a.tipo === "info").length;
 
   const getAlertHref = (a: { modulo: string; finca?: string; titulo?: string }) => {
     let base = "/dashboard";
@@ -106,47 +114,83 @@ export function AppHeader() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5" />
-              {alertasNoLeidas > 0 && (
+              {alertasCount > 0 && (
                 <Badge
                   variant="destructive"
-                  aria-label={`Notificaciones: ${alertasNoLeidas}`}
+                  aria-label={`Notificaciones: ${alertasCount}`}
                   className="absolute -right-1 -top-1 h-5 min-w-5 rounded-full px-1 text-xs"
                 >
-                  {alertasNoLeidas > 99 ? "99+" : alertasNoLeidas}
+                  {alertasCount > 99 ? "99+" : alertasCount}
                 </Badge>
               )}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel>Notificaciones</DropdownMenuLabel>
+          <DropdownMenuContent align="end" side="bottom" sideOffset={8} className="dropdown-notif rounded-xl p-0">
+            <DropdownMenuLabel className="sticky top-0 z-10 bg-popover px-3 py-2 text-sm">
+              <div className="notif-header flex items-center justify-between gap-2">
+                <span>Notificaciones</span>
+                {extraCount > 0 && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <span>Mostrando {Math.min(MAX_VISIBLE, totalVisibles)} de {totalVisibles}</span>
+                    <span>•</span>
+                    <span>+{extraCount} más</span>
+                  </div>
+                )}
+              </div>
+              {extraCount > 0 && (
+                <div className="notif-summary mt-1 flex items-center gap-1">
+                  {countCritico > 0 && (
+                    <Badge variant="destructive" className="px-1 py-0 text-[10px]">{countCritico} críticas</Badge>
+                  )}
+                  {countAdvertencia > 0 && (
+                    <Badge variant="secondary" className="px-1 py-0 text-[10px]">{countAdvertencia} bajas</Badge>
+                  )}
+                  {countInfo > 0 && (
+                    <Badge variant="outline" className="px-1 py-0 text-[10px]">{countInfo} info</Badge>
+                  )}
+                </div>
+              )}
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <div className="max-h-96 overflow-y-auto">
+            <ScrollArea className="list-scroll overflow-y-auto">
               {alertasVisibles.length === 0 && (
                 <div className="p-3 text-xs text-muted-foreground">Sin notificaciones para tu rol</div>
               )}
-              {alertasVisibles.slice(0, 8).map((a) => (
+              {inventarioVisibles.slice(0, MAX_VISIBLE).map((a) => (
                 <DropdownMenuItem
                   key={a.id}
+                  className="px-3 py-2"
                   onClick={() => {
+                    marcarAlertaLeida(a.id);
                     const href = getAlertHref(a);
                     router.push(href);
                   }}
                 >
-                  <div className="flex flex-col gap-1">
-                    <p className="text-sm font-medium">{a.titulo}</p>
-                    <p className="text-xs text-muted-foreground">{a.descripcion}</p>
+                  <div className="flex items-start gap-3 w-full">
+                    <span className={cn(
+                      a.tipo === "critico" ? "text-destructive" :
+                      a.tipo === "advertencia" ? "text-secondary" : "text-primary",
+                      "mt-0.5"
+                    )}>
+                      {(a.tipo === "critico" ? <AlertCircle className="h-4 w-4" /> : a.tipo === "advertencia" ? <AlertTriangle className="h-4 w-4" /> : <Info className="h-4 w-4" />)}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="notif-title text-sm font-medium truncate">{a.titulo}</p>
+                      <p className="notif-desc text-xs text-muted-foreground">{a.descripcion}</p>
+                    </div>
                   </div>
                 </DropdownMenuItem>
               ))}
-            </div>
+            </ScrollArea>
             <DropdownMenuSeparator />
             <DropdownMenuItem
+              className="sticky bottom-0 bg-popover px-3 py-2"
               onClick={() => {
                 const qp = currentUser?.rol === "supervisor_finca" && fincaAsignadaNombre ? `?finca=${encodeURIComponent(fincaAsignadaNombre)}` : "";
                 router.push(`/inventario/alertas${qp}`);
               }}
             >
-              Ver todas las alertas
+              {extraCount > 0 ? `Ver +${extraCount} más` : "Ver todas las alertas"}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
