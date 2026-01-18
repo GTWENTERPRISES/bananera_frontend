@@ -1,0 +1,18 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:3000",
+  "loginUser": "admin@bananerahg.com",
+  "loginPassword": "123456",
+  "executionArgs": {
+    "projectName": "bananera_frontend",
+    "projectPath": "c:\\Users\\pc\\Documents\\GitHub\\bananera_frontend",
+    "testIds": [],
+    "additionalInstruction": "Run all tests fresh. Make sure frontend is on port 3000 and backend API on port 8000.",
+    "envs": {
+      "API_KEY": "sk-user-OC2b4j3CP53trWn9lXkLDz6HEeOTB_jtwf_1b_v4xdq_ZV-zyau4Azkxy7Qbemkd3K9ePrnINIXwBm9cyZ4lTGyX-p6ue1SoAnKJpH8EXxBuPi9QEQGl1vcHrMcXycPE-FA"
+    }
+  },
+  "proxy": "http://d314a5f7-b9c0-45f4-8ed6-156e3ee4a7ba:1ytfOuNUX6zbq2vCmETAI8udmpYmV9U6@tun.testsprite.com:8080"
+}

@@ -48,7 +48,9 @@ import {
   PieChart as PieChartIcon,
   Activity,
   Target,
+  MapPin,
 } from "lucide-react";
+import { Badge } from "@/src/components/ui/badge";
 import { useIsMobile } from "@/src/hooks/use-mobile";
 import { cn } from "@/src/lib/utils";
 import { useApp } from "@/src/contexts/app-context";
@@ -67,7 +69,14 @@ export default function AnalyticsPage() {
   const chartHeight = isMobile ? 300 : 400;
 
   // Usar el contexto de la aplicación
-  const { cosechas, enfundes, fincas, empleados } = useApp();
+  const { cosechas, enfundes, fincas, empleados, currentUser } = useApp();
+
+  const fincaAsignadaNombre = (() => {
+    if (!currentUser?.fincaAsignada) return null;
+    const f = fincas.find((fi) => fi.id === currentUser.fincaAsignada || fi.nombre === currentUser.fincaAsignada);
+    return f?.nombre || currentUser.fincaAsignada;
+  })();
+  const esFiltrado = currentUser?.rol === 'supervisor_finca' || currentUser?.rol === 'bodeguero';
 
   // Calcular métricas basadas en datos reales del contexto
   const calcularMetricas = () => {
@@ -237,9 +246,17 @@ export default function AnalyticsPage() {
     <div className={cn("space-y-6", isMobile && "px-2")}>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Analytics</h2>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h2 className="text-3xl font-bold tracking-tight">Analytics</h2>
+            {esFiltrado && fincaAsignadaNombre && (
+              <Badge variant="outline" className="gap-1">
+                <MapPin className="h-3 w-3" />
+                {fincaAsignadaNombre}
+              </Badge>
+            )}
+          </div>
           <p className="text-muted-foreground">
-            Análisis avanzado de datos y métricas clave del negocio
+            {esFiltrado && fincaAsignadaNombre ? `Análisis de ${fincaAsignadaNombre}` : "Análisis avanzado de datos y métricas clave del negocio"}
           </p>
         </div>
 

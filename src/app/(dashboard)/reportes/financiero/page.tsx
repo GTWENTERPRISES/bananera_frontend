@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/src/components/ui/button";
 import { ExportButton } from "@/src/components/shared/export-button";
 import { AreaChart, Area, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieLabelRenderProps } from "recharts";
-import { Download, Filter, Calendar, DollarSign, TrendingUp, TrendingDown } from "lucide-react";
+import { Download, Filter, Calendar, DollarSign, TrendingUp, TrendingDown, MapPin } from "lucide-react";
+import { Badge } from "@/src/components/ui/badge";
 import { useIsMobile } from "@/src/hooks/use-mobile";
 import { cn } from "@/src/lib/utils";
 import { useApp } from "@/src/contexts/app-context";
@@ -60,7 +61,14 @@ const renderSimpleLabel = ({
 export default function ReportesFinancieroPage() {
   const isMobile = useIsMobile();
   const chartHeight = isMobile ? 300 : 400;
-  const { state } = useApp();
+  const { state, fincas, currentUser } = useApp();
+  
+  const fincaAsignadaNombre = (() => {
+    if (!currentUser?.fincaAsignada) return null;
+    const f = fincas.find((fi) => fi.id === currentUser.fincaAsignada || fi.nombre === currentUser.fincaAsignada);
+    return f?.nombre || currentUser.fincaAsignada;
+  })();
+  const esFiltrado = currentUser?.rol === 'supervisor_finca' || currentUser?.rol === 'bodeguero';
   const [tab, setTab] = useState("ingresos");
   const [preciosMercado, setPreciosMercado] = useState<PrecioMercado[]>(preciosFallback);
   const [cargandoPrecios, setCargandoPrecios] = useState(false);
@@ -113,21 +121,28 @@ export default function ReportesFinancieroPage() {
     <div className={cn("space-y-6", isMobile && "px-2")}>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Reportes Financieros</h2>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h2 className="text-3xl font-bold tracking-tight">Reportes Financieros</h2>
+            {esFiltrado && fincaAsignadaNombre && (
+              <Badge variant="outline" className="gap-1">
+                <MapPin className="h-3 w-3" />
+                {fincaAsignadaNombre}
+              </Badge>
+            )}
+          </div>
           <p className="text-muted-foreground">
-            Análisis de ingresos, costos y rentabilidad del negocio
+            {esFiltrado && fincaAsignadaNombre ? `Finanzas de ${fincaAsignadaNombre}` : "Análisis de ingresos, costos y rentabilidad del negocio"}
           </p>
         </div>
         
         <div className="flex flex-wrap items-center gap-2">
-          <Select defaultValue="2023">
+          <Select defaultValue="2025">
             <SelectTrigger className="w-[100px]">
               <SelectValue placeholder="Año" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="2021">2021</SelectItem>
-              <SelectItem value="2022">2022</SelectItem>
-              <SelectItem value="2023">2023</SelectItem>
+              <SelectItem value="2024">2024</SelectItem>
+              <SelectItem value="2025">2025</SelectItem>
             </SelectContent>
           </Select>
           
@@ -247,7 +262,7 @@ export default function ReportesFinancieroPage() {
               <DollarSign className="h-5 w-5 text-green-500 mr-2" />
               <div className="text-3xl font-bold">$321,000</div>
             </div>
-            <p className="text-sm text-muted-foreground">Acumulado 2023</p>
+            <p className="text-sm text-muted-foreground">Acumulado 2025</p>
             <div className="text-sm text-green-500 mt-2 flex items-center">
               <TrendingUp className="h-4 w-4 mr-1" />
               +8.5% vs año anterior
@@ -264,7 +279,7 @@ export default function ReportesFinancieroPage() {
               <DollarSign className="h-5 w-5 text-red-500 mr-2" />
               <div className="text-3xl font-bold">$214,000</div>
             </div>
-            <p className="text-sm text-muted-foreground">Acumulado 2023</p>
+            <p className="text-sm text-muted-foreground">Acumulado 2025</p>
             <div className="text-sm text-red-500 mt-2 flex items-center">
               <TrendingUp className="h-4 w-4 mr-1" />
               +5.2% vs año anterior
@@ -278,7 +293,7 @@ export default function ReportesFinancieroPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">33.3%</div>
-            <p className="text-sm text-muted-foreground">Promedio 2023</p>
+            <p className="text-sm text-muted-foreground">Promedio 2025</p>
             <div className="text-sm text-green-500 mt-2 flex items-center">
               <TrendingUp className="h-4 w-4 mr-1" />
               +2.1% vs año anterior

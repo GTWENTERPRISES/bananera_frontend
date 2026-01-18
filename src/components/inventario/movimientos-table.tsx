@@ -24,7 +24,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/src/components/ui/pagination";
 
 export function MovimientosTable() {
-  const { movimientosInventario, insumos } = useApp(); // Agregué insumos
+  const { getFilteredMovimientos, getFilteredInsumos } = useApp();
+  const movimientosInventario = getFilteredMovimientos();
+  const insumos = getFilteredInsumos();
   const [searchTerm, setSearchTerm] = useState("");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
@@ -36,8 +38,11 @@ export function MovimientosTable() {
   ).length;
 
   // Función para obtener el nombre del insumo
-  const getInsumoNombre = (insumoId: string) => {
-    const insumo = insumos.find((i) => i.id === insumoId);
+  const getInsumoNombre = (mov: MovimientoInventario) => {
+    // Primero intentar usar el nombre que viene del backend
+    if (mov.insumoNombre) return mov.insumoNombre;
+    // Fallback: buscar en la lista de insumos
+    const insumo = insumos.find((i) => i.id === mov.insumoId);
     return insumo?.nombre || "Insumo no encontrado";
   };
 
@@ -49,7 +54,7 @@ export function MovimientosTable() {
 
   const filteredMovimientos = movimientosInventario.filter((mov) => {
     const term = searchTerm.toLowerCase();
-    const nombre = (getInsumoNombre(mov.insumoId) || "").toLowerCase();
+    const nombre = (getInsumoNombre(mov) || "").toLowerCase();
     const tipo = (mov.tipo || "").toLowerCase();
     const responsable = (mov.responsable || "").toLowerCase();
     const motivo = (mov.motivo || "").toLowerCase();
@@ -84,7 +89,7 @@ export function MovimientosTable() {
         <ExportButton
           data={filteredMovimientos.map((mov) => ({
             fecha: mov.fecha,
-            insumo: getInsumoNombre(mov.insumoId),
+            insumo: getInsumoNombre(mov),
             tipo: mov.tipo,
             cantidad: mov.cantidad,
             unidad: getInsumoUnidad(mov.insumoId),
@@ -190,7 +195,7 @@ export function MovimientosTable() {
                 {paginated.map((mov) => (
                 <TableRow key={mov.id} className="odd:bg-muted/50 hover:bg-muted transition-colors">
                   <TableCell className="font-medium truncate max-w-[160px]">
-                    {getInsumoNombre(mov.insumoId)}
+                    {getInsumoNombre(mov)}
                   </TableCell>
                   <TableCell>
                     <Badge
@@ -214,7 +219,7 @@ export function MovimientosTable() {
                   <TableCell className="text-right font-medium tabular-nums whitespace-nowrap">
                     {mov.cantidad} {getInsumoUnidad(mov.insumoId)}
                   </TableCell>
-                  <TableCell className="truncate max-w-[160px]">{mov.responsable}</TableCell>
+                  <TableCell className="truncate max-w-[160px]">{mov.responsableNombre || mov.responsable || "No asignado"}</TableCell>
                   <TableCell className="max-w-xs truncate" title={mov.motivo}>
                     {mov.motivo}
                   </TableCell>

@@ -103,6 +103,30 @@ interface AppContextType {
   addUsuario: (usuario: User) => void;
   updateUsuario: (id: string, usuario: Partial<User>) => void;
   deleteUsuario: (id: string) => void;
+
+  // Filtered data getters (por finca del usuario)
+  getFilteredEnfundes: () => Enfunde[];
+  getFilteredCosechas: () => Cosecha[];
+  getFilteredRecuperaciones: () => RecuperacionCinta[];
+  getFilteredEmpleados: () => Empleado[];
+  getFilteredRolesPago: () => RolPago[];
+  getFilteredPrestamos: () => Prestamo[];
+  getFilteredInsumos: () => Insumo[];
+  getFilteredMovimientos: () => MovimientoInventario[];
+
+  // Direct access helpers
+  currentUser: User | null;
+  enfundes: Enfunde[];
+  cosechas: Cosecha[];
+  empleados: Empleado[];
+  rolesPago: RolPago[];
+  prestamos: Prestamo[];
+  insumos: Insumo[];
+  movimientosInventario: MovimientoInventario[];
+  alertas: Alerta[];
+  fincas: Finca[];
+  usuarios: User[];
+  recuperacionCintas: RecuperacionCinta[];
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -401,13 +425,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             const updates: Record<string, Prestamo> = {} as any;
             for (const p of prestamosEmpleado) {
               if (p.estado !== "activo") continue;
-              const desc = Math.min(p.valorCuota, p.saldoPendiente);
+              const valorCuota = p.valorCuota || 0;
+              const cuotasPagadas = p.cuotasPagadas || 0;
+              const numeroCuotas = p.numeroCuotas || p.cuotas || 1;
+              const desc = Math.min(valorCuota, p.saldoPendiente);
               totalDesc += desc;
               updates[p.id] = {
                 ...p,
-                cuotasPagadas: p.cuotasPagadas + 1,
+                cuotasPagadas: cuotasPagadas + 1,
                 saldoPendiente: Math.max(0, p.saldoPendiente - desc),
-                estado: p.cuotasPagadas + 1 >= p.numeroCuotas || p.saldoPendiente - desc <= 0 ? "finalizado" : "activo",
+                estado: cuotasPagadas + 1 >= numeroCuotas || p.saldoPendiente - desc <= 0 ? "finalizado" : "activo",
               };
             }
             newPrestamos = prev.prestamos.map((x) => (updates[x.id] ? updates[x.id] : x));
@@ -416,8 +443,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 ? {
                     ...r,
                     prestamos: Number(totalDesc.toFixed(2)),
-                    totalEgresos: Number((r.iess + r.multas + totalDesc).toFixed(2)),
-                    netoAPagar: Number((r.totalIngresos - (r.iess + r.multas + totalDesc)).toFixed(2)),
+                    totalEgresos: Number(((r.iess || 0) + (r.multas || 0) + totalDesc).toFixed(2)),
+                    netoAPagar: Number(((r.totalIngresos || 0) - ((r.iess || 0) + (r.multas || 0) + totalDesc)).toFixed(2)),
                     prestamoAplicado: true,
                     estado: "pagado",
                   }
@@ -432,8 +459,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const updates: Record<string, Prestamo> = {} as any;
           for (const p of prestamosEmpleado) {
             if (remaining <= 0) break;
-            const revertAmount = Math.min(p.valorCuota, remaining);
-            const cuotasPagadas = Math.max(0, p.cuotasPagadas - 1);
+            const revertAmount = Math.min(p.valorCuota || 0, remaining);
+            const cuotasPagadas = Math.max(0, (p.cuotasPagadas || 0) - 1);
             const saldoPendiente = p.saldoPendiente + revertAmount;
             updates[p.id] = {
               ...p,
@@ -791,6 +818,118 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       };
       return PERMISSIONS[resource][role][action];
     },
+
+    // Filtered data getters
+    getFilteredEnfundes: () => {
+      const user = state.currentUser;
+      if (!user || user.rol === 'administrador' || user.rol === 'gerente') {
+        return state.enfundes;
+      }
+      if (user.fincaAsignada) {
+        const finca = state.fincas.find(f => f.id === user.fincaAsignada);
+        const fincaNombre = finca?.nombre;
+        return state.enfundes.filter(e => e.finca === fincaNombre || e.fincaId === user.fincaAsignada);
+      }
+      return state.enfundes;
+    },
+    getFilteredCosechas: () => {
+      const user = state.currentUser;
+      if (!user || user.rol === 'administrador' || user.rol === 'gerente') {
+        return state.cosechas;
+      }
+      if (user.fincaAsignada) {
+        const finca = state.fincas.find(f => f.id === user.fincaAsignada);
+        const fincaNombre = finca?.nombre;
+        return state.cosechas.filter(c => c.finca === fincaNombre || c.fincaId === user.fincaAsignada);
+      }
+      return state.cosechas;
+    },
+    getFilteredRecuperaciones: () => {
+      const user = state.currentUser;
+      if (!user || user.rol === 'administrador' || user.rol === 'gerente') {
+        return state.recuperacionCintas;
+      }
+      if (user.fincaAsignada) {
+        const finca = state.fincas.find(f => f.id === user.fincaAsignada);
+        const fincaNombre = finca?.nombre;
+        return state.recuperacionCintas.filter(r => r.finca === fincaNombre || r.fincaNombre === fincaNombre);
+      }
+      return state.recuperacionCintas;
+    },
+    getFilteredEmpleados: () => {
+      const user = state.currentUser;
+      if (!user || user.rol === 'administrador' || user.rol === 'gerente' || user.rol === 'contador_rrhh') {
+        return state.empleados;
+      }
+      if (user.fincaAsignada) {
+        const finca = state.fincas.find(f => f.id === user.fincaAsignada);
+        const fincaNombre = finca?.nombre;
+        return state.empleados.filter(e => e.finca === fincaNombre || e.fincaId === user.fincaAsignada);
+      }
+      return state.empleados;
+    },
+    getFilteredRolesPago: () => {
+      const user = state.currentUser;
+      if (!user || user.rol === 'administrador' || user.rol === 'gerente' || user.rol === 'contador_rrhh') {
+        return state.rolesPago;
+      }
+      if (user.fincaAsignada) {
+        const finca = state.fincas.find(f => f.id === user.fincaAsignada);
+        const fincaNombre = finca?.nombre;
+        return state.rolesPago.filter(r => r.finca === fincaNombre || r.fincaNombre === fincaNombre);
+      }
+      return state.rolesPago;
+    },
+    getFilteredPrestamos: () => {
+      const user = state.currentUser;
+      if (!user || user.rol === 'administrador' || user.rol === 'gerente' || user.rol === 'contador_rrhh') {
+        return state.prestamos;
+      }
+      if (user.fincaAsignada) {
+        const finca = state.fincas.find(f => f.id === user.fincaAsignada);
+        const fincaNombre = finca?.nombre;
+        return state.prestamos.filter(p => p.fincaNombre === fincaNombre);
+      }
+      return state.prestamos;
+    },
+    getFilteredInsumos: () => {
+      const user = state.currentUser;
+      if (!user || user.rol === 'administrador' || user.rol === 'gerente') {
+        return state.insumos;
+      }
+      if (user.fincaAsignada) {
+        const finca = state.fincas.find(f => f.id === user.fincaAsignada);
+        const fincaNombre = finca?.nombre;
+        return state.insumos.filter(i => i.finca === fincaNombre || i.fincaId === user.fincaAsignada);
+      }
+      return state.insumos;
+    },
+    getFilteredMovimientos: () => {
+      const user = state.currentUser;
+      if (!user || user.rol === 'administrador' || user.rol === 'gerente') {
+        return state.movimientosInventario;
+      }
+      if (user.fincaAsignada) {
+        const finca = state.fincas.find(f => f.id === user.fincaAsignada);
+        const fincaNombre = finca?.nombre;
+        return state.movimientosInventario.filter(m => m.finca === fincaNombre || m.fincaId === user.fincaAsignada);
+      }
+      return state.movimientosInventario;
+    },
+
+    // Direct access helpers
+    currentUser: state.currentUser,
+    enfundes: state.enfundes,
+    cosechas: state.cosechas,
+    empleados: state.empleados,
+    rolesPago: state.rolesPago,
+    prestamos: state.prestamos,
+    insumos: state.insumos,
+    movimientosInventario: state.movimientosInventario,
+    alertas: state.alertas,
+    fincas: state.fincas,
+    usuarios: state.usuarios,
+    recuperacionCintas: state.recuperacionCintas,
   };
 
   // No renderizar hasta que esté inicializado

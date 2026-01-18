@@ -69,7 +69,8 @@ const colorMap: { [key: string]: string } = {
 };
 
 export function EnfundesTable() {
-  const { enfundes, fincas, updateEnfunde, deleteEnfunde, replaceEnfundes } = useApp();
+  const { getFilteredEnfundes, fincas, updateEnfunde, deleteEnfunde, replaceEnfundes } = useApp();
+  const enfundes = getFilteredEnfundes();
   const isMobile = useIsMobile();
   const [searchTerm, setSearchTerm] = useState("");
   const searchParams = useSearchParams();
@@ -114,10 +115,11 @@ export function EnfundesTable() {
 
   const filteredEnfundes = useMemo(() => {
     return enfundes.filter((enfunde) => {
+      const fincaName = enfunde.fincaNombre || enfunde.finca;
       const matchesSearch =
-        enfunde.finca.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        fincaName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         enfunde.colorCinta.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesFinca = fincaSel ? enfunde.finca === fincaSel : true;
+      const matchesFinca = fincaSel ? fincaName === fincaSel : true;
       const matchesWeek = weekFilter ? enfunde.semana === Number(weekFilter) : true;
       const matchesYear = yearFilter ? enfunde.año === Number(yearFilter) : true;
       const d = new Date(enfunde.fecha);
@@ -143,13 +145,13 @@ export function EnfundesTable() {
   const sortedEnfundes = useMemo(() => {
     const getValue = (e: typeof enfundes[number]) => {
       if (sortBy === "fecha") return new Date(e.fecha).getTime();
-      if (sortBy === "finca") return e.finca.toLowerCase();
+      if (sortBy === "finca") return (e.fincaNombre || e.finca).toLowerCase();
       if (sortBy === "semana") return e.semana;
       if (sortBy === "año") return e.año;
       if (sortBy === "colorCinta") return e.colorCinta.toLowerCase();
       if (sortBy === "cantidadEnfundes") return e.cantidadEnfundes;
       if (sortBy === "matasCaidas") return e.matasCaidas;
-      if (sortBy === "responsable") return (getFincaInfo(e.finca)?.responsable || "").toLowerCase();
+      if (sortBy === "responsable") return (getFincaInfo(e.fincaNombre || e.finca)?.responsable || "").toLowerCase();
       return 0;
     };
     const arr = [...filteredEnfundes];
@@ -173,7 +175,7 @@ export function EnfundesTable() {
     if (!latestRecord) return;
     const nextWeek = String(latestRecord.semana);
     const nextYear = String(latestRecord.año);
-    const nextFinca = latestRecord.finca;
+    const nextFinca = latestRecord.fincaNombre || latestRecord.finca;
     setWeekFilter(nextWeek);
     setYearFilter(nextYear);
     setFincaSel(nextFinca);
@@ -237,13 +239,12 @@ export function EnfundesTable() {
       };
       const colorNorm = (c: string) => {
         const x = c.toLowerCase();
-        if (x.includes("azul")) return "Azul";
-        if (x.includes("rojo")) return "Rojo";
-        if (x.includes("verde")) return "Verde";
-        if (x.includes("amar")) return "Amarillo";
-        if (x.includes("naranja")) return "Naranja";
-        if (x.includes("blanco")) return "Blanco";
-        if (x.includes("negro")) return "Negro";
+        if (x.includes("azul")) return "azul";
+        if (x.includes("rojo")) return "rojo";
+        if (x.includes("verde")) return "verde";
+        if (x.includes("amar")) return "amarillo";
+        if (x.includes("naranja")) return "naranja";
+        if (x.includes("blanco")) return "blanco";
         if (x.includes("morado") || x.includes("violeta") || x.includes("purp")) return "Violeta";
         return c || "";
       };
@@ -294,7 +295,36 @@ export function EnfundesTable() {
 
   const [editing, setEditing] = useState<null | typeof enfundes[number]>(null);
   const [editForm, setEditForm] = useState({ colorCinta: "", cantidadEnfundes: "", matasCaidas: "", fecha: "" });
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+  const [editTouched, setEditTouched] = useState<Record<string, boolean>>({});
   const [toDelete, setToDelete] = useState<null | typeof enfundes[number]>(null);
+
+  // Validación en vivo para edición
+  const validateEditField = (field: string, value: string): string => {
+    if (field === "colorCinta" && !value) return "Selecciona un color";
+    if (field === "cantidadEnfundes") {
+      if (!value) return "Ingresa la cantidad";
+      const num = Number(value);
+      if (isNaN(num) || num < 0) return "Debe ser un número >= 0";
+    }
+    if (field === "matasCaidas") {
+      if (!value) return "Ingresa las matas caídas";
+      const num = Number(value);
+      if (isNaN(num) || num < 0) return "Debe ser un número >= 0";
+    }
+    if (field === "fecha") {
+      if (!value) return "Selecciona una fecha";
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return "Formato inválido (YYYY-MM-DD)";
+    }
+    return "";
+  };
+
+  const handleEditChange = (field: string, value: string) => {
+    setEditForm(prev => ({ ...prev, [field]: value }));
+    const error = validateEditField(field, value);
+    setEditErrors(prev => ({ ...prev, [field]: error }));
+    setEditTouched(prev => ({ ...prev, [field]: true }));
+  };
 
   const openEdit = (e: typeof enfundes[number]) => {
     setEditing(e);
@@ -304,10 +334,20 @@ export function EnfundesTable() {
       matasCaidas: String(e.matasCaidas),
       fecha: e.fecha.split("T")[0] || e.fecha,
     });
+    setEditErrors({});
+    setEditTouched({});
+  };
+
+  const isEditFormValid = () => {
+    return editForm.colorCinta && 
+           editForm.cantidadEnfundes && Number(editForm.cantidadEnfundes) >= 0 &&
+           editForm.matasCaidas && Number(editForm.matasCaidas) >= 0 &&
+           editForm.fecha && /^\d{4}-\d{2}-\d{2}$/.test(editForm.fecha) &&
+           !Object.values(editErrors).some(e => e);
   };
 
   const saveEdit = () => {
-    if (!editing) return;
+    if (!editing || !isEditFormValid()) return;
     const cantidad = Number.parseInt(editForm.cantidadEnfundes || "0");
     const matas = Number.parseInt(editForm.matasCaidas || "0");
     updateEnfunde(editing.id, {
@@ -339,7 +379,8 @@ export function EnfundesTable() {
           <ExportButton
           data={filteredEnfundes.map(e => ({
             ...e,
-            responsable: getFincaInfo(e.finca)?.responsable || "No asignado",
+            finca: e.fincaNombre || e.finca,
+            responsable: getFincaInfo(e.fincaNombre || e.finca)?.responsable || "No asignado",
           }))}
           headers={[
             "Fecha",
@@ -373,7 +414,7 @@ export function EnfundesTable() {
       <CardContent>
         {latestRecord && (
           <div className="mb-4 rounded-lg border border-border bg-muted/40 p-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
-            <div className="text-xs md:text-sm text-muted-foreground">Último registro: <span className="font-medium text-foreground">{latestRecord.finca}</span> · S{latestRecord.semana} · {latestRecord.año} · {latestRecord.colorCinta} · {latestRecord.cantidadEnfundes.toLocaleString()} enfundes</div>
+            <div className="text-xs md:text-sm text-muted-foreground">Último registro: <span className="font-medium text-foreground">{latestRecord.fincaNombre || latestRecord.finca}</span> · S{latestRecord.semana} · {latestRecord.año} · {latestRecord.colorCinta} · {latestRecord.cantidadEnfundes.toLocaleString()} enfundes</div>
             <Button variant="outline" size="sm" onClick={applyLatestFilters}>Ver</Button>
           </div>
         )}
@@ -503,13 +544,14 @@ export function EnfundesTable() {
               </TableHeader>
               <TableBody className="animate-in fade-in duration-200">
               {paginated.map((enfunde) => {
-                const fincaInfo = getFincaInfo(enfunde.finca);
+                const fincaName = enfunde.fincaNombre || enfunde.finca;
+                const fincaInfo = getFincaInfo(fincaName);
                 return (
                   <TableRow key={enfunde.id} className="odd:bg-muted/50 hover:bg-muted transition-colors">
                     <TableCell>
                       {new Date(enfunde.fecha).toLocaleDateString("es-ES", { year: "numeric", month: "short", day: "numeric" })}
                     </TableCell>
-                    <TableCell className="truncate max-w-[160px]">{enfunde.finca}</TableCell>
+                    <TableCell className="truncate max-w-[160px]">{fincaName}</TableCell>
                     <TableCell className="text-right tabular-nums whitespace-nowrap">{enfunde.semana}</TableCell>
                     <TableCell className="text-right tabular-nums whitespace-nowrap">{enfunde.año}</TableCell>
                     <TableCell>
@@ -562,26 +604,69 @@ export function EnfundesTable() {
               <DialogTitle>Editar Enfunde</DialogTitle>
             </DialogHeader>
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-2">
-                <span className="text-sm text-muted-foreground">Color</span>
-                <Input className="h-11" value={editForm.colorCinta} onChange={(e) => setEditForm({ ...editForm, colorCinta: e.target.value })} />
+              <div className="space-y-1">
+                <span className="text-sm font-medium">Color de Cinta *</span>
+                <p className="text-xs text-muted-foreground">Color para identificar la semana</p>
+                <Select value={editForm.colorCinta} onValueChange={(value) => handleEditChange("colorCinta", value)}>
+                  <SelectTrigger className={`h-11 ${editErrors.colorCinta && editTouched.colorCinta ? 'border-red-500' : editTouched.colorCinta && !editErrors.colorCinta && editForm.colorCinta ? 'border-green-500' : ''}`}>
+                    <SelectValue placeholder="Seleccionar color" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="azul">Azul</SelectItem>
+                    <SelectItem value="rojo">Rojo</SelectItem>
+                    <SelectItem value="amarillo">Amarillo</SelectItem>
+                    <SelectItem value="verde">Verde</SelectItem>
+                    <SelectItem value="naranja">Naranja</SelectItem>
+                    <SelectItem value="morado">Morado</SelectItem>
+                    <SelectItem value="rosado">Rosado</SelectItem>
+                    <SelectItem value="blanco">Blanco</SelectItem>
+                  </SelectContent>
+                </Select>
+                {editErrors.colorCinta && editTouched.colorCinta && <p className="text-xs text-red-500">{editErrors.colorCinta}</p>}
+                {!editErrors.colorCinta && editTouched.colorCinta && editForm.colorCinta && <p className="text-xs text-green-500">✓ Color válido</p>}
               </div>
-              <div className="space-y-2">
-                <span className="text-sm text-muted-foreground">Enfundes</span>
-                <Input className="h-11" type="number" value={editForm.cantidadEnfundes} onChange={(e) => setEditForm({ ...editForm, cantidadEnfundes: e.target.value })} />
+              <div className="space-y-1">
+                <span className="text-sm font-medium">Cantidad de Enfundes *</span>
+                <p className="text-xs text-muted-foreground">Total de fundas colocadas</p>
+                <Input 
+                  className={`h-11 ${editErrors.cantidadEnfundes && editTouched.cantidadEnfundes ? 'border-red-500' : editTouched.cantidadEnfundes && !editErrors.cantidadEnfundes && editForm.cantidadEnfundes ? 'border-green-500' : ''}`}
+                  type="number" 
+                  min="0" 
+                  value={editForm.cantidadEnfundes} 
+                  onChange={(e) => handleEditChange("cantidadEnfundes", e.target.value)} 
+                />
+                {editErrors.cantidadEnfundes && editTouched.cantidadEnfundes && <p className="text-xs text-red-500">{editErrors.cantidadEnfundes}</p>}
+                {!editErrors.cantidadEnfundes && editTouched.cantidadEnfundes && editForm.cantidadEnfundes && <p className="text-xs text-green-500">✓ Cantidad válida</p>}
               </div>
-              <div className="space-y-2">
-                <span className="text-sm text-muted-foreground">Matas Caídas</span>
-                <Input className="h-11" type="number" value={editForm.matasCaidas} onChange={(e) => setEditForm({ ...editForm, matasCaidas: e.target.value })} />
+              <div className="space-y-1">
+                <span className="text-sm font-medium">Matas Caídas *</span>
+                <p className="text-xs text-muted-foreground">Plantas perdidas durante el enfunde</p>
+                <Input 
+                  className={`h-11 ${editErrors.matasCaidas && editTouched.matasCaidas ? 'border-red-500' : editTouched.matasCaidas && !editErrors.matasCaidas && editForm.matasCaidas ? 'border-green-500' : ''}`}
+                  type="number" 
+                  min="0" 
+                  value={editForm.matasCaidas} 
+                  onChange={(e) => handleEditChange("matasCaidas", e.target.value)} 
+                />
+                {editErrors.matasCaidas && editTouched.matasCaidas && <p className="text-xs text-red-500">{editErrors.matasCaidas}</p>}
+                {!editErrors.matasCaidas && editTouched.matasCaidas && editForm.matasCaidas && <p className="text-xs text-green-500">✓ Cantidad válida</p>}
               </div>
-              <div className="space-y-2">
-                <span className="text-sm text-muted-foreground">Fecha</span>
-                <Input className="h-11" type="date" value={editForm.fecha} onChange={(e) => setEditForm({ ...editForm, fecha: e.target.value })} />
+              <div className="space-y-1">
+                <span className="text-sm font-medium">Fecha de Ejecución *</span>
+                <p className="text-xs text-muted-foreground">Día del enfunde (YYYY-MM-DD)</p>
+                <Input 
+                  className={`h-11 ${editErrors.fecha && editTouched.fecha ? 'border-red-500' : editTouched.fecha && !editErrors.fecha && editForm.fecha ? 'border-green-500' : ''}`}
+                  type="date" 
+                  value={editForm.fecha} 
+                  onChange={(e) => handleEditChange("fecha", e.target.value)} 
+                />
+                {editErrors.fecha && editTouched.fecha && <p className="text-xs text-red-500">{editErrors.fecha}</p>}
+                {!editErrors.fecha && editTouched.fecha && editForm.fecha && <p className="text-xs text-green-500">✓ Fecha válida</p>}
               </div>
             </div>
             <div className="flex flex-col md:flex-row justify-end gap-2 mt-4">
               <Button className="h-11" variant="secondary" onClick={() => setEditing(null)}>Cancelar</Button>
-              <Button className="h-11" onClick={saveEdit}>Guardar</Button>
+              <Button className="h-11" onClick={saveEdit} disabled={!isEditFormValid()}>Guardar</Button>
             </div>
           </DialogContent>
         </Dialog>

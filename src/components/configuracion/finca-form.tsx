@@ -22,9 +22,10 @@ import {
 } from "@/src/components/ui/select";
 import { Alert, AlertDescription } from "@/src/components/ui/alert";
 import type { Finca } from "@/src/lib/types";
-import { Save, X, AlertCircle } from "lucide-react";
+import { Save, X, AlertCircle, CheckCircle2 } from "lucide-react";
 import { FincaSchema } from "@/src/lib/validation";
 import { Spinner } from "@/src/components/ui/spinner";
+import { FieldFeedback, getInputClassName } from "@/src/components/ui/field-feedback";
 
 interface FincaFormProps {
   finca?: Finca;
@@ -37,6 +38,7 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [formData, setFormData] = useState<Partial<Finca>>({
     nombre: finca?.nombre || "",
     hectareas: finca?.hectareas || 0,
@@ -94,23 +96,68 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
   };
 
   // Funciones auxiliares
+  const validateField = (field: string, value: any): string => {
+    try {
+      const dataToValidate = {
+        nombre: formData.nombre || "",
+        hectareas: String(formData.hectareas ?? ""),
+        ubicacion: formData.ubicacion || undefined,
+        responsable: formData.responsable || undefined,
+        variedad: (formData.variedad || "Cavendish") as any,
+        plantasTotales: String(formData.plantasTotales ?? ""),
+        fechaSiembra: formData.fechaSiembra || undefined,
+        estado: (formData.estado || "activa") as any,
+        coordenadas: formData.coordenadas || undefined,
+        telefono: formData.telefono || undefined,
+        [field]: field === "hectareas" || field === "plantasTotales" ? String(value) : value,
+      };
+      const parsed = FincaSchema.safeParse(dataToValidate);
+      if (!parsed.success) {
+        const fieldError = parsed.error.flatten().fieldErrors[field];
+        if (fieldError && fieldError.length > 0) {
+          return String(fieldError[0]);
+        }
+      }
+      return "";
+    } catch {
+      return "";
+    }
+  };
+
   const handleTextChange = (field: keyof Finca, value: string) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
     }));
     if (error) setError(null);
-    setErrors((prev) => ({ ...prev, [field]: "" }));
+    
+    if (touched[field] || value !== "") {
+      const err = validateField(field, value);
+      setErrors((prev) => ({ ...prev, [field]: err }));
+    }
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  };
+
+  const handleFieldBlur = (field: string, value: any) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    const err = validateField(field, value);
+    setErrors((prev) => ({ ...prev, [field]: err }));
   };
 
   const handleNumberChange = (field: keyof Finca, value: string) => {
     const num = Number.parseFloat(value);
+    const finalValue = Number.isFinite(num) ? num : 0;
     setFormData((prev) => ({
       ...prev,
-      [field]: Number.isFinite(num) ? num : (prev[field] as number) || 0,
+      [field]: finalValue,
     }));
     if (error) setError(null);
-    setErrors((prev) => ({ ...prev, [field]: "" }));
+    
+    if (touched[field] || value !== "") {
+      const err = validateField(field, value);
+      setErrors((prev) => ({ ...prev, [field]: err }));
+    }
+    setTouched((prev) => ({ ...prev, [field]: true }));
   };
 
   // Parseador sencillo de GeoJSON (Polygon/MultiPolygon)
@@ -172,13 +219,18 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
                 id="nombre"
                 value={formData.nombre || ""}
                 onChange={(e) => handleTextChange("nombre", e.target.value)}
+                onBlur={(e) => handleFieldBlur("nombre", e.target.value)}
                 placeholder="BABY"
                 disabled={isSubmitting || !allowEdit}
                 required
+                className={getInputClassName(errors, touched, "nombre", formData.nombre)}
               />
-              {errors.nombre && (
-                <p className="text-xs text-red-600">{errors.nombre}</p>
-              )}
+              <FieldFeedback
+                error={errors.nombre}
+                touched={touched.nombre}
+                isValid={!errors.nombre && !!formData.nombre}
+                successMessage="Nombre válido"
+              />
             </div>
 
             <div className="space-y-2">
@@ -190,11 +242,16 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
                 min="0"
                 value={formData.hectareas || 0}
                 onChange={(e) => handleNumberChange("hectareas", e.target.value)}
+                onBlur={(e) => handleFieldBlur("hectareas", e.target.value)}
                 disabled={isSubmitting || !allowEdit}
+                className={getInputClassName(errors, touched, "hectareas", String(formData.hectareas))}
               />
-              {errors.hectareas && (
-                <p className="text-xs text-red-600">{errors.hectareas}</p>
-              )}
+              <FieldFeedback
+                error={errors.hectareas}
+                touched={touched.hectareas}
+                isValid={!errors.hectareas && (formData.hectareas ?? 0) > 0}
+                successMessage="Hectáreas válidas"
+              />
             </div>
 
             <div className="space-y-2">
@@ -202,7 +259,7 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
               <Select
                 value={formData.variedad || "Cavendish"}
                 onValueChange={(v) =>
-                  setFormData((prev) => ({ ...prev, variedad: v }))
+                  setFormData((prev) => ({ ...prev, variedad: v as any }))
                 }
                 disabled={isSubmitting || !allowEdit}
               >
@@ -212,6 +269,8 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
                 <SelectContent>
                   <SelectItem value="Cavendish">Cavendish</SelectItem>
                   <SelectItem value="Clon">Clon</SelectItem>
+                  <SelectItem value="Williams">Williams</SelectItem>
+                  <SelectItem value="Gran Enano">Gran Enano</SelectItem>
                   <SelectItem value="Otro">Otro</SelectItem>
                 </SelectContent>
               </Select>
@@ -228,11 +287,16 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
                 min="0"
                 value={formData.plantasTotales || 0}
                 onChange={(e) => handleNumberChange("plantasTotales", e.target.value)}
+                onBlur={(e) => handleFieldBlur("plantasTotales", e.target.value)}
                 disabled={isSubmitting || !allowEdit}
+                className={getInputClassName(errors, touched, "plantasTotales", String(formData.plantasTotales))}
               />
-              {errors.plantasTotales && (
-                <p className="text-xs text-red-600">{errors.plantasTotales}</p>
-              )}
+              <FieldFeedback
+                error={errors.plantasTotales}
+                touched={touched.plantasTotales}
+                isValid={!errors.plantasTotales && (formData.plantasTotales ?? 0) >= 0}
+                successMessage="Cantidad válida"
+              />
             </div>
 
             <div className="space-y-2">
@@ -241,12 +305,17 @@ export function FincaForm({ finca, onSave, onCancel }: FincaFormProps) {
                 id="responsable"
                 value={formData.responsable || ""}
                 onChange={(e) => handleTextChange("responsable", e.target.value)}
+                onBlur={(e) => handleFieldBlur("responsable", e.target.value)}
                 placeholder="Juan Pérez"
                 disabled={isSubmitting || !allowEdit}
+                className={getInputClassName(errors, touched, "responsable", formData.responsable)}
               />
-              {errors.responsable && (
-                <p className="text-xs text-red-600">{errors.responsable}</p>
-              )}
+              <FieldFeedback
+                error={errors.responsable}
+                touched={touched.responsable}
+                isValid={!errors.responsable && !!formData.responsable}
+                successMessage="Responsable válido"
+              />
             </div>
 
             <div className="space-y-2">

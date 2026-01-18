@@ -13,7 +13,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/src/compo
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/src/components/ui/alert-dialog";
 
 export function AlertasInventario() {
-  const { insumos, generarOrdenCompra, currentUser } = useApp();
+  const { getFilteredInsumos, generarOrdenCompra, currentUser } = useApp();
+  const insumos = getFilteredInsumos();
   const { toast } = useToast();
   const router = useRouter();
   const isMobile = useIsMobile();

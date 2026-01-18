@@ -33,7 +33,9 @@ import { Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export function RecuperacionTable() {
-  const { recuperacionCintas, enfundes, updateRecuperacionCinta, deleteRecuperacionCinta } = useApp();
+  const { getFilteredRecuperaciones, getFilteredEnfundes, updateRecuperacionCinta, deleteRecuperacionCinta } = useApp();
+  const recuperacionCintas = getFilteredRecuperaciones();
+  const enfundes = getFilteredEnfundes();
   const searchParams = useSearchParams();
   const fincaFilter = searchParams.get("finca") || "";
   const [fincaSel, setFincaSel] = useState(fincaFilter);
@@ -57,7 +59,8 @@ export function RecuperacionTable() {
 
   const filtered = useMemo(() => {
     return recuperacionCintas.filter((r) => {
-      const matchesFinca = fincaSel ? r.finca === fincaSel : true;
+      const fincaName = r.fincaNombre || r.finca;
+      const matchesFinca = fincaSel ? fincaName === fincaSel : true;
       const matchesWeek = weekFilter ? r.semana === Number(weekFilter) : true;
       return matchesFinca && matchesWeek;
     });
@@ -76,7 +79,7 @@ export function RecuperacionTable() {
   const sorted = useMemo(() => {
     const getValue = (r: typeof recuperacionCintas[number]) => {
       if (sortBy === "fecha") return (r.fecha ? new Date(r.fecha) : getDateFromYearSemana(r.año, r.semana)).getTime();
-      if (sortBy === "finca") return r.finca.toLowerCase();
+      if (sortBy === "finca") return (r.fincaNombre || r.finca).toLowerCase();
       if (sortBy === "semana") return r.semana;
       if (sortBy === "color") {
         const match = enfundes.find(e => e.finca === r.finca && e.semana === r.semana && e.año === r.año);
@@ -190,7 +193,31 @@ export function RecuperacionTable() {
 
   const [editing, setEditing] = useState<null | typeof recuperacionCintas[number]>(null);
   const [editForm, setEditForm] = useState({ colorCinta: "", enfundesIniciales: "", primeraCalCosecha: "", segundaCalCosecha: "", terceraCalCosecha: "", barridaFinal: "" });
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+  const [editTouched, setEditTouched] = useState<Record<string, boolean>>({});
   const [toDelete, setToDelete] = useState<null | typeof recuperacionCintas[number]>(null);
+
+  const validateEditField = (field: string, value: string): string => {
+    if (field === "colorCinta") return value ? "" : "Seleccione un color";
+    if (!value) return "Campo requerido";
+    const num = Number(value);
+    if (isNaN(num)) return "Debe ser un número";
+    if (num < 0) return "Debe ser >= 0";
+    return "";
+  };
+
+  const handleEditChange = (field: string, value: string) => {
+    setEditForm(prev => ({ ...prev, [field]: value }));
+    const error = validateEditField(field, value);
+    setEditErrors(prev => ({ ...prev, [field]: error }));
+    setEditTouched(prev => ({ ...prev, [field]: true }));
+  };
+
+  const isEditFormValid = () => {
+    return editForm.colorCinta && 
+           Object.entries(editForm).filter(([k]) => k !== "colorCinta").every(([_, v]) => v && Number(v) >= 0) &&
+           !Object.values(editErrors).some(e => e);
+  };
 
   const openEdit = (r: typeof recuperacionCintas[number]) => {
     setEditing(r);
@@ -202,10 +229,12 @@ export function RecuperacionTable() {
       terceraCalCosecha: String(r.terceraCalCosecha),
       barridaFinal: String(r.barridaFinal),
     });
+    setEditErrors({});
+    setEditTouched({});
   };
 
   const saveEdit = () => {
-    if (!editing) return;
+    if (!editing || !isEditFormValid()) return;
     const color = editForm.colorCinta;
     const enf = Number.parseInt(editForm.enfundesIniciales || "0");
     const p1 = Number.parseInt(editForm.primeraCalCosecha || "0");
@@ -281,7 +310,7 @@ export function RecuperacionTable() {
       <CardContent>
         {latestRecord && (
           <div className="mb-4 rounded-lg border border-border bg-muted/40 p-3 flex items-center justify-between">
-            <div className="text-sm text-muted-foreground">Último registro: <span className="font-medium text-foreground">{latestRecord.finca}</span> · S{latestRecord.semana} · {latestRecord.año}</div>
+            <div className="text-sm text-muted-foreground">Último registro: <span className="font-medium text-foreground">{latestRecord.fincaNombre || latestRecord.finca}</span> · S{latestRecord.semana} · {latestRecord.año}</div>
             <Button variant="outline" size="sm" onClick={applyLatestFilters}>Ver</Button>
           </div>
         )}
@@ -383,7 +412,7 @@ export function RecuperacionTable() {
                   <TableCell className="whitespace-nowrap">
                     {(rec.fecha ? new Date(rec.fecha) : getDateFromYearSemana(rec.año, rec.semana)).toLocaleDateString("es-ES", { year: "numeric", month: "short", day: "numeric" })}
                   </TableCell>
-                  <TableCell className="font-medium truncate max-w-[160px]">{rec.finca}</TableCell>
+                  <TableCell className="font-medium truncate max-w-[160px]">{rec.fincaNombre || rec.finca}</TableCell>
                   <TableCell className="tabular-nums whitespace-nowrap">S{rec.semana}</TableCell>
                   <TableCell>
                     {color ? (
@@ -457,30 +486,63 @@ export function RecuperacionTable() {
               <DialogTitle>Editar Recuperación</DialogTitle>
             </DialogHeader>
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-2"><span className="text-sm text-muted-foreground">Color</span>
-                <Select value={editForm.colorCinta} onValueChange={(v) => setEditForm({ ...editForm, colorCinta: v })}>
-                  <SelectTrigger className="h-11">
+              <div className="space-y-1">
+                <span className="text-sm font-medium">Color *</span>
+                <p className="text-xs text-muted-foreground">Color de cinta a recuperar</p>
+                <Select value={editForm.colorCinta} onValueChange={(v) => handleEditChange("colorCinta", v)}>
+                  <SelectTrigger className={`h-11 ${editErrors.colorCinta && editTouched.colorCinta ? 'border-red-500' : editTouched.colorCinta && !editErrors.colorCinta ? 'border-green-500' : ''}`}>
                     <SelectValue placeholder="Seleccionar color" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Azul">Azul</SelectItem>
-                    <SelectItem value="Rojo">Rojo</SelectItem>
-                    <SelectItem value="Verde">Verde</SelectItem>
-                    <SelectItem value="Amarillo">Amarillo</SelectItem>
-                    <SelectItem value="Blanco">Blanco</SelectItem>
-                    <SelectItem value="Naranja">Naranja</SelectItem>
+                    <SelectItem value="azul">Azul</SelectItem>
+                    <SelectItem value="rojo">Rojo</SelectItem>
+                    <SelectItem value="verde">Verde</SelectItem>
+                    <SelectItem value="amarillo">Amarillo</SelectItem>
+                    <SelectItem value="blanco">Blanco</SelectItem>
+                    <SelectItem value="naranja">Naranja</SelectItem>
                   </SelectContent>
                 </Select>
+                {editErrors.colorCinta && editTouched.colorCinta && <p className="text-xs text-red-500">{editErrors.colorCinta}</p>}
               </div>
-              <div className="space-y-2"><span className="text-sm text-muted-foreground">Enfunde</span><Input className="h-11" type="number" value={editForm.enfundesIniciales} onChange={(e) => setEditForm({ ...editForm, enfundesIniciales: e.target.value })} /></div>
-              <div className="space-y-2"><span className="text-sm text-muted-foreground">1ª Cal</span><Input className="h-11" type="number" value={editForm.primeraCalCosecha} onChange={(e) => setEditForm({ ...editForm, primeraCalCosecha: e.target.value })} /></div>
-              <div className="space-y-2"><span className="text-sm text-muted-foreground">2ª Cal</span><Input className="h-11" type="number" value={editForm.segundaCalCosecha} onChange={(e) => setEditForm({ ...editForm, segundaCalCosecha: e.target.value })} /></div>
-              <div className="space-y-2"><span className="text-sm text-muted-foreground">3ª Cal</span><Input className="h-11" type="number" value={editForm.terceraCalCosecha} onChange={(e) => setEditForm({ ...editForm, terceraCalCosecha: e.target.value })} /></div>
-              <div className="space-y-2"><span className="text-sm text-muted-foreground">Barrida</span><Input className="h-11" type="number" value={editForm.barridaFinal} onChange={(e) => setEditForm({ ...editForm, barridaFinal: e.target.value })} /></div>
+              <div className="space-y-1">
+                <span className="text-sm font-medium">Enfunde *</span>
+                <p className="text-xs text-muted-foreground">Total enfundes colocados</p>
+                <Input className={`h-11 ${editErrors.enfundesIniciales && editTouched.enfundesIniciales ? 'border-red-500' : editTouched.enfundesIniciales && !editErrors.enfundesIniciales ? 'border-green-500' : ''}`} type="number" min="0" value={editForm.enfundesIniciales} onChange={(e) => handleEditChange("enfundesIniciales", e.target.value)} />
+                {editErrors.enfundesIniciales && editTouched.enfundesIniciales && <p className="text-xs text-red-500">{editErrors.enfundesIniciales}</p>}
+                {!editErrors.enfundesIniciales && editTouched.enfundesIniciales && editForm.enfundesIniciales && <p className="text-xs text-green-500">✓ Válido</p>}
+              </div>
+              <div className="space-y-1">
+                <span className="text-sm font-medium">1ª Cal *</span>
+                <p className="text-xs text-muted-foreground">Primera calibración</p>
+                <Input className={`h-11 ${editErrors.primeraCalCosecha && editTouched.primeraCalCosecha ? 'border-red-500' : editTouched.primeraCalCosecha && !editErrors.primeraCalCosecha ? 'border-green-500' : ''}`} type="number" min="0" value={editForm.primeraCalCosecha} onChange={(e) => handleEditChange("primeraCalCosecha", e.target.value)} />
+                {editErrors.primeraCalCosecha && editTouched.primeraCalCosecha && <p className="text-xs text-red-500">{editErrors.primeraCalCosecha}</p>}
+                {!editErrors.primeraCalCosecha && editTouched.primeraCalCosecha && editForm.primeraCalCosecha && <p className="text-xs text-green-500">✓ Válido</p>}
+              </div>
+              <div className="space-y-1">
+                <span className="text-sm font-medium">2ª Cal *</span>
+                <p className="text-xs text-muted-foreground">Segunda calibración</p>
+                <Input className={`h-11 ${editErrors.segundaCalCosecha && editTouched.segundaCalCosecha ? 'border-red-500' : editTouched.segundaCalCosecha && !editErrors.segundaCalCosecha ? 'border-green-500' : ''}`} type="number" min="0" value={editForm.segundaCalCosecha} onChange={(e) => handleEditChange("segundaCalCosecha", e.target.value)} />
+                {editErrors.segundaCalCosecha && editTouched.segundaCalCosecha && <p className="text-xs text-red-500">{editErrors.segundaCalCosecha}</p>}
+                {!editErrors.segundaCalCosecha && editTouched.segundaCalCosecha && editForm.segundaCalCosecha && <p className="text-xs text-green-500">✓ Válido</p>}
+              </div>
+              <div className="space-y-1">
+                <span className="text-sm font-medium">3ª Cal *</span>
+                <p className="text-xs text-muted-foreground">Tercera calibración</p>
+                <Input className={`h-11 ${editErrors.terceraCalCosecha && editTouched.terceraCalCosecha ? 'border-red-500' : editTouched.terceraCalCosecha && !editErrors.terceraCalCosecha ? 'border-green-500' : ''}`} type="number" min="0" value={editForm.terceraCalCosecha} onChange={(e) => handleEditChange("terceraCalCosecha", e.target.value)} />
+                {editErrors.terceraCalCosecha && editTouched.terceraCalCosecha && <p className="text-xs text-red-500">{editErrors.terceraCalCosecha}</p>}
+                {!editErrors.terceraCalCosecha && editTouched.terceraCalCosecha && editForm.terceraCalCosecha && <p className="text-xs text-green-500">✓ Válido</p>}
+              </div>
+              <div className="space-y-1">
+                <span className="text-sm font-medium">Barrida *</span>
+                <p className="text-xs text-muted-foreground">Barrida final</p>
+                <Input className={`h-11 ${editErrors.barridaFinal && editTouched.barridaFinal ? 'border-red-500' : editTouched.barridaFinal && !editErrors.barridaFinal ? 'border-green-500' : ''}`} type="number" min="0" value={editForm.barridaFinal} onChange={(e) => handleEditChange("barridaFinal", e.target.value)} />
+                {editErrors.barridaFinal && editTouched.barridaFinal && <p className="text-xs text-red-500">{editErrors.barridaFinal}</p>}
+                {!editErrors.barridaFinal && editTouched.barridaFinal && editForm.barridaFinal && <p className="text-xs text-green-500">✓ Válido</p>}
+              </div>
             </div>
             <div className="flex flex-col md:flex-row justify-end gap-2 mt-4">
               <Btn className="h-11" variant="secondary" onClick={() => setEditing(null)}>Cancelar</Btn>
-              <Btn className="h-11" onClick={saveEdit}>Guardar</Btn>
+              <Btn className="h-11" onClick={saveEdit} disabled={!isEditFormValid()}>Guardar</Btn>
             </div>
           </DialogContent>
         </Dialog>

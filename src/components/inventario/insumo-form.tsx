@@ -20,17 +20,20 @@ import {
   CardTitle,
 } from "@/src/components/ui/card";
 import { useApp } from "@/src/contexts/app-context";
-import type { Insumo, FincaName } from "@/src/lib/types";
+import type { Insumo, FincaName, UnidadMedida } from "@/src/lib/types";
 import { Package } from "lucide-react";
 import { useToast } from "@/src/hooks/use-toast";
 import { InsumoSchema } from "@/src/lib/validation";
 import { Spinner } from "@/src/components/ui/spinner";
+import { FieldFeedback, getInputClassName } from "@/src/components/ui/field-feedback";
 
 export function InsumoForm() {
-  const { addInsumo, canAccess, fincas } = useApp();
+  const { addInsumo, canAccess, fincas, getFilteredInsumos } = useApp();
+  const insumos = getFilteredInsumos();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [formData, setFormData] = useState({
     nombre: "",
     categoria: "" as
@@ -70,6 +73,7 @@ export function InsumoForm() {
   const handleCategoriaChange = (value: string) => {
     if (isValidCategoria(value)) {
       setFormData({ ...formData, categoria: value });
+      setErrors(prev => ({ ...prev, categoria: "" }));
     } else {
       setFormData({
         ...formData,
@@ -81,6 +85,50 @@ export function InsumoForm() {
           | "otro",
       });
     }
+    setTouched(prev => ({ ...prev, categoria: true }));
+  };
+
+  const validateField = (field: string, value: string): string => {
+    try {
+      const dataToValidate = {
+        nombre: formData.nombre,
+        categoria: formData.categoria || "",
+        unidadMedida: formData.unidadMedida,
+        stockActual: formData.stockActual,
+        stockMinimo: formData.stockMinimo,
+        stockMaximo: formData.stockMaximo,
+        precioUnitario: formData.precioUnitario,
+        proveedor: formData.proveedor,
+        finca: formData.finca || undefined,
+        [field]: value,
+      };
+      const parsed = InsumoSchema.safeParse(dataToValidate);
+      if (!parsed.success) {
+        const flat = parsed.error.flatten().fieldErrors;
+        const fieldError = flat[field as keyof typeof flat];
+        if (fieldError && fieldError.length > 0) {
+          return String(fieldError[0]);
+        }
+      }
+      return "";
+    } catch {
+      return "";
+    }
+  };
+
+  const handleFieldChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (touched[field] || value !== "") {
+      const err = validateField(field, value);
+      setErrors(prev => ({ ...prev, [field]: err }));
+    }
+    setTouched(prev => ({ ...prev, [field]: true }));
+  };
+
+  const handleFieldBlur = (field: string, value: string) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+    const err = validateField(field, value);
+    setErrors(prev => ({ ...prev, [field]: err }));
   };
 
   const allowEdit = canAccess("inventario", "edit");
@@ -117,17 +165,27 @@ export function InsumoForm() {
       return;
     }
 
+    // Verificar duplicado por nombre + finca
+    const insumoExiste = insumos.some(
+      (i) => i.nombre.toLowerCase() === formData.nombre.toLowerCase() && i.finca === (formData.finca || undefined)
+    );
+    if (insumoExiste) {
+      toast({ title: "Insumo duplicado", description: "Ya existe un insumo con este nombre en la finca seleccionada", variant: "destructive" });
+      setErrors(prev => ({ ...prev, nombre: "Este insumo ya existe en esta finca" }));
+      setIsSubmitting(false);
+      return;
+    }
+
     const newInsumo: Insumo = {
       id: Date.now().toString(),
       nombre: formData.nombre,
-      categoria: formData.categoria, // Ya está tipado correctamente
-      unidadMedida: formData.unidadMedida,
+      categoria: formData.categoria,
+      unidadMedida: formData.unidadMedida as UnidadMedida,
       stockActual: Number.parseFloat(formData.stockActual),
       stockMinimo: Number.parseFloat(formData.stockMinimo),
-      stockMaximo: Number.parseFloat(formData.stockMaximo), // Agregado
+      stockMaximo: Number.parseFloat(formData.stockMaximo),
       precioUnitario: Number.parseFloat(formData.precioUnitario),
       proveedor: formData.proveedor,
-      // fechaVencimiento es opcional, no se incluye aquí
       finca: formData.finca || undefined,
     };
 
@@ -177,24 +235,28 @@ export function InsumoForm() {
           <div className="space-y-3 md:space-y-4">
             <div className="grid grid-cols-1 xl:grid-cols-[1.6fr_1fr] gap-3 md:gap-4">
               <div className="space-y-2">
-                <Label htmlFor="nombre" className="font-medium">Nombre del Insumo</Label>
+                <Label htmlFor="nombre" className="font-medium">Nombre del Insumo *</Label>
+                <p className="text-xs text-muted-foreground">Identificador único del producto</p>
                 <Input
                   id="nombre"
-                  className="h-11 w-full"
+                  className={`h-11 w-full ${getInputClassName(errors, touched, "nombre", formData.nombre)}`}
                   value={formData.nombre}
-                  onChange={(e) =>
-                    (setFormData({ ...formData, nombre: e.target.value }), setErrors((prev) => ({ ...prev, nombre: "" })))
-                  }
+                  onChange={(e) => handleFieldChange("nombre", e.target.value)}
+                  onBlur={(e) => handleFieldBlur("nombre", e.target.value)}
                   disabled={isSubmitting || !allowEdit}
                   required
                 />
-                {errors.nombre && (
-                  <p className="text-xs text-red-600">{errors.nombre}</p>
-                )}
+                <FieldFeedback
+                  error={errors.nombre}
+                  touched={touched.nombre}
+                  isValid={!errors.nombre && !!formData.nombre}
+                  successMessage="Nombre válido"
+                />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="categoria" className="font-medium">Categoría</Label>
+                <Label htmlFor="categoria" className="font-medium">Categoría *</Label>
+                <p className="text-xs text-muted-foreground">Tipo de insumo</p>
                 <Select
                   value={formData.categoria}
                   onValueChange={handleCategoriaChange}
@@ -220,124 +282,153 @@ export function InsumoForm() {
 
             <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-3 md:gap-4">
               <div className="space-y-2">
-                <Label htmlFor="unidadMedida" className="font-medium">Unidad de Medida</Label>
-                <Input
-                  id="unidadMedida"
-                  className="h-11 w-full"
+                <Label htmlFor="unidadMedida" className="font-medium">Unidad de Medida *</Label>
+                <p className="text-xs text-muted-foreground">Forma de medir el stock</p>
+                <Select
                   value={formData.unidadMedida}
-                  onChange={(e) =>
-                    (setFormData({ ...formData, unidadMedida: e.target.value }), setErrors((prev) => ({ ...prev, unidadMedida: "" })))
-                  }
-                  placeholder="Ej: kg, L, unidades, rollos, etc."
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, unidadMedida: value });
+                    setErrors(prev => ({ ...prev, unidadMedida: "" }));
+                    setTouched(prev => ({ ...prev, unidadMedida: true }));
+                  }}
                   disabled={isSubmitting || !allowEdit}
                   required
-                />
+                >
+                  <SelectTrigger className="h-11 w-full">
+                    <SelectValue placeholder="Seleccionar unidad" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="kg">Kilogramos (kg)</SelectItem>
+                    <SelectItem value="L">Litros (L)</SelectItem>
+                    <SelectItem value="unidades">Unidades</SelectItem>
+                    <SelectItem value="rollos">Rollos</SelectItem>
+                    <SelectItem value="pares">Pares</SelectItem>
+                    <SelectItem value="cajas">Cajas</SelectItem>
+                    <SelectItem value="galones">Galones</SelectItem>
+                    <SelectItem value="sacos">Sacos</SelectItem>
+                  </SelectContent>
+                </Select>
                 {errors.unidadMedida && (
                   <p className="text-xs text-red-600">{errors.unidadMedida}</p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="stockActual" className="font-medium">Stock Actual</Label>
+                <Label htmlFor="stockActual" className="font-medium">Stock Actual *</Label>
+                <p className="text-xs text-muted-foreground">Cantidad disponible ahora</p>
                 <Input
                   id="stockActual"
                   type="number"
                   step="0.01"
                   min="0"
-                  className="h-11 w-[160px] sm:w-[180px] xl:w-full"
+                  className={`h-11 w-[160px] sm:w-[180px] xl:w-full ${getInputClassName(errors, touched, "stockActual", formData.stockActual)}`}
                   value={formData.stockActual}
-                  onChange={(e) =>
-                    (setFormData({ ...formData, stockActual: e.target.value }), setErrors((prev) => ({ ...prev, stockActual: "" })))
-                  }
+                  onChange={(e) => handleFieldChange("stockActual", e.target.value)}
+                  onBlur={(e) => handleFieldBlur("stockActual", e.target.value)}
                   disabled={isSubmitting || !allowEdit}
                   required
                 />
-                {errors.stockActual && (
-                  <p className="text-xs text-red-600">{errors.stockActual}</p>
-                )}
+                <FieldFeedback
+                  error={errors.stockActual}
+                  touched={touched.stockActual}
+                  isValid={!errors.stockActual && !!formData.stockActual}
+                  successMessage="Stock válido"
+                />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="stockMinimo" className="font-medium">Stock Mínimo</Label>
+              <Label htmlFor="stockMinimo" className="font-medium">Stock Mínimo *</Label>
+              <p className="text-xs text-muted-foreground">Nivel para generar alerta</p>
               <Input
                 id="stockMinimo"
                 type="number"
                 step="0.01"
                 min="0"
-                className="h-11 w-[160px] sm:w-[180px] xl:w-full"
+                className={`h-11 w-[160px] sm:w-[180px] xl:w-full ${getInputClassName(errors, touched, "stockMinimo", formData.stockMinimo)}`}
                 value={formData.stockMinimo}
-                onChange={(e) =>
-                  (setFormData({ ...formData, stockMinimo: e.target.value }), setErrors((prev) => ({ ...prev, stockMinimo: "" })))
-                }
+                onChange={(e) => handleFieldChange("stockMinimo", e.target.value)}
+                onBlur={(e) => handleFieldBlur("stockMinimo", e.target.value)}
                 disabled={isSubmitting || !allowEdit}
                 required
               />
-              {errors.stockMinimo && (
-                <p className="text-xs text-red-600">{errors.stockMinimo}</p>
-              )}
+              <FieldFeedback
+                error={errors.stockMinimo}
+                touched={touched.stockMinimo}
+                isValid={!errors.stockMinimo && !!formData.stockMinimo}
+                successMessage="Stock mínimo válido"
+              />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="stockMaximo" className="font-medium">Stock Máximo</Label>
-              {/* Nuevo campo */}
+              <Label htmlFor="stockMaximo" className="font-medium">Stock Máximo *</Label>
+              <p className="text-xs text-muted-foreground">Capacidad máxima de almacenamiento</p>
               <Input
                 id="stockMaximo"
                 type="number"
                 step="0.01"
                 min="0"
-                className="h-11 w-[160px] sm:w-[180px] xl:w-full"
+                className={`h-11 w-[160px] sm:w-[180px] xl:w-full ${getInputClassName(errors, touched, "stockMaximo", formData.stockMaximo)}`}
                 value={formData.stockMaximo}
-                onChange={(e) =>
-                  (setFormData({ ...formData, stockMaximo: e.target.value }), setErrors((prev) => ({ ...prev, stockMaximo: "" })))
-                }
+                onChange={(e) => handleFieldChange("stockMaximo", e.target.value)}
+                onBlur={(e) => handleFieldBlur("stockMaximo", e.target.value)}
                 disabled={isSubmitting || !allowEdit}
                 required
               />
-              {errors.stockMaximo && (
-                <p className="text-xs text-red-600">{errors.stockMaximo}</p>
-              )}
+              <FieldFeedback
+                error={errors.stockMaximo}
+                touched={touched.stockMaximo}
+                isValid={!errors.stockMaximo && !!formData.stockMaximo}
+                successMessage="Stock máximo válido"
+              />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="precioUnitario" className="font-medium">Precio Unitario ($)</Label>
+              <Label htmlFor="precioUnitario" className="font-medium">Precio Unitario ($) *</Label>
+              <p className="text-xs text-muted-foreground">Costo por unidad de medida</p>
               <Input
                 id="precioUnitario"
                 type="number"
                 step="0.01"
                 min="0"
-                className="h-11 w-[160px] sm:w-[180px] xl:w-full"
+                className={`h-11 w-[160px] sm:w-[180px] xl:w-full ${getInputClassName(errors, touched, "precioUnitario", formData.precioUnitario)}`}
                 value={formData.precioUnitario}
-                onChange={(e) =>
-                  (setFormData({ ...formData, precioUnitario: e.target.value }), setErrors((prev) => ({ ...prev, precioUnitario: "" })))
-                }
+                onChange={(e) => handleFieldChange("precioUnitario", e.target.value)}
+                onBlur={(e) => handleFieldBlur("precioUnitario", e.target.value)}
                 disabled={isSubmitting || !allowEdit}
                 required
               />
-              {errors.precioUnitario && (
-                <p className="text-xs text-red-600">{errors.precioUnitario}</p>
-              )}
+              <FieldFeedback
+                error={errors.precioUnitario}
+                touched={touched.precioUnitario}
+                isValid={!errors.precioUnitario && !!formData.precioUnitario}
+                successMessage="Precio válido"
+              />
             </div>
 
             <div className="col-span-2 space-y-2">
-              <Label htmlFor="proveedor" className="font-medium">Proveedor</Label>
+              <Label htmlFor="proveedor" className="font-medium">Proveedor *</Label>
+              <p className="text-xs text-muted-foreground">Empresa o persona que suministra</p>
               <Input
                 id="proveedor"
-                className="h-11"
+                className={`h-11 ${getInputClassName(errors, touched, "proveedor", formData.proveedor)}`}
                 value={formData.proveedor}
-                onChange={(e) =>
-                  (setFormData({ ...formData, proveedor: e.target.value }), setErrors((prev) => ({ ...prev, proveedor: "" })))
-                }
+                onChange={(e) => handleFieldChange("proveedor", e.target.value)}
+                onBlur={(e) => handleFieldBlur("proveedor", e.target.value)}
                 disabled={isSubmitting || !allowEdit}
                 required
               />
-              {errors.proveedor && (
-                <p className="text-xs text-red-600">{errors.proveedor}</p>
-              )}
+              <FieldFeedback
+                error={errors.proveedor}
+                touched={touched.proveedor}
+                isValid={!errors.proveedor && !!formData.proveedor}
+                successMessage="Proveedor válido"
+              />
             </div>
 
             <div className="space-y-2 lg:col-span-2">
               <Label htmlFor="finca" className="font-medium">Finca Asociada</Label>
+              <p className="text-xs text-muted-foreground">Opcional - asignar a finca específica</p>
               <Select
                 value={formData.finca}
                 onValueChange={(value) =>

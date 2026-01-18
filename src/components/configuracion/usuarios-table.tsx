@@ -149,10 +149,11 @@ export function UsuariosTable({
           <ExportButton
             data={filteredUsuarios.map(u => ({
               ...u,
+              fincaNombre: u.fincaNombre || "Todas",
               estado: u.activo ? "Activo" : "Inactivo",
             }))}
             headers={["Nombre", "Email", "Rol", "Finca", "Teléfono", "Estado"]}
-            keys={["nombre", "email", "rol", "fincaAsignada", "telefono", "estado"]}
+            keys={["nombre", "email", "rol", "fincaNombre", "telefono", "estado"]}
             title="Listado de Usuarios"
             filename="usuarios"
           />
@@ -206,7 +207,7 @@ export function UsuariosTable({
                           usuario.rol.slice(1)}
                       </Badge>
                     </TableCell>
-                    <TableCell>{usuario.fincaAsignada || "Todas"}</TableCell>
+                    <TableCell>{usuario.fincaNombre || "Todas"}</TableCell>
                     <TableCell>{usuario.telefono || "-"}</TableCell>
                     <TableCell>
                       <Badge variant={usuario.activo ? "default" : "secondary"}>

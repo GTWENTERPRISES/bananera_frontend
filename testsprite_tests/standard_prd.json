@@ -1,0 +1,250 @@
+{
+  "meta": {
+    "project": "Sistema de Gestión Bananera HG",
+    "date": "2025-12-30",
+    "prepared_by": "Software Development Manager"
+  },
+  "product_overview": "Sistema integral de gestión para operaciones bananeras que digitaliza y optimiza la gestión operativa de fincas, ofreciendo control de producción, inventario, nómina, reportes y análisis predictivo con IA.",
+  "core_goals": [
+    "Centralizar la gestión de fincas bananeras para mejorar la eficiencia operativa.",
+    "Proveer visibilidad en tiempo real sobre producción, inventario y nómina.",
+    "Automatizar procesos de registro y cálculo en producción y nómina.",
+    "Generar reportes analíticos y comparativos para la toma de decisiones.",
+    "Implementar análisis predictivo con inteligencia artificial para proyecciones y recomendaciones.",
+    "Garantizar seguridad mediante autenticación JWT y controles de acceso por roles.",
+    "Ofrecer una interfaz responsive e intuitiva compatible con diferentes dispositivos."
+  ],
+  "key_features": [
+    "Autenticación segura con JWT y roles diferenciados (administrador, gerente, supervisor, contador, bodeguero).",
+    "Dashboard principal con métricas de producción, alertas de inventario y KPIs claves.",
+    "Módulo de Producción que incluye registro de enfundes y cosechas, recuperación de cintas y heatmap de productividad por lotes.",
+    "Gestión de Inventario con CRUD de insumos, control de stock, alertas de stock bajo y registro de movimientos de entrada y salida.",
+    "Administración de Nómina con CRUD de empleados, gestión de roles de pago, préstamos y exportación de reportes.",
+    "Reportes interactivos con gráficos, comparativas entre fincas, filtros temporales y exportación a PDF/Excel.",
+    "Módulo de Analytics Predictivo con proyecciones de producción y precios, análisis de riesgos, recomendaciones y configuración por período y nivel de confianza.",
+    "Gestión de Fincas con CRUD, geolocalización, asignación de lotes y visualización en mapa interactivo.",
+    "Mapas interactivos con localización de fincas y delimitación de lotes usando Leaflet.",
+    "Gestión de usuarios con interfaz administrativa para control de accesos y permisos.",
+    "Contexto global para gestión de estado y comunicación eficiente con backend REST usando tokens JWT."
+  ],
+  "user_flow_summary": [
+    "Usuario inicia sesión mediante formulario de login con email y contraseña, autenticación validada por tokens JWT.",
+    "Según el rol del usuario, el sistema muestra el dashboard con métricas personalizadas y acceso a módulos permitidos.",
+    "Gestión de Producción donde el usuario puede registrar o modificar datos de enfundes y cosechas, visualizando tendencias y mapas de productividad.",
+    "Gestión de Inventario que permite registrar insumos, actualizar stock, revisar alertas y registrar movimientos de inventario.",
+    "Administración de Nómina para crear y actualizar empleados, calcular roles de pago, registrar préstamos y exportar reportes financieros.",
+    "Acceso a reportes y analytics para visualizar gráficos interactivos, realizar comparaciones temporales y entre fincas, exportar información.",
+    "Acceso a módulo de Analytics Predictivo para configurar parámetros de proyección y recibir insights y recomendaciones basadas en datos históricos.",
+    "Administradores pueden gestionar usuarios, asignando roles y permisos para controlar accesos al sistema."
+  ],
+  "validation_criteria": [
+    "El sistema debe autenticar usuarios correctamente y aplicar roles para controlar acceso a las funcionalidades.",
+    "Los registros de producción (enfundes, cosechas) deben guardar información válida y calcular ratios y mermas correctamente.",
+    "El inventario debe emitir alertas automáticas cuando el stock actual esté por debajo del mínimo definido.",
+    "Los roles de pago se deben calcular correctamente considerando salarios, bonificaciones y descuentos.",
+    "Los reportes deben filtrar correctamente por períodos y permitir exportación a formatos estándar (PDF, Excel).",
+    "Las proyecciones predictivas deben ajustarse según periodo y nivel de confianza con precisión aceptable.",
+    "La interfaz debe ser completamente responsive y permitir navegación intuitiva con feedback visual.",
+    "El tiempo de carga inicial no debe exceder 3 segundos y las respuestas API deben ser rápidas (menos de 500ms).",
+    "Las operaciones CRUD deben reflejarse correctamente en la base de datos y estar disponibles para los usuarios autorizados.",
+    "El sistema debe cumplir con normativas de seguridad incluyendo HTTPS, JWT, sanitización de inputs y manejo seguro de sesiones."
+  ],
+  "code_summary": {
+    "tech_stack": [
+      "TypeScript",
+      "React 19",
+      "Next.js 16",
+      "TailwindCSS",
+      "shadcn/ui",
+      "Recharts",
+      "Leaflet",
+      "Django REST Framework (Backend)",
+      "PostgreSQL + PostGIS (Database)",
+      "JWT Authentication"
+    ],
+    "features": [
+      {
+        "name": "Authentication",
+        "description": "User login/logout with JWT tokens and role-based access control (admin, gerente, supervisor_finca, contador_rrhh, bodeguero)",
+        "files": [
+          "src/app/(auth)/login/page.tsx",
+          "src/contexts/app-context.tsx",
+          "src/lib/api-client.ts"
+        ]
+      },
+      {
+        "name": "Dashboard",
+        "description": "Main dashboard showing production metrics, weekly stats, alerts, and quick access cards",
+        "files": [
+          "src/app/(dashboard)/page.tsx",
+          "src/components/dashboard/stats-card.tsx",
+          "src/components/dashboard/production-chart.tsx",
+          "src/components/dashboard/trend-chart.tsx",
+          "src/components/dashboard/quick-actions.tsx"
+        ]
+      },
+      {
+        "name": "Enfundes Management",
+        "description": "CRUD operations for banana bagging records including week, year, ribbon color, and fallen plants",
+        "files": [
+          "src/app/(dashboard)/produccion/enfundes/page.tsx",
+          "src/components/produccion/enfundes-table.tsx",
+          "src/components/produccion/enfunde-form.tsx"
+        ]
+      },
+      {
+        "name": "Cosechas Management",
+        "description": "CRUD operations for harvest records including bunches, boxes produced, ratio, and waste percentage",
+        "files": [
+          "src/app/(dashboard)/produccion/cosechas/page.tsx",
+          "src/components/produccion/cosechas-table.tsx",
+          "src/components/produccion/cosecha-form.tsx"
+        ]
+      },
+      {
+        "name": "Productivity Heatmap",
+        "description": "Visual heatmap showing production by lot (A-E) for each farm with color intensity based on output",
+        "files": [
+          "src/app/(dashboard)/produccion/mapa/page.tsx",
+          "src/components/produccion/heatmap-productivity.tsx"
+        ]
+      },
+      {
+        "name": "Ribbon Recovery",
+        "description": "Track ribbon usage and recovery rates across farms and weeks",
+        "files": [
+          "src/app/(dashboard)/produccion/recuperacion-cintas/page.tsx",
+          "src/components/produccion/recuperacion-cintas-table.tsx",
+          "src/components/produccion/recuperacion-cinta-form.tsx"
+        ]
+      },
+      {
+        "name": "Inventory Management",
+        "description": "CRUD for supplies/inputs with stock levels, categories, suppliers, and expiration dates",
+        "files": [
+          "src/app/(dashboard)/inventario/page.tsx",
+          "src/components/inventario/insumos-table.tsx",
+          "src/components/inventario/insumo-form.tsx"
+        ]
+      },
+      {
+        "name": "Inventory Alerts",
+        "description": "Display alerts when stock_actual < stock_minimo for any supply item",
+        "files": [
+          "src/app/(dashboard)/inventario/alertas/page.tsx",
+          "src/components/inventario/alertas-inventario.tsx"
+        ]
+      },
+      {
+        "name": "Inventory Movements",
+        "description": "Track entry/exit movements of supplies with quantity, type, and date",
+        "files": [
+          "src/app/(dashboard)/inventario/movimientos/page.tsx",
+          "src/components/inventario/movimientos-table.tsx",
+          "src/components/inventario/movimiento-form.tsx"
+        ]
+      },
+      {
+        "name": "Employee Management",
+        "description": "CRUD for employees with farm assignment, position, and contact information",
+        "files": [
+          "src/app/(dashboard)/nomina/empleados/page.tsx",
+          "src/components/nomina/empleados-table.tsx",
+          "src/components/nomina/empleado-form.tsx"
+        ]
+      },
+      {
+        "name": "Payroll (Roles de Pago)",
+        "description": "Generate and manage payroll records with salary calculations, bonuses, and deductions",
+        "files": [
+          "src/app/(dashboard)/nomina/roles-pago/page.tsx",
+          "src/components/nomina/roles-pago-table.tsx",
+          "src/components/nomina/rol-pago-form.tsx"
+        ]
+      },
+      {
+        "name": "Loans Management",
+        "description": "Track employee loans with installments and pending balances",
+        "files": [
+          "src/app/(dashboard)/nomina/prestamos/page.tsx",
+          "src/components/nomina/prestamos-table.tsx",
+          "src/components/nomina/prestamo-form.tsx"
+        ]
+      },
+      {
+        "name": "Reports Dashboard",
+        "description": "Interactive charts showing production by farm, trends, and farm comparisons with temporal filters",
+        "files": [
+          "src/app/(dashboard)/reportes/page.tsx",
+          "src/components/reportes/analytics-charts.tsx",
+          "src/components/reportes/comparativa-fincas.tsx",
+          "src/components/reportes/ai-insights.tsx"
+        ]
+      },
+      {
+        "name": "Production Reports",
+        "description": "Detailed production reports with weekly/monthly data and PDF export",
+        "files": [
+          "src/app/(dashboard)/reportes/produccion/page.tsx"
+        ]
+      },
+      {
+        "name": "Predictive Analytics",
+        "description": "AI-powered projections for production, prices, and risks with configurable period and confidence levels",
+        "files": [
+          "src/app/(dashboard)/analytics/predictivo/page.tsx"
+        ]
+      },
+      {
+        "name": "Farm Management",
+        "description": "CRUD for farms with geolocation, lots, and responsible person",
+        "files": [
+          "src/app/(dashboard)/fincas/page.tsx",
+          "src/components/fincas/fincas-table.tsx",
+          "src/components/fincas/finca-form.tsx"
+        ]
+      },
+      {
+        "name": "Interactive Map",
+        "description": "Leaflet-based map showing farm locations and lot boundaries",
+        "files": [
+          "src/app/(dashboard)/mapa/page.tsx",
+          "src/components/mapa/mapa-fincas.tsx"
+        ]
+      },
+      {
+        "name": "User Management",
+        "description": "Admin interface for managing system users and their roles",
+        "files": [
+          "src/app/(dashboard)/usuarios/page.tsx",
+          "src/components/usuarios/usuarios-table.tsx",
+          "src/components/usuarios/usuario-form.tsx"
+        ]
+      },
+      {
+        "name": "App Context",
+        "description": "Global state management using React Context for all data entities and API operations",
+        "files": [
+          "src/contexts/app-context.tsx"
+        ]
+      },
+      {
+        "name": "API Client",
+        "description": "HTTP client for communicating with Django REST backend with JWT authentication",
+        "files": [
+          "src/lib/api-client.ts",
+          "src/lib/api-mapper.ts"
+        ]
+      },
+      {
+        "name": "Layout Components",
+        "description": "App shell with sidebar navigation, header, and responsive design",
+        "files": [
+          "src/components/layout/app-sidebar.tsx",
+          "src/components/layout/app-header.tsx",
+          "src/app/(dashboard)/layout.tsx"
+        ]
+      }
+    ]
+  }
+}

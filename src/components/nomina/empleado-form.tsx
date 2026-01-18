@@ -20,29 +20,32 @@ import {
   CardTitle,
 } from "@/src/components/ui/card";
 import { useApp } from "@/src/contexts/app-context";
-import type { Empleado, FincaName } from "@/src/lib/types"; // Cambia Finca por FincaName
+import type { Empleado, FincaName, LaborEmpleado, Lote } from "@/src/lib/types";
 import { UserPlus } from "lucide-react";
 import { useToast } from "@/src/hooks/use-toast";
 import { EmpleadoSchema } from "@/src/lib/validation";
 import { Spinner } from "@/src/components/ui/spinner";
+import { FieldFeedback, getInputClassName } from "@/src/components/ui/field-feedback";
 
 export function EmpleadoForm() {
-  const { addEmpleado, canAccess, fincas } = useApp();
+  const { addEmpleado, canAccess, fincas, getFilteredEmpleados } = useApp();
+  const empleados = getFilteredEmpleados();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [formData, setFormData] = useState({
     nombre: "",
     cedula: "",
-    labor: "", // Cambiado de "cargo" a "labor" para coincidir con la interfaz
+    labor: "" as LaborEmpleado | "",
     finca: undefined as FincaName | undefined,
-    tarifaDiaria: "", // Cambiado de "salarioDiario" a "tarifaDiaria"
+    tarifaDiaria: "",
     fechaIngreso: new Date().toISOString().split("T")[0],
     telefono: "",
-    activo: true, // Cambiado de "estado" a "activo" (boolean)
-    lote: "", // Agregado para coincidir con la interfaz
-    direccion: "", // Agregado para coincidir con la interfaz
-    cuentaBancaria: "", // Agregado para coincidir con la interfaz
+    activo: true,
+    lote: "" as Lote | "",
+    direccion: "",
+    cuentaBancaria: "",
   });
 
   // Función helper para validar el tipo FincaName
@@ -60,6 +63,51 @@ export function EmpleadoForm() {
   };
 
   const allowEdit = canAccess("nomina", "edit");
+
+  const validateField = (field: string, value: any): string => {
+    try {
+      const dataToValidate = {
+        nombre: formData.nombre,
+        cedula: formData.cedula,
+        labor: formData.labor,
+        finca: formData.finca || "",
+        tarifaDiaria: formData.tarifaDiaria,
+        fechaIngreso: formData.fechaIngreso,
+        telefono: formData.telefono,
+        activo: formData.activo,
+        lote: formData.lote || undefined,
+        direccion: formData.direccion,
+        cuentaBancaria: formData.cuentaBancaria,
+        [field]: value,
+      };
+      const parsed = EmpleadoSchema.safeParse(dataToValidate);
+      if (!parsed.success) {
+        const flat = parsed.error.flatten().fieldErrors;
+        const fieldError = flat[field as keyof typeof flat];
+        if (fieldError && fieldError.length > 0) {
+          return String(fieldError[0]);
+        }
+      }
+      return "";
+    } catch {
+      return "";
+    }
+  };
+
+  const handleFieldChange = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (touched[field] || value !== "") {
+      const err = validateField(field, value);
+      setErrors(prev => ({ ...prev, [field]: err }));
+    }
+    setTouched(prev => ({ ...prev, [field]: true }));
+  };
+
+  const handleFieldBlur = (field: string, value: any) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+    const err = validateField(field, value);
+    setErrors(prev => ({ ...prev, [field]: err }));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,17 +143,26 @@ export function EmpleadoForm() {
       return;
     }
 
+    // Verificar duplicado por cédula
+    const cedulaExiste = empleados.some((e) => e.cedula === formData.cedula);
+    if (cedulaExiste) {
+      toast({ title: "Cédula duplicada", description: "Ya existe un empleado con esta cédula", variant: "destructive" });
+      setErrors(prev => ({ ...prev, cedula: "Esta cédula ya está registrada" }));
+      setIsSubmitting(false);
+      return;
+    }
+
     const newEmpleado: Empleado = {
       id: Date.now().toString(),
       nombre: formData.nombre,
       cedula: formData.cedula,
-      labor: formData.labor, // Cambiado de "cargo" a "labor"
+      labor: formData.labor as LaborEmpleado,
       finca: formData.finca as FincaName,
-      tarifaDiaria: Number.parseFloat(formData.tarifaDiaria), // Cambiado de "salarioDiario"
+      tarifaDiaria: Number.parseFloat(formData.tarifaDiaria),
       fechaIngreso: formData.fechaIngreso,
       telefono: formData.telefono,
-      activo: formData.activo, // Cambiado de "estado" a "activo" (boolean)
-      lote: formData.lote || undefined,
+      activo: formData.activo,
+      lote: (formData.lote || undefined) as Lote | undefined,
       direccion: formData.direccion,
       cuentaBancaria: formData.cuentaBancaria,
     };
@@ -143,43 +200,54 @@ export function EmpleadoForm() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="nombre">Nombre Completo</Label>
+              <Label htmlFor="nombre">Nombre Completo *</Label>
+              <p className="text-xs text-muted-foreground">Nombres y apellidos del trabajador</p>
               <Input
                 id="nombre"
                 value={formData.nombre}
-                onChange={(e) =>
-                  (setFormData({ ...formData, nombre: e.target.value }), setErrors((prev) => ({ ...prev, nombre: "" })))
-                }
+                onChange={(e) => handleFieldChange("nombre", e.target.value)}
+                onBlur={(e) => handleFieldBlur("nombre", e.target.value)}
                 disabled={isSubmitting || !allowEdit}
                 required
+                className={getInputClassName(errors, touched, "nombre", formData.nombre)}
               />
-              {errors.nombre && (
-                <p className="text-xs text-red-600">{errors.nombre}</p>
-              )}
+              <FieldFeedback
+                error={errors.nombre}
+                touched={touched.nombre}
+                isValid={!errors.nombre && !!formData.nombre}
+                successMessage="Nombre válido"
+              />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cedula">Cédula</Label>
+              <Label htmlFor="cedula">Cédula *</Label>
+              <p className="text-xs text-muted-foreground">10 dígitos, cédula ecuatoriana</p>
               <Input
                 id="cedula"
                 value={formData.cedula}
-                onChange={(e) =>
-                  (setFormData({ ...formData, cedula: e.target.value }), setErrors((prev) => ({ ...prev, cedula: "" })))
-                }
+                onChange={(e) => handleFieldChange("cedula", e.target.value)}
+                onBlur={(e) => handleFieldBlur("cedula", e.target.value)}
                 disabled={isSubmitting || !allowEdit}
                 required
+                placeholder="0123456789"
+                className={getInputClassName(errors, touched, "cedula", formData.cedula)}
               />
-              {errors.cedula && (
-                <p className="text-xs text-red-600">{errors.cedula}</p>
-              )}
+              <FieldFeedback
+                error={errors.cedula}
+                touched={touched.cedula}
+                isValid={!errors.cedula && !!formData.cedula}
+                successMessage="Cédula válida"
+                infoMessage={!touched.cedula ? "10 dígitos, cédula ecuatoriana" : undefined}
+              />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="labor">Labor</Label> {/* Cambiado de "cargo" */}
+              <Label htmlFor="labor">Labor *</Label>
+              <p className="text-xs text-muted-foreground">Actividad principal del empleado</p>
               <Select
                 value={formData.labor}
                 onValueChange={(value) =>
-                  (setFormData({ ...formData, labor: value }), setErrors((prev) => ({ ...prev, labor: "" })))
+                  (setFormData({ ...formData, labor: value as LaborEmpleado }), setErrors((prev) => ({ ...prev, labor: "" })))
                 }
                 disabled={isSubmitting || !allowEdit}
                 required
@@ -194,6 +262,8 @@ export function EmpleadoForm() {
                   <SelectItem value="Varios">Varios</SelectItem>
                   <SelectItem value="Administrador">Administrador</SelectItem>
                   <SelectItem value="Supervisor">Supervisor</SelectItem>
+                  <SelectItem value="Fumigación">Fumigación</SelectItem>
+                  <SelectItem value="Mantenimiento">Mantenimiento</SelectItem>
                 </SelectContent>
               </Select>
               {errors.labor && (
@@ -202,7 +272,8 @@ export function EmpleadoForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="finca">Finca Asignada</Label>
+              <Label htmlFor="finca">Finca Asignada *</Label>
+              <p className="text-xs text-muted-foreground">Finca donde trabaja el empleado</p>
               <Select
                 value={formData.finca}
                 onValueChange={handleFincaChange}
@@ -213,10 +284,11 @@ export function EmpleadoForm() {
                   <SelectValue placeholder="Seleccionar finca" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="BABY">BABY</SelectItem>
-                  <SelectItem value="SOLO">SOLO</SelectItem>
-                  <SelectItem value="LAURITA">LAURITA</SelectItem>
-                  <SelectItem value="MARAVILLA">MARAVILLA</SelectItem>
+                  {fincas.map((finca) => (
+                    <SelectItem key={finca.id} value={finca.nombre}>
+                      {finca.nombre}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {errors.finca && (
@@ -225,27 +297,31 @@ export function EmpleadoForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="tarifaDiaria">Tarifa Diaria ($)</Label>{" "}
-              {/* Cambiado */}
+              <Label htmlFor="tarifaDiaria">Tarifa Diaria ($) *</Label>
+              <p className="text-xs text-muted-foreground">Salario por día de trabajo</p>
               <Input
                 id="tarifaDiaria"
                 type="number"
                 step="0.01"
                 min="0"
                 value={formData.tarifaDiaria}
-                onChange={(e) =>
-                  (setFormData({ ...formData, tarifaDiaria: e.target.value }), setErrors((prev) => ({ ...prev, tarifaDiaria: "" })))
-                }
+                onChange={(e) => handleFieldChange("tarifaDiaria", e.target.value)}
+                onBlur={(e) => handleFieldBlur("tarifaDiaria", e.target.value)}
                 disabled={isSubmitting || !allowEdit}
                 required
+                className={getInputClassName(errors, touched, "tarifaDiaria", formData.tarifaDiaria)}
               />
-              {errors.tarifaDiaria && (
-                <p className="text-xs text-red-600">{errors.tarifaDiaria}</p>
-              )}
+              <FieldFeedback
+                error={errors.tarifaDiaria}
+                touched={touched.tarifaDiaria}
+                isValid={!errors.tarifaDiaria && !!formData.tarifaDiaria}
+                successMessage="Tarifa válida"
+              />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="fechaIngreso">Fecha de Ingreso</Label>
+              <Label htmlFor="fechaIngreso">Fecha de Ingreso *</Label>
+              <p className="text-xs text-muted-foreground">Día que comenzó a trabajar</p>
               <Input
                 id="fechaIngreso"
                 type="date"
@@ -262,10 +338,11 @@ export function EmpleadoForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="lote">Lote</Label>
+              <Label htmlFor="lote">Lote (Opcional)</Label>
+              <p className="text-xs text-muted-foreground">Sector de trabajo en la finca</p>
               <Select
                 value={formData.lote}
-                onValueChange={(value) => setFormData({ ...formData, lote: value })}
+                onValueChange={(value) => setFormData({ ...formData, lote: value as Lote })}
                 disabled={isSubmitting || !allowEdit || !formData.finca}
               >
                 <SelectTrigger>
@@ -288,14 +365,19 @@ export function EmpleadoForm() {
               <Input
                 id="telefono"
                 value={formData.telefono}
-                onChange={(e) =>
-                  (setFormData({ ...formData, telefono: e.target.value }), setErrors((prev) => ({ ...prev, telefono: "" })))
-                }
+                onChange={(e) => handleFieldChange("telefono", e.target.value)}
+                onBlur={(e) => handleFieldBlur("telefono", e.target.value)}
                 disabled={isSubmitting || !allowEdit}
+                placeholder="0999999999"
+                className={getInputClassName(errors, touched, "telefono", formData.telefono)}
               />
-              {errors.telefono && (
-                <p className="text-xs text-red-600">{errors.telefono}</p>
-              )}
+              <FieldFeedback
+                error={errors.telefono}
+                touched={touched.telefono}
+                isValid={!errors.telefono && !!formData.telefono}
+                successMessage="Teléfono válido"
+                infoMessage={!touched.telefono ? "Formato: 09XXXXXXXX" : undefined}
+              />
             </div>
 
             <div className="space-y-2">
@@ -303,15 +385,18 @@ export function EmpleadoForm() {
               <Input
                 id="direccion"
                 value={formData.direccion}
-                onChange={(e) =>
-                  (setFormData({ ...formData, direccion: e.target.value }), setErrors((prev) => ({ ...prev, direccion: "" })))
-                }
+                onChange={(e) => handleFieldChange("direccion", e.target.value)}
+                onBlur={(e) => handleFieldBlur("direccion", e.target.value)}
                 disabled={isSubmitting || !allowEdit}
                 required
+                className={getInputClassName(errors, touched, "direccion", formData.direccion)}
               />
-              {errors.direccion && (
-                <p className="text-xs text-red-600">{errors.direccion}</p>
-              )}
+              <FieldFeedback
+                error={errors.direccion}
+                touched={touched.direccion}
+                isValid={!errors.direccion && !!formData.direccion}
+                successMessage="Dirección válida"
+              />
             </div>
 
             <div className="space-y-2">
@@ -319,15 +404,18 @@ export function EmpleadoForm() {
               <Input
                 id="cuentaBancaria"
                 value={formData.cuentaBancaria}
-                onChange={(e) =>
-                  (setFormData({ ...formData, cuentaBancaria: e.target.value }), setErrors((prev) => ({ ...prev, cuentaBancaria: "" })))
-                }
+                onChange={(e) => handleFieldChange("cuentaBancaria", e.target.value)}
+                onBlur={(e) => handleFieldBlur("cuentaBancaria", e.target.value)}
                 disabled={isSubmitting || !allowEdit}
                 required
+                className={getInputClassName(errors, touched, "cuentaBancaria", formData.cuentaBancaria)}
               />
-              {errors.cuentaBancaria && (
-                <p className="text-xs text-red-600">{errors.cuentaBancaria}</p>
-              )}
+              <FieldFeedback
+                error={errors.cuentaBancaria}
+                touched={touched.cuentaBancaria}
+                isValid={!errors.cuentaBancaria && !!formData.cuentaBancaria}
+                successMessage="Cuenta bancaria válida"
+              />
             </div>
 
             <div className="space-y-2">

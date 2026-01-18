@@ -1,0 +1,416 @@
+[
+  {
+    "id": "TC001",
+    "title": "Successful login with valid credentials",
+    "description": "Verify that the system authenticates users correctly with valid email and password and returns a JWT token with proper role assignment.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the login page."
+      },
+      {
+        "type": "action",
+        "description": "Enter a valid registered email and correct password."
+      },
+      {
+        "type": "action",
+        "description": "Click the login button."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that the login is successful and a JWT token is received."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that the user is redirected to the dashboard with access based on their role."
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Failed login with invalid credentials",
+    "description": "Check that the system denies access when incorrect email or password are provided and shows an appropriate error message.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the login page."
+      },
+      {
+        "type": "action",
+        "description": "Enter an invalid email or incorrect password."
+      },
+      {
+        "type": "action",
+        "description": "Click the login button."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the login is rejected and an error message is displayed."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify no JWT token is issued."
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Role-based access control",
+    "description": "Validate that each user role (admin, gerente, supervisor, contador, bodeguero) only sees and can access the permitted modules and UI components.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as user with role 'admin'."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify access to all modules including user management."
+      },
+      {
+        "type": "action",
+        "description": "Logout and login as user with role 'bodeguero'."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify access is limited to inventory modules only."
+      },
+      {
+        "type": "action",
+        "description": "Repeat for roles 'gerente', 'supervisor', 'contador' verifying their respective allowed modules."
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Create, update, delete enfunde record",
+    "description": "Test CRUD operations on banana bagging (Enfundes) including entering week, year, ribbon color, fallen plants and validating data correctness.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to Enfundes management module."
+      },
+      {
+        "type": "action",
+        "description": "Create new enfunde with valid fields."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify record appears in the list with correct data."
+      },
+      {
+        "type": "action",
+        "description": "Update the enfunde record fields."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updated values are saved and displayed."
+      },
+      {
+        "type": "action",
+        "description": "Delete the enfunde record."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the record is removed from the list."
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Data validation on enfunde and cosecha entries",
+    "description": "Ensure that the system validates all required fields and logical constraints on enfunde and harvest (cosecha) data entries.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Attempt to create enfunde with missing required fields such as week or year."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation errors prompt user to fill required fields."
+      },
+      {
+        "type": "action",
+        "description": "Create cosecha record with invalid numeric fields (e.g., negative ratio or waste percentage > 100)."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation prevents saving and appropriate error messages are shown."
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Inventory stock alert triggers",
+    "description": "Confirm that the system generates alerts automatically when any supply's current stock drops below the minimum stock threshold.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Create or update a supply item with stock_actual just above stock_minimo."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify no alert is shown."
+      },
+      {
+        "type": "action",
+        "description": "Reduce stock_actual below stock_minimo for the same item."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an alert is generated and displayed correctly in the alerts section."
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Employee payroll calculation accuracy",
+    "description": "Check payroll roles calculations including salaries, bonuses, deductions and loans are computed correctly according to provided employee data.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Create a new employee with salary and assign payment roles."
+      },
+      {
+        "type": "action",
+        "description": "Add bonuses and deductions."
+      },
+      {
+        "type": "action",
+        "description": "Register loans with installments."
+      },
+      {
+        "type": "action",
+        "description": "Generate payroll record for this employee."
+      },
+      {
+        "type": "assertion",
+        "description": "Validate the payroll calculations: net pay = salary + bonuses - deductions - loan installments."
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Report filtering and export functionality",
+    "description": "Verify that report views filter data correctly by selected time periods and farms and allow exporting data in PDF and Excel formats.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to reports dashboard."
+      },
+      {
+        "type": "action",
+        "description": "Apply date filters and farm selection filters."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify displayed reports update to reflect filter selections."
+      },
+      {
+        "type": "action",
+        "description": "Export the report to PDF."
+      },
+      {
+        "type": "assertion",
+        "description": "Validate the PDF file downloads and contents correspond to filtered data."
+      },
+      {
+        "type": "action",
+        "description": "Export the report to Excel."
+      },
+      {
+        "type": "assertion",
+        "description": "Validate the Excel file downloads and contains filtered data correctly."
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Predictive analytics configuration and output validation",
+    "description": "Test the configuration inputs for production/price projections including period and confidence level and verify output accuracy and format.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Access the predictive analytics module."
+      },
+      {
+        "type": "action",
+        "description": "Set a projection period and confidence level."
+      },
+      {
+        "type": "action",
+        "description": "Request generation of projections and insights."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify projections and recommendations respond to inputs and display formatted AI insights."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm projections appear logically consistent with historical data."
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Farm management CRUD with geolocation validation",
+    "description": "Ensure that farms can be created, updated, and deleted with correct geolocation data and lot assignments represented on interactive maps.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Go to farm management module."
+      },
+      {
+        "type": "action",
+        "description": "Create a new farm with geolocation coordinates and lot assignments."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify farm appears on the interactive map with accurate location and lot boundaries."
+      },
+      {
+        "type": "action",
+        "description": "Update farm details and lot boundaries."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify updates reflect correctly on the map and in farm list."
+      },
+      {
+        "type": "action",
+        "description": "Delete the farm."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify farm is removed from map and list."
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "User management CRUD and role assignment",
+    "description": "Test that admin users can create, update, and delete system users and assign appropriate roles controlling system access.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as admin user."
+      },
+      {
+        "type": "action",
+        "description": "Navigate to user management."
+      },
+      {
+        "type": "action",
+        "description": "Create a new user and assign role."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify new user is listed and role is assigned correctly."
+      },
+      {
+        "type": "action",
+        "description": "Update existing user roles."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm role updates are saved and effective."
+      },
+      {
+        "type": "action",
+        "description": "Delete a user."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify user is removed and can no longer access the system."
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "API response time and load performance",
+    "description": "Ensure all API endpoints respond within the required performance threshold (under 500ms) and initial page load is under 3 seconds.",
+    "category": "performance",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Measure the initial load time of login and dashboard pages."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify page load is within 3 seconds."
+      },
+      {
+        "type": "action",
+        "description": "Perform API calls for CRUD operations and dashboard data retrieval."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm all API responses return within 500ms under normal load conditions."
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "UI responsiveness and cross-device compatibility",
+    "description": "Validate that the user interface is fully responsive and usable on various devices including desktop, tablet, and mobile.",
+    "category": "ui",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open the system on desktop browser, tablet, and mobile devices."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify layout adapts correctly and no UI element is truncated or misaligned."
+      },
+      {
+        "type": "assertion",
+        "description": "Test navigation menus and buttons to ensure usability on all screen sizes."
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Input sanitization and security for form submissions",
+    "description": "Verify that all user inputs across the system are sanitized to prevent injection attacks and ensure secure data handling.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Submit input forms with potentially malicious scripts or SQL code in text fields."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify system sanitizes inputs and prevents code execution or SQL injection."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify no data corruption or security breaches occur."
+      }
+    ]
+  }
+]

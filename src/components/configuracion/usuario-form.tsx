@@ -25,6 +25,7 @@ import { Save, X } from "lucide-react";
 import { useToast } from "@/src/hooks/use-toast";
 import { UsuarioSchema } from "@/src/lib/validation";
 import { Spinner } from "@/src/components/ui/spinner";
+import { FieldFeedback, getInputClassName } from "@/src/components/ui/field-feedback";
 
 interface UsuarioFormProps {
   usuario?: User;
@@ -45,6 +46,7 @@ export function UsuarioForm({
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [formData, setFormData] = useState<Partial<User>>({
     nombre: usuario?.nombre || "",
     email: usuario?.email || "",
@@ -57,6 +59,47 @@ export function UsuarioForm({
 
   const [showPassword, setShowPassword] = useState(false);
   const allowEdit = canAccess("configuracion", "edit");
+
+  const validateField = (field: string, value: any): string => {
+    try {
+      const dataToValidate = {
+        nombre: formData.nombre || "",
+        email: formData.email || "",
+        password: formData.password,
+        rol: (formData.rol || "bodeguero") as any,
+        fincaAsignada: formData.fincaAsignada,
+        telefono: formData.telefono,
+        activo: formData.activo ?? true,
+        [field]: value,
+      };
+      const parsed = UsuarioSchema.safeParse(dataToValidate);
+      if (!parsed.success) {
+        const flat = parsed.error.flatten().fieldErrors;
+        const fieldError = flat[field as keyof typeof flat];
+        if (fieldError && fieldError.length > 0) {
+          return String(fieldError[0]);
+        }
+      }
+      return "";
+    } catch {
+      return "";
+    }
+  };
+
+  const handleFieldChange = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (touched[field] || value !== "") {
+      const err = validateField(field, value);
+      setErrors(prev => ({ ...prev, [field]: err }));
+    }
+    setTouched(prev => ({ ...prev, [field]: true }));
+  };
+
+  const handleFieldBlur = (field: string, value: any) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+    const err = validateField(field, value);
+    setErrors(prev => ({ ...prev, [field]: err }));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,52 +161,61 @@ export function UsuarioForm({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="nombre">Nombre Completo *</Label>
+              <p className="text-xs text-muted-foreground">Nombres y apellidos del usuario</p>
               <Input
                 id="nombre"
                 value={formData.nombre}
-                onChange={(e) =>
-                  (setFormData({ ...formData, nombre: e.target.value }), setErrors((prev) => ({ ...prev, nombre: "" })))
-                }
+                onChange={(e) => handleFieldChange("nombre", e.target.value)}
+                onBlur={(e) => handleFieldBlur("nombre", e.target.value)}
                 placeholder="Juan Pérez"
                 disabled={isSubmitting || !allowEdit}
                 required
+                className={getInputClassName(errors, touched, "nombre", formData.nombre)}
               />
-              {errors.nombre && (
-                <p className="text-xs text-red-600">{errors.nombre}</p>
-              )}
+              <FieldFeedback
+                error={errors.nombre}
+                touched={touched.nombre}
+                isValid={!errors.nombre && !!formData.nombre}
+                successMessage="Nombre válido"
+              />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="email">Email *</Label>
+              <p className="text-xs text-muted-foreground">Correo para inicio de sesión</p>
               <Input
                 id="email"
                 type="email"
                 value={formData.email}
-                onChange={(e) =>
-                  (setFormData({ ...formData, email: e.target.value }), setErrors((prev) => ({ ...prev, email: "" })))
-                }
+                onChange={(e) => handleFieldChange("email", e.target.value)}
+                onBlur={(e) => handleFieldBlur("email", e.target.value)}
                 placeholder="juan@bananerashg.com"
                 disabled={isSubmitting || !allowEdit}
                 required
+                className={getInputClassName(errors, touched, "email", formData.email)}
               />
-              {errors.email && (
-                <p className="text-xs text-red-600">{errors.email}</p>
-              )}
+              <FieldFeedback
+                error={errors.email}
+                touched={touched.email}
+                isValid={!errors.email && !!formData.email}
+                successMessage="Email válido"
+              />
             </div>
 
             {!usuario && (
               <div className="space-y-2">
                 <Label htmlFor="password">Contraseña</Label>
+                <p className="text-xs text-muted-foreground">Mínimo 6 caracteres</p>
                 <div className="flex gap-2">
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
                     value={formData.password}
-                    onChange={(e) =>
-                      (setFormData({ ...formData, password: e.target.value }), setErrors((prev) => ({ ...prev, password: "" })))
-                    }
+                    onChange={(e) => handleFieldChange("password", e.target.value)}
+                    onBlur={(e) => handleFieldBlur("password", e.target.value)}
                     placeholder="Dejar vacío para contraseña por defecto"
                     disabled={isSubmitting || !allowEdit}
+                    className={getInputClassName(errors, touched, "password", formData.password)}
                   />
                   <Button
                     type="button"
@@ -185,22 +237,28 @@ export function UsuarioForm({
 
             <div className="space-y-2">
               <Label htmlFor="telefono">Teléfono</Label>
+              <p className="text-xs text-muted-foreground">Número de contacto</p>
               <Input
                 id="telefono"
                 value={formData.telefono}
-                onChange={(e) =>
-                  (setFormData({ ...formData, telefono: e.target.value }), setErrors((prev) => ({ ...prev, telefono: "" })))
-                }
+                onChange={(e) => handleFieldChange("telefono", e.target.value)}
+                onBlur={(e) => handleFieldBlur("telefono", e.target.value)}
                 placeholder="0999999999"
                 disabled={isSubmitting || !allowEdit}
+                className={getInputClassName(errors, touched, "telefono", formData.telefono)}
               />
-              {errors.telefono && (
-                <p className="text-xs text-red-600">{errors.telefono}</p>
-              )}
+              <FieldFeedback
+                error={errors.telefono}
+                touched={touched.telefono}
+                isValid={!errors.telefono && !!formData.telefono}
+                successMessage="Teléfono válido"
+                infoMessage={!touched.telefono ? "Formato: 09XXXXXXXX o 07XXXXXXX" : undefined}
+              />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="rol">Rol *</Label>
+              <p className="text-xs text-muted-foreground">Nivel de permisos en el sistema</p>
               <Select
                 value={formData.rol}
                 onValueChange={(value) =>
@@ -228,6 +286,7 @@ export function UsuarioForm({
 
             <div className="space-y-2">
               <Label htmlFor="finca">Finca Asignada</Label>
+              <p className="text-xs text-muted-foreground">Finca donde puede operar</p>
               <Select
                 value={formData.fincaAsignada}
                 onValueChange={(value) =>
@@ -254,6 +313,7 @@ export function UsuarioForm({
 
             <div className="space-y-2">
               <Label htmlFor="activo">Estado</Label>
+              <p className="text-xs text-muted-foreground">¿Puede acceder al sistema?</p>
               <Select
                 value={formData.activo ? "activo" : "inactivo"}
                 onValueChange={(value) =>

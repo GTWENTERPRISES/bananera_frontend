@@ -4,18 +4,17 @@ export interface Finca {
   hectareas: number;
   ubicacion?: string;
   responsable?: string;
+  telefono?: string;
+  activa?: boolean;
   variedad?: string;
   plantasTotales?: number;
   fechaSiembra?: string;
   estado?: "activa" | "inactiva" | "mantenimiento";
   coordenadas?: string;
-  telefono?: string;
-  // Nuevo: geometría GeoJSON de la finca (Polygon/MultiPolygon)
   geom?: {
     type: "Polygon" | "MultiPolygon";
     coordinates: any;
   };
-  // Coordenadas de lotes (centroides aproximados) A–E
   lotes?: {
     A?: { lat: number; lng: number };
     B?: { lat: number; lng: number };
@@ -38,9 +37,10 @@ export interface User {
   id: string;
   nombre: string;
   email: string;
-  password: string;
+  password?: string;
   rol: UserRole;
   fincaAsignada?: string;
+  fincaNombre?: string;
   telefono?: string;
   activo: boolean;
   avatar?: string;
@@ -48,31 +48,35 @@ export interface User {
 
 export interface Enfunde {
   id: string;
-  finca: FincaName;
+  finca: string;
+  fincaId?: string;
   semana: number;
   año: number;
   colorCinta: string;
   cantidadEnfundes: number;
   matasCaidas: number;
   fecha: string;
+  observaciones?: string;
 }
 
 export interface Cosecha {
   id: string;
-  finca: FincaName;
+  finca: string;
+  fincaId?: string;
   semana: number;
   año: number;
   fecha?: string;
-  racimosCorta: number;
-  racimosRechazados: number;
+  lote?: string;
+  racimosCorta?: number;
+  racimosRechazados?: number;
   racimosRecuperados: number;
   cajasProducidas: number;
   pesoPromedio: number;
   calibracion: number;
   numeroManos: number;
   ratio: number;
-  merma: number;
-  // Producción por lote en cajas (opcional)
+  merma?: number;
+  observaciones?: string;
   cajasPorLote?: {
     A?: number;
     B?: number;
@@ -86,10 +90,13 @@ export interface Empleado {
   id: string;
   nombre: string;
   cedula: string;
-  finca: FincaName;
-  labor: string;
+  finca: string;
+  fincaId?: string;
+  cargo: string;
+  labor?: string;
   lote?: string;
-  tarifaDiaria: number;
+  salarioBase: number;
+  tarifaDiaria?: number;
   fechaIngreso: string;
   cuentaBancaria?: string;
   telefono?: string;
@@ -100,75 +107,104 @@ export interface Empleado {
 export interface RolPago {
   id: string;
   empleadoId: string;
-  empleado: Empleado;
-  finca: FincaName;
-  semana: number;
-  año: number;
+  empleadoNombre?: string;
+  fincaNombre?: string;
+  empleado?: Empleado;
+  finca?: string;
+  semana?: number;
+  año?: number;
+  fechaPago: string;
+  periodoInicio?: string;
+  periodoFin?: string;
   fecha?: string;
-  diasLaborados: number;
+  diasLaborados?: number;
   horasExtras?: number;
-  sueldoBase: number;
-  cosecha: number;
-  tareasEspeciales: number;
-  totalIngresos: number;
-  iess: number;
-  multas: number;
-  prestamos: number;
-  totalEgresos: number;
+  salarioBase: number;
+  sueldoBase?: number;
+  bonificaciones?: number;
+  deducciones?: number;
+  cosecha?: number;
+  tareasEspeciales?: number;
+  totalIngresos?: number;
+  iess?: number;
+  multas?: number;
+  prestamos?: number;
+  totalEgresos?: number;
   netoAPagar: number;
-  estado: "pendiente" | "pagado";
+  estado: "pendiente" | "aprobado" | "pagado";
+  observaciones?: string;
   prestamoAplicado?: boolean;
 }
 
 export interface Prestamo {
   id: string;
   empleadoId: string;
-  empleado: Empleado;
+  empleadoNombre?: string;
+  fincaNombre?: string;
+  empleado?: Empleado;
   monto: number;
-  fechaDesembolso: string;
-  numeroCuotas: number;
-  valorCuota: number;
-  cuotasPagadas: number;
+  montoPagado?: number;
+  fechaDesembolso?: string;
+  fechaSolicitud?: string;
+  fechaAprobacion?: string;
+  numeroCuotas?: number;
+  cuotas?: number;
+  cuotasPagadas?: number;
+  valorCuota?: number;
   saldoPendiente: number;
-  estado: "activo" | "finalizado";
+  motivo?: string;
+  observaciones?: string;
+  estado: "pendiente" | "aprobado" | "pagado" | "rechazado" | "activo" | "finalizado";
 }
 
 export interface Insumo {
   id: string;
   nombre: string;
-  categoria: "fertilizante" | "protector" | "herramienta" | "empaque" | "otro";
-  proveedor: string;
+  categoria: "fertilizante" | "protector" | "herramienta" | "empaque" | "quimico" | "par" | "otro";
+  proveedor?: string;
   unidadMedida: string;
   stockActual: number;
   stockMinimo: number;
-  stockMaximo: number;
+  stockMaximo?: number;
+  stockStatus?: "normal" | "bajo" | "critico";
   precioUnitario: number;
   fechaVencimiento?: string;
-  finca?: FincaName;
+  finca?: string;
+  fincaId?: string;
   pedidoGenerado?: boolean;
 }
 
 export interface MovimientoInventario {
   id: string;
   insumoId: string;
+  insumoNombre?: string;
+  finca?: string;
+  fincaId?: string;
   tipo: "entrada" | "salida";
   cantidad: number;
   fecha: string;
-  motivo: string;
-  responsable: string;
+  motivo?: string;
+  responsable?: string;
+  responsableId?: string;
+  responsableNombre?: string;
+  observaciones?: string;
 }
 
 export interface Alerta {
   id: string;
-  tipo: "critico" | "advertencia" | "info";
-  modulo: string;
+  tipo: "critico" | "advertencia" | "info" | "inventario" | "produccion" | "nomina";
+  prioridad?: "alta" | "media" | "baja";
+  modulo?: string;
   titulo: string;
-  descripcion: string;
-  fecha: string;
+  mensaje?: string;
+  descripcion?: string;
+  fecha?: string;
+  fechaCreacion?: string;
   leida: boolean;
   accionRequerida?: string;
-  finca?: FincaName;
-  rolesPermitidos: UserRole[];
+  finca?: string;
+  fincaId?: string;
+  rolesPermitidos?: UserRole[];
   metadata?: Record<string, string>;
 }
 
@@ -182,20 +218,25 @@ export interface KPI {
 
 export interface RecuperacionCinta {
   id: string;
-  finca: FincaName;
-  semana: number;
-  año: number;
+  finca?: string;
+  fincaNombre?: string;
+  enfundeId?: string;
+  enfundeInfo?: string;
+  semana?: number;
+  año?: number;
   fecha?: string;
   colorCinta?: string;
-  enfundesIniciales: number;
-  primeraCalCosecha: number;
-  primeraCalSaldo: number;
-  segundaCalCosecha: number;
-  segundaCalSaldo: number;
-  terceraCalCosecha: number;
-  terceraCalSaldo: number;
-  barridaFinal: number;
+  cintasRecuperadas?: number;
+  enfundesIniciales?: number;
+  primeraCalCosecha?: number;
+  primeraCalSaldo?: number;
+  segundaCalCosecha?: number;
+  segundaCalSaldo?: number;
+  terceraCalCosecha?: number;
+  terceraCalSaldo?: number;
+  barridaFinal?: number;
   porcentajeRecuperacion: number;
+  observaciones?: string;
 }
 
 export interface Reporte {

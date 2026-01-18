@@ -48,7 +48,14 @@ type RendimientoMensual = { mes: string; rendimiento: number };
 type EstadisticasFincas = Record<"BABY" | "SOLO" | "LAURITA" | "MARAVILLA", { cajas: number; tendencia: string; positivo: boolean }>;
 
 export default function ReportesProduccionPage() {
-  const { enfundes, cosechas } = useApp();
+  const { enfundes, cosechas, fincas } = useApp();
+  
+  // Helper para obtener nombre de finca desde UUID o nombre
+  const getFincaNombre = (fincaIdOrName: string, fincaNombre?: string): string => {
+    if (fincaNombre && fincaNombre !== 'Sin asignar') return fincaNombre;
+    const finca = fincas.find(f => f.id === fincaIdOrName || f.nombre === fincaIdOrName);
+    return finca?.nombre || fincaIdOrName;
+  };
   const [periodo, setPeriodo] = useState("mensual");
   const [añoSeleccionado, setAñoSeleccionado] = useState("2025");
   const [tab, setTab] = useState("volumen");
@@ -74,7 +81,7 @@ export default function ReportesProduccionPage() {
   const chartHeight = 400;
 
   // Derivados de precios
-  const currencySymbol = useMemo(() => (currency === "USD" ? "$" : currency === "EUR" ? "€" : "$"), [currency]);
+  const currencySymbol = useMemo(() => "$", [currency]);
   const precioActual = useMemo(() => (preciosMercado.length ? preciosMercado[preciosMercado.length - 1].precio : 0), [preciosMercado]);
   const precioAnterior = useMemo(() => (preciosMercado.length > 1 ? preciosMercado[preciosMercado.length - 2].precio : 0), [preciosMercado]);
   const variacionMes = useMemo(() => (precioAnterior ? ((precioActual - precioAnterior) / precioAnterior) * 100 : 0), [precioActual, precioAnterior]);
@@ -128,14 +135,32 @@ export default function ReportesProduccionPage() {
     rendimientoData: RendimientoMensual[];
     estadisticasFincas: EstadisticasFincas;
   }>(() => {
+    // Debug: Ver qué datos llegan
+    if (cosechas.length > 0) {
+      console.log("DEBUG Cosechas:", {
+        total: cosechas.length,
+        ejemplo: cosechas[0],
+        fincaNombre: cosechas[0]?.fincaNombre,
+        finca: cosechas[0]?.finca,
+        año: cosechas[0]?.año,
+      });
+    }
+    
     // Filtrar datos por año seleccionado
     const mapMes = (sem: number) => Math.ceil(sem / 4.33);
     const enfundesFiltradosBase = enfundes.filter(
-      (e) => e.año.toString() === añoSeleccionado && fincasSeleccionadas.includes(e.finca)
+      (e) => e.año.toString() === añoSeleccionado && fincasSeleccionadas.includes(getFincaNombre(e.finca, e.fincaNombre))
     );
     const cosechasFiltradasBase = cosechas.filter(
-      (c) => c.año.toString() === añoSeleccionado && fincasSeleccionadas.includes(c.finca)
+      (c) => c.año.toString() === añoSeleccionado && fincasSeleccionadas.includes(getFincaNombre(c.finca, c.fincaNombre))
     );
+    
+    console.log("DEBUG Filtrado:", {
+      añoSeleccionado,
+      fincasSeleccionadas,
+      cosechasTotal: cosechas.length,
+      cosechasFiltradas: cosechasFiltradasBase.length,
+    });
     const enfundesFiltrados = enfundesFiltradosBase.filter((e) =>
       periodo === "mensual"
         ? mapMes(e.semana) >= Number(mesInicio) && mapMes(e.semana) <= Number(mesFin)
@@ -167,16 +192,16 @@ export default function ReportesProduccionPage() {
       return {
         mes,
         BABY: cosechasFiltradas
-          .filter((c) => c.finca === "BABY" && Math.ceil(c.semana / 4.33) === mesNum)
+          .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "BABY" && Math.ceil(c.semana / 4.33) === mesNum)
           .reduce((sum, c) => sum + c.cajasProducidas, 0),
         SOLO: cosechasFiltradas
-          .filter((c) => c.finca === "SOLO" && Math.ceil(c.semana / 4.33) === mesNum)
+          .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "SOLO" && Math.ceil(c.semana / 4.33) === mesNum)
           .reduce((sum, c) => sum + c.cajasProducidas, 0),
         LAURITA: cosechasFiltradas
-          .filter((c) => c.finca === "LAURITA" && Math.ceil(c.semana / 4.33) === mesNum)
+          .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "LAURITA" && Math.ceil(c.semana / 4.33) === mesNum)
           .reduce((sum, c) => sum + c.cajasProducidas, 0),
         MARAVILLA: cosechasFiltradas
-          .filter((c) => c.finca === "MARAVILLA" && Math.ceil(c.semana / 4.33) === mesNum)
+          .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "MARAVILLA" && Math.ceil(c.semana / 4.33) === mesNum)
           .reduce((sum, c) => sum + c.cajasProducidas, 0),
       };
     });
@@ -190,16 +215,16 @@ export default function ReportesProduccionPage() {
     const produccionSemanal: ProduccionSemanalPorFinca[] = semanasRango.map((sem) => ({
       semana: `Sem ${sem}`,
       BABY: cosechasFiltradas
-        .filter((c) => c.finca === "BABY" && c.semana === sem)
+        .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "BABY" && c.semana === sem)
         .reduce((sum, c) => sum + c.cajasProducidas, 0),
       SOLO: cosechasFiltradas
-        .filter((c) => c.finca === "SOLO" && c.semana === sem)
+        .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "SOLO" && c.semana === sem)
         .reduce((sum, c) => sum + c.cajasProducidas, 0),
       LAURITA: cosechasFiltradas
-        .filter((c) => c.finca === "LAURITA" && c.semana === sem)
+        .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "LAURITA" && c.semana === sem)
         .reduce((sum, c) => sum + c.cajasProducidas, 0),
       MARAVILLA: cosechasFiltradas
-        .filter((c) => c.finca === "MARAVILLA" && c.semana === sem)
+        .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "MARAVILLA" && c.semana === sem)
         .reduce((sum, c) => sum + c.cajasProducidas, 0),
     }));
 
@@ -250,28 +275,28 @@ export default function ReportesProduccionPage() {
     const estadisticasFincas: EstadisticasFincas = {
       BABY: {
         cajas: cosechasFiltradas
-          .filter((c) => c.finca === "BABY")
+          .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "BABY")
           .reduce((sum, c) => sum + c.cajasProducidas, 0),
         tendencia: "+5.2%",
         positivo: true,
       },
       SOLO: {
         cajas: cosechasFiltradas
-          .filter((c) => c.finca === "SOLO")
+          .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "SOLO")
           .reduce((sum, c) => sum + c.cajasProducidas, 0),
         tendencia: "-2.1%",
         positivo: false,
       },
       LAURITA: {
         cajas: cosechasFiltradas
-          .filter((c) => c.finca === "LAURITA")
+          .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "LAURITA")
           .reduce((sum, c) => sum + c.cajasProducidas, 0),
         tendencia: "+8.3%",
         positivo: true,
       },
       MARAVILLA: {
         cajas: cosechasFiltradas
-          .filter((c) => c.finca === "MARAVILLA")
+          .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "MARAVILLA")
           .reduce((sum, c) => sum + c.cajasProducidas, 0),
         tendencia: "+4.7%",
         positivo: true,
@@ -288,6 +313,7 @@ export default function ReportesProduccionPage() {
   }, [
     enfundes,
     cosechas,
+    fincas,
     añoSeleccionado,
     periodo,
     semanaInicio,
@@ -295,6 +321,7 @@ export default function ReportesProduccionPage() {
     mesInicio,
     mesFin,
     fincasSeleccionadas,
+    getFincaNombre,
   ]);
 
   const currentData = useMemo(() => {
@@ -884,8 +911,7 @@ export default function ReportesProduccionPage() {
                     <SelectValue placeholder="Moneda" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="USD">USD</SelectItem>
-                    <SelectItem value="EUR">EUR</SelectItem>
+                    <SelectItem value="USD">USD ($)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

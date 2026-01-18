@@ -73,7 +73,7 @@ export function RolesPagoTable() {
         <CardTitle>Roles de Pago</CardTitle>
         <ExportButton
           data={rolesPago?.map((rol) => ({
-            empleado: rol.empleado?.nombre || "N/A",
+            empleado: (rol as any).empleadoNombre || rol.empleado?.nombre || "N/A",
             semana: rol.semana,
             año: rol.año,
             diasLaborados: rol.diasLaborados || 0,
@@ -239,7 +239,7 @@ export function RolesPagoTable() {
                     quincena: pdfMode === 'quincena' ? Number(pdfQuincena || '1') : undefined,
                     superficie: undefined,
                     roles: roles.map((r) => ({
-                      empleado: { nombre: r.empleado?.nombre, cedula: r.empleado?.cedula, labor: r.empleado?.labor },
+                      empleado: { nombre: (r as any).empleadoNombre || r.empleado?.nombre, cedula: r.empleado?.cedula, labor: r.empleado?.labor },
                       diasLaborados: r.diasLaborados,
                       sueldoBase: r.sueldoBase,
                       cosecha: r.cosecha,
@@ -344,7 +344,7 @@ export function RolesPagoTable() {
                 {paginated.map((rol) => (
                 <TableRow key={rol.id} className="odd:bg-muted/50 hover:bg-muted transition-colors">
                   <TableCell className="font-medium truncate max-w-[160px]">
-                    {rol.empleado?.nombre || "N/A"}
+                    {(rol as any).empleadoNombre || rol.empleado?.nombre || "N/A"}
                   </TableCell>
                   <TableCell>S{rol.semana}</TableCell>
                   <TableCell className="whitespace-nowrap">

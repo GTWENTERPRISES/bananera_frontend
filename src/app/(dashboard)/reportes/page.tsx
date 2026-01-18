@@ -17,7 +17,8 @@ import {
 } from "@/src/components/ui/select";
 import { ExportButton } from "@/src/components/shared/export-button";
 import { useApp } from "@/src/contexts/app-context";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, MapPin } from "lucide-react";
+import { Badge } from "@/src/components/ui/badge";
 import { AIInsights } from "@/src/components/reportes/ai-insights";
 import { ReporteGenerator } from "@/src/components/reportes/reporte-generator";
 import { AnalyticsCharts } from "@/src/components/reportes/analytics-charts";
@@ -25,9 +26,23 @@ import { ComparativaFincas } from "@/src/components/reportes/comparativa-fincas"
 import { KPISummary } from "@/src/components/reportes/kpi-summary";
 
 export default function ReportesPage() {
-  const { cosechas } = useApp();
+  const { cosechas, fincas, currentUser } = useApp();
   const [periodo, setPeriodo] = useState("mensual");
   const [añoSeleccionado, setAñoSeleccionado] = useState("2025");
+
+  // Helper para obtener nombre de finca desde UUID
+  const getFincaNombre = (fincaId: string, fincaNombre?: string): string => {
+    if (fincaNombre && fincaNombre !== 'Sin asignar') return fincaNombre;
+    const f = fincas.find(f => f.id === fincaId || f.nombre === fincaId);
+    return f?.nombre || fincaId;
+  };
+
+  const fincaAsignadaNombre = (() => {
+    if (!currentUser?.fincaAsignada) return null;
+    const f = fincas.find((fi) => fi.id === currentUser.fincaAsignada || fi.nombre === currentUser.fincaAsignada);
+    return f?.nombre || currentUser.fincaAsignada;
+  })();
+  const esFiltrado = currentUser?.rol === 'supervisor_finca' || currentUser?.rol === 'bodeguero';
 
   const cosechasFiltradas = useMemo(() => {
     return cosechas.filter((c) => c.año.toString() === añoSeleccionado);
@@ -72,16 +87,16 @@ export default function ReportesPage() {
       return {
         mes,
         BABY: registrosMes
-          .filter((c) => c.finca === "BABY")
+          .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "BABY")
           .reduce((sum, c) => sum + c.cajasProducidas, 0),
         SOLO: registrosMes
-          .filter((c) => c.finca === "SOLO")
+          .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "SOLO")
           .reduce((sum, c) => sum + c.cajasProducidas, 0),
         LAURITA: registrosMes
-          .filter((c) => c.finca === "LAURITA")
+          .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "LAURITA")
           .reduce((sum, c) => sum + c.cajasProducidas, 0),
         MARAVILLA: registrosMes
-          .filter((c) => c.finca === "MARAVILLA")
+          .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "MARAVILLA")
           .reduce((sum, c) => sum + c.cajasProducidas, 0),
       };
     });
@@ -97,16 +112,16 @@ export default function ReportesPage() {
     return semanasDisponibles.map((sem) => ({
       semana: `Sem ${sem}`,
       BABY: cosechasFiltradas
-        .filter((c) => c.finca === "BABY" && c.semana === sem)
+        .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "BABY" && c.semana === sem)
         .reduce((sum, c) => sum + c.cajasProducidas, 0),
       SOLO: cosechasFiltradas
-        .filter((c) => c.finca === "SOLO" && c.semana === sem)
+        .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "SOLO" && c.semana === sem)
         .reduce((sum, c) => sum + c.cajasProducidas, 0),
       LAURITA: cosechasFiltradas
-        .filter((c) => c.finca === "LAURITA" && c.semana === sem)
+        .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "LAURITA" && c.semana === sem)
         .reduce((sum, c) => sum + c.cajasProducidas, 0),
       MARAVILLA: cosechasFiltradas
-        .filter((c) => c.finca === "MARAVILLA" && c.semana === sem)
+        .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "MARAVILLA" && c.semana === sem)
         .reduce((sum, c) => sum + c.cajasProducidas, 0),
     }));
   }, [cosechasFiltradas, semanasDisponibles]);
@@ -116,16 +131,16 @@ export default function ReportesPage() {
       {
         año: añoSeleccionado,
         BABY: cosechasFiltradas
-          .filter((c) => c.finca === "BABY")
+          .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "BABY")
           .reduce((sum, c) => sum + c.cajasProducidas, 0),
         SOLO: cosechasFiltradas
-          .filter((c) => c.finca === "SOLO")
+          .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "SOLO")
           .reduce((sum, c) => sum + c.cajasProducidas, 0),
         LAURITA: cosechasFiltradas
-          .filter((c) => c.finca === "LAURITA")
+          .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "LAURITA")
           .reduce((sum, c) => sum + c.cajasProducidas, 0),
         MARAVILLA: cosechasFiltradas
-          .filter((c) => c.finca === "MARAVILLA")
+          .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "MARAVILLA")
           .reduce((sum, c) => sum + c.cajasProducidas, 0),
       },
     ];
@@ -206,11 +221,19 @@ export default function ReportesPage() {
         </CardContent>
       </Card>
       <div>
-        <h1 className="text-3xl font-bold text-foreground">
-          Reportes y Analytics
-        </h1>
+        <div className="flex items-center gap-3 flex-wrap">
+          <h1 className="text-3xl font-bold text-foreground">
+            Reportes y Analytics
+          </h1>
+          {esFiltrado && fincaAsignadaNombre && (
+            <Badge variant="outline" className="gap-1">
+              <MapPin className="h-3 w-3" />
+              {fincaAsignadaNombre}
+            </Badge>
+          )}
+        </div>
         <p className="text-muted-foreground">
-          Análisis inteligente con insights generados por IA
+          {esFiltrado && fincaAsignadaNombre ? `Análisis de ${fincaAsignadaNombre}` : "Análisis inteligente con insights generados por IA"}
         </p>
       </div>
 
@@ -223,9 +246,9 @@ export default function ReportesPage() {
         <ReporteGenerator />
       </div>
 
-      <AnalyticsCharts />
+      <AnalyticsCharts año={añoSeleccionado} periodo={periodo} />
 
-      <ComparativaFincas />
+      <ComparativaFincas año={añoSeleccionado} periodo={periodo} />
     </div>
   );
 }

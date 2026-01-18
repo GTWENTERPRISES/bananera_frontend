@@ -1,9 +1,8 @@
 "use client";
 
-import { Bell, Search, Moon, Sun, User, LogOut, Menu, AlertCircle, AlertTriangle, Info } from "lucide-react";
+import { Bell, Moon, Sun, User, LogOut, AlertCircle, AlertTriangle, Info } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/src/components/ui/button";
-import { Input } from "@/src/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -84,16 +83,7 @@ export function AppHeader() {
   return (
     <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
       <div className="flex flex-1 items-center gap-4">
-        {!isMobile && (
-          <div className="relative w-full max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Buscar en el sistema..."
-              className="pl-10"
-            />
-          </div>
-        )}
+        {/* Espacio reservado para mantener el layout */}
       </div>
 
       <div className="flex items-center gap-2">

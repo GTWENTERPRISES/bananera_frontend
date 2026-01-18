@@ -56,7 +56,8 @@ import {
 import { toast } from "sonner";
 
 export function CosechasTable() {
-  const { cosechas, fincas, updateCosecha, deleteCosecha } = useApp();
+  const { getFilteredCosechas, fincas, updateCosecha, deleteCosecha } = useApp();
+  const cosechas = getFilteredCosechas();
   const [searchTerm, setSearchTerm] = useState("");
   const searchParams = useSearchParams();
   const fincaFilter = searchParams.get("finca") || "";
@@ -123,12 +124,13 @@ export function CosechasTable() {
 
   const filteredCosechas = useMemo(() => {
     return cosechas.filter((cosecha) => {
+      const fincaName = cosecha.fincaNombre || cosecha.finca;
       const matchesSearch =
-        cosecha.finca.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        fincaName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (
-          getFincaInfo(cosecha.finca)?.responsable?.toLowerCase() || ""
+          getFincaInfo(fincaName)?.responsable?.toLowerCase() || ""
         ).includes(searchTerm.toLowerCase());
-      const matchesFinca = fincaSel ? cosecha.finca === fincaSel : true;
+      const matchesFinca = fincaSel ? fincaName === fincaSel : true;
       const matchesWeek = weekFilter
         ? cosecha.semana === Number(weekFilter)
         : true;
@@ -157,7 +159,7 @@ export function CosechasTable() {
         ).getTime();
       if (sortBy === "semana") return c.semana;
       if (sortBy === "año") return c.año;
-      if (sortBy === "finca") return c.finca.toLowerCase();
+      if (sortBy === "finca") return (c.fincaNombre || c.finca).toLowerCase();
       if (sortBy === "racimosCorta") return c.racimosCorta;
       if (sortBy === "racimosRechazados") return c.racimosRechazados;
       if (sortBy === "racimosRecuperados") return c.racimosRecuperados;
@@ -168,7 +170,7 @@ export function CosechasTable() {
       if (sortBy === "ratio") return c.ratio;
       if (sortBy === "merma") return c.merma;
       if (sortBy === "responsable")
-        return (getFincaInfo(c.finca)?.responsable || "").toLowerCase();
+        return (getFincaInfo(c.fincaNombre || c.finca)?.responsable || "").toLowerCase();
       return 0;
     };
     const arr = [...filteredCosechas];
@@ -282,9 +284,27 @@ export function CosechasTable() {
     calibracion: "",
     numeroManos: "",
   });
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+  const [editTouched, setEditTouched] = useState<Record<string, boolean>>({});
   const [toDelete, setToDelete] = useState<null | (typeof cosechas)[number]>(
     null
   );
+
+  // Validación en vivo para edición
+  const validateEditField = (field: string, value: string): string => {
+    if (!value) return "Campo requerido";
+    const num = Number(value);
+    if (isNaN(num)) return "Debe ser un número";
+    if (num < 0) return "Debe ser >= 0";
+    return "";
+  };
+
+  const handleEditChange = (field: string, value: string) => {
+    setEditForm(prev => ({ ...prev, [field]: value }));
+    const error = validateEditField(field, value);
+    setEditErrors(prev => ({ ...prev, [field]: error }));
+    setEditTouched(prev => ({ ...prev, [field]: true }));
+  };
 
   const openEdit = (c: (typeof cosechas)[number]) => {
     setEditing(c);
@@ -296,10 +316,17 @@ export function CosechasTable() {
       calibracion: String(c.calibracion),
       numeroManos: String(c.numeroManos),
     });
+    setEditErrors({});
+    setEditTouched({});
+  };
+
+  const isEditFormValid = () => {
+    return Object.values(editForm).every(v => v && Number(v) >= 0) &&
+           !Object.values(editErrors).some(e => e);
   };
 
   const saveEdit = () => {
-    if (!editing) return;
+    if (!editing || !isEditFormValid()) return;
     const racimosCorta = Number.parseInt(editForm.racimosCorta || "0");
     const racimosRechazados = Number.parseInt(
       editForm.racimosRechazados || "0"
@@ -310,9 +337,9 @@ export function CosechasTable() {
     const calibracion = Number.parseFloat(editForm.calibracion || "0");
     const numeroManos = Number.parseFloat(editForm.numeroManos || "0");
     const ratio =
-      racimosRecuperados > 0 ? cajasProducidas / racimosRecuperados : 0;
+      racimosRecuperados > 0 ? Math.round((cajasProducidas / racimosRecuperados) * 100) / 100 : 0;
     const merma =
-      racimosCorta > 0 ? (racimosRechazados / racimosCorta) * 100 : 0;
+      racimosCorta > 0 ? Math.round((racimosRechazados / racimosCorta) * 10000) / 100 : 0;
     updateCosecha(editing.id, {
       racimosCorta,
       racimosRechazados,
@@ -382,7 +409,7 @@ export function CosechasTable() {
             <div className="text-sm text-muted-foreground">
               Último registro:{" "}
               <span className="font-medium text-foreground">
-                {latestRecord.finca}
+                {latestRecord.fincaNombre || latestRecord.finca}
               </span>{" "}
               · S{latestRecord.semana} · {latestRecord.año} · Cajas{" "}
               {latestRecord.cajasProducidas.toLocaleString()}
@@ -780,7 +807,8 @@ export function CosechasTable() {
               </TableHeader>
               <TableBody className="animate-in fade-in duration-200">
               {paginated.map((cosecha) => {
-                const fincaInfo = getFincaInfo(cosecha.finca);
+                const fincaName = cosecha.fincaNombre || cosecha.finca;
+                const fincaInfo = getFincaInfo(fincaName);
                 return (
                   <TableRow key={cosecha.id} className="odd:bg-muted/50 hover:bg-muted transition-colors">
                     <TableCell>
@@ -795,7 +823,7 @@ export function CosechasTable() {
                     </TableCell>
                     <TableCell className="text-right tabular-nums whitespace-nowrap">{cosecha.semana}</TableCell>
                     <TableCell className="text-right tabular-nums whitespace-nowrap">{cosecha.año}</TableCell>
-                    <TableCell className="truncate max-w-[160px]">{cosecha.finca}</TableCell>
+                    <TableCell className="truncate max-w-[160px]">{fincaName}</TableCell>
                     <TableCell className="text-right tabular-nums whitespace-nowrap">
                       {cosecha.racimosCorta.toLocaleString()}
                     </TableCell>
@@ -879,98 +907,92 @@ export function CosechasTable() {
               <DialogTitle>Editar Cosecha</DialogTitle>
             </DialogHeader>
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-2">
-                <span className="text-sm text-muted-foreground">
-                  Racimos Cortados
-                </span>
+              <div className="space-y-1">
+                <span className="text-sm font-medium">Racimos Cortados *</span>
+                <p className="text-xs text-muted-foreground">Total cortados en la semana</p>
                 <Input
-                  className="h-11"
+                  className={`h-11 ${editErrors.racimosCorta && editTouched.racimosCorta ? 'border-red-500' : editTouched.racimosCorta && !editErrors.racimosCorta ? 'border-green-500' : ''}`}
                   type="number"
+                  min="0"
                   value={editForm.racimosCorta}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, racimosCorta: e.target.value })
-                  }
+                  onChange={(e) => handleEditChange("racimosCorta", e.target.value)}
                 />
+                {editErrors.racimosCorta && editTouched.racimosCorta && <p className="text-xs text-red-500">{editErrors.racimosCorta}</p>}
+                {!editErrors.racimosCorta && editTouched.racimosCorta && editForm.racimosCorta && <p className="text-xs text-green-500">✓ Válido</p>}
               </div>
-              <div className="space-y-2">
-                <span className="text-sm text-muted-foreground">
-                  Racimos Rechazados
-                </span>
+              <div className="space-y-1">
+                <span className="text-sm font-medium">Racimos Rechazados *</span>
+                <p className="text-xs text-muted-foreground">No cumplieron estándar</p>
                 <Input
-                  className="h-11"
+                  className={`h-11 ${editErrors.racimosRechazados && editTouched.racimosRechazados ? 'border-red-500' : editTouched.racimosRechazados && !editErrors.racimosRechazados ? 'border-green-500' : ''}`}
                   type="number"
+                  min="0"
                   value={editForm.racimosRechazados}
-                  onChange={(e) =>
-                    setEditForm({
-                      ...editForm,
-                      racimosRechazados: e.target.value,
-                    })
-                  }
+                  onChange={(e) => handleEditChange("racimosRechazados", e.target.value)}
                 />
+                {editErrors.racimosRechazados && editTouched.racimosRechazados && <p className="text-xs text-red-500">{editErrors.racimosRechazados}</p>}
+                {!editErrors.racimosRechazados && editTouched.racimosRechazados && editForm.racimosRechazados && <p className="text-xs text-green-500">✓ Válido</p>}
               </div>
-              <div className="space-y-2">
-                <span className="text-sm text-muted-foreground">
-                  Cajas Producidas
-                </span>
+              <div className="space-y-1">
+                <span className="text-sm font-medium">Cajas Producidas *</span>
+                <p className="text-xs text-muted-foreground">Total empacadas y listas</p>
                 <Input
-                  className="h-11"
+                  className={`h-11 ${editErrors.cajasProducidas && editTouched.cajasProducidas ? 'border-red-500' : editTouched.cajasProducidas && !editErrors.cajasProducidas ? 'border-green-500' : ''}`}
                   type="number"
+                  min="0"
                   value={editForm.cajasProducidas}
-                  onChange={(e) =>
-                    setEditForm({
-                      ...editForm,
-                      cajasProducidas: e.target.value,
-                    })
-                  }
+                  onChange={(e) => handleEditChange("cajasProducidas", e.target.value)}
                 />
+                {editErrors.cajasProducidas && editTouched.cajasProducidas && <p className="text-xs text-red-500">{editErrors.cajasProducidas}</p>}
+                {!editErrors.cajasProducidas && editTouched.cajasProducidas && editForm.cajasProducidas && <p className="text-xs text-green-500">✓ Válido</p>}
               </div>
-              <div className="space-y-2">
-                <span className="text-sm text-muted-foreground">
-                  Peso Promedio
-                </span>
+              <div className="space-y-1">
+                <span className="text-sm font-medium">Peso Promedio (lb) *</span>
+                <p className="text-xs text-muted-foreground">Peso promedio por caja</p>
                 <Input
-                  className="h-11"
+                  className={`h-11 ${editErrors.pesoPromedio && editTouched.pesoPromedio ? 'border-red-500' : editTouched.pesoPromedio && !editErrors.pesoPromedio ? 'border-green-500' : ''}`}
                   type="number"
                   step="0.1"
+                  min="0"
                   value={editForm.pesoPromedio}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, pesoPromedio: e.target.value })
-                  }
+                  onChange={(e) => handleEditChange("pesoPromedio", e.target.value)}
                 />
+                {editErrors.pesoPromedio && editTouched.pesoPromedio && <p className="text-xs text-red-500">{editErrors.pesoPromedio}</p>}
+                {!editErrors.pesoPromedio && editTouched.pesoPromedio && editForm.pesoPromedio && <p className="text-xs text-green-500">✓ Válido</p>}
               </div>
-              <div className="space-y-2">
-                <span className="text-sm text-muted-foreground">
-                  Calibración
-                </span>
+              <div className="space-y-1">
+                <span className="text-sm font-medium">Calibración *</span>
+                <p className="text-xs text-muted-foreground">Grosor en 32avos de pulgada</p>
                 <Input
-                  className="h-11"
+                  className={`h-11 ${editErrors.calibracion && editTouched.calibracion ? 'border-red-500' : editTouched.calibracion && !editErrors.calibracion ? 'border-green-500' : ''}`}
                   type="number"
+                  min="0"
                   value={editForm.calibracion}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, calibracion: e.target.value })
-                  }
+                  onChange={(e) => handleEditChange("calibracion", e.target.value)}
                 />
+                {editErrors.calibracion && editTouched.calibracion && <p className="text-xs text-red-500">{editErrors.calibracion}</p>}
+                {!editErrors.calibracion && editTouched.calibracion && editForm.calibracion && <p className="text-xs text-green-500">✓ Válido</p>}
               </div>
-              <div className="space-y-2">
-                <span className="text-sm text-muted-foreground">
-                  Número de Manos
-                </span>
+              <div className="space-y-1">
+                <span className="text-sm font-medium">Número de Manos *</span>
+                <p className="text-xs text-muted-foreground">Promedio por racimo</p>
                 <Input
-                  className="h-11"
+                  className={`h-11 ${editErrors.numeroManos && editTouched.numeroManos ? 'border-red-500' : editTouched.numeroManos && !editErrors.numeroManos ? 'border-green-500' : ''}`}
                   type="number"
                   step="0.1"
+                  min="0"
                   value={editForm.numeroManos}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, numeroManos: e.target.value })
-                  }
+                  onChange={(e) => handleEditChange("numeroManos", e.target.value)}
                 />
+                {editErrors.numeroManos && editTouched.numeroManos && <p className="text-xs text-red-500">{editErrors.numeroManos}</p>}
+                {!editErrors.numeroManos && editTouched.numeroManos && editForm.numeroManos && <p className="text-xs text-green-500">✓ Válido</p>}
               </div>
             </div>
             <div className="flex flex-col md:flex-row justify-end gap-2 mt-4">
               <Button className="h-11" variant="secondary" onClick={() => setEditing(null)}>
                 Cancelar
               </Button>
-              <Button className="h-11" onClick={saveEdit}>Guardar</Button>
+              <Button className="h-11" onClick={saveEdit} disabled={!isEditFormValid()}>Guardar</Button>
             </div>
           </DialogContent>
         </Dialog>

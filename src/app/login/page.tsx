@@ -9,9 +9,10 @@ import { Button } from "@/src/components/ui/button"
 import { Input } from "@/src/components/ui/input"
 import { Label } from "@/src/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
-import { AlertCircle, Loader2 } from "lucide-react"
+import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react"
 import { Alert, AlertDescription } from "@/src/components/ui/alert"
 import { LoginSchema } from "@/src/lib/validation"
+import { FieldFeedback, getInputClassName } from "@/src/components/ui/field-feedback"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -19,7 +20,40 @@ export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [isLoading, setIsLoading] = useState(false)
+
+  const validateField = (field: "email" | "password", value: string): string => {
+    const data = { email, password, [field]: value };
+    const parsed = LoginSchema.safeParse(data);
+    if (!parsed.success) {
+      const flat = parsed.error.flatten().fieldErrors;
+      const fieldError = flat[field];
+      if (fieldError && fieldError.length > 0) {
+        return String(fieldError[0]);
+      }
+    }
+    return "";
+  };
+
+  const handleFieldChange = (field: "email" | "password", value: string) => {
+    if (field === "email") setEmail(value);
+    else setPassword(value);
+    
+    if (touched[field] || value !== "") {
+      const err = validateField(field, value);
+      setErrors(prev => ({ ...prev, [field]: err }));
+    }
+    setTouched(prev => ({ ...prev, [field]: true }));
+    if (error) setError("");
+  };
+
+  const handleFieldBlur = (field: "email" | "password", value: string) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+    const err = validateField(field, value);
+    setErrors(prev => ({ ...prev, [field]: err }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -67,9 +101,17 @@ export default function LoginPage() {
                 type="email"
                 placeholder="usuario@bananerahg.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => handleFieldChange("email", e.target.value)}
+                onBlur={(e) => handleFieldBlur("email", e.target.value)}
                 required
                 disabled={isLoading}
+                className={getInputClassName(errors, touched, "email", email)}
+              />
+              <FieldFeedback
+                error={errors.email}
+                touched={touched.email}
+                isValid={!errors.email && !!email}
+                successMessage="Email válido"
               />
             </div>
             <div className="space-y-2">
@@ -79,9 +121,18 @@ export default function LoginPage() {
                 type="password"
                 placeholder="••••••••"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => handleFieldChange("password", e.target.value)}
+                onBlur={(e) => handleFieldBlur("password", e.target.value)}
                 required
                 disabled={isLoading}
+                className={getInputClassName(errors, touched, "password", password)}
+              />
+              <FieldFeedback
+                error={errors.password}
+                touched={touched.password}
+                isValid={!errors.password && password.length >= 6}
+                successMessage="Contraseña válida"
+                infoMessage={!touched.password ? "Mínimo 6 caracteres" : undefined}
               />
             </div>
 

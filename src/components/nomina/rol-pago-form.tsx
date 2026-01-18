@@ -22,7 +22,9 @@ import { RolPagoInputSchema } from "@/src/lib/validation";
 import { Spinner } from "@/src/components/ui/spinner";
 
 export function RolPagoForm() {
-  const { addRolPago, empleados, prestamos, updatePrestamo } = useApp();
+  const { addRolPago, getFilteredEmpleados, getFilteredPrestamos, updatePrestamo } = useApp();
+  const empleados = getFilteredEmpleados();
+  const prestamos = getFilteredPrestamos();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -101,16 +103,16 @@ export function RolPagoForm() {
       finca: empleado.finca,
       semana: Number.parseInt(formData.semana),
       año: Number.parseInt(formData.año),
-      fecha: new Date().toISOString(),
+      fecha: new Date().toISOString().split("T")[0],
       diasLaborados: diasLaborados,
-      horasExtras: horasExtras,
+      horasExtras: Number.parseFloat(horasExtras.toFixed(2)),
       sueldoBase: Number.parseFloat(sueldoBase.toFixed(2)),
-      cosecha: cosecha,
-      tareasEspeciales: tareasEspeciales,
+      cosecha: Number.parseFloat(cosecha.toFixed(2)),
+      tareasEspeciales: Number.parseFloat(tareasEspeciales.toFixed(2)),
       totalIngresos: Number.parseFloat(totalIngresos.toFixed(2)),
       iess: Number.parseFloat(iess.toFixed(2)),
-      multas: multas,
-      prestamos: descuentoPrestamos,
+      multas: Number.parseFloat(multas.toFixed(2)),
+      prestamos: Number.parseFloat(descuentoPrestamos.toFixed(2)),
       totalEgresos: Number.parseFloat(totalEgresos.toFixed(2)),
       netoAPagar: Number.parseFloat(netoAPagar.toFixed(2)),
       estado: "pendiente",
@@ -150,7 +152,8 @@ export function RolPagoForm() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="empleado">Empleado</Label>
+              <Label htmlFor="empleado">Empleado *</Label>
+              <p className="text-xs text-muted-foreground">Trabajador a generar rol</p>
               <Select
                 value={formData.empleadoId}
                 onValueChange={(value) => {
@@ -178,7 +181,8 @@ export function RolPagoForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="semana">Semana</Label>
+              <Label htmlFor="semana">Semana *</Label>
+              <p className="text-xs text-muted-foreground">Semana del año (1-53)</p>
               <Input
                 id="semana"
                 type="number"
@@ -197,7 +201,8 @@ export function RolPagoForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="diasLaborados">Días Laborados</Label>
+              <Label htmlFor="diasLaborados">Días Laborados *</Label>
+              <p className="text-xs text-muted-foreground">Días trabajados (0-7)</p>
               <Input
                 id="diasLaborados"
                 type="number"
@@ -217,6 +222,7 @@ export function RolPagoForm() {
 
             <div className="space-y-2">
               <Label htmlFor="horasExtras">Horas Extras</Label>
+              <p className="text-xs text-muted-foreground">Horas adicionales trabajadas</p>
               <Input
                 id="horasExtras"
                 type="number"
@@ -235,6 +241,7 @@ export function RolPagoForm() {
 
             <div className="space-y-2">
               <Label htmlFor="cosecha">Cosecha ($)</Label>
+              <p className="text-xs text-muted-foreground">Pago adicional por cosecha</p>
               <Input
                 id="cosecha"
                 type="number"
@@ -253,6 +260,7 @@ export function RolPagoForm() {
 
             <div className="space-y-2">
               <Label htmlFor="tareasEspeciales">Tareas Especiales ($)</Label>
+              <p className="text-xs text-muted-foreground">Bonos por trabajos especiales</p>
               <Input
                 id="tareasEspeciales"
                 type="number"
@@ -271,6 +279,7 @@ export function RolPagoForm() {
 
             <div className="space-y-2">
               <Label htmlFor="multas">Multas ($)</Label>
+              <p className="text-xs text-muted-foreground">Descuentos por faltas</p>
               <Input
                 id="multas"
                 type="number"
@@ -289,6 +298,7 @@ export function RolPagoForm() {
 
             <div className="space-y-2">
               <Label htmlFor="prestamos">Descuento Préstamos ($)</Label>
+              <p className="text-xs text-muted-foreground">Cuota de préstamo activo</p>
               <Input
                 id="prestamos"
                 type="number"

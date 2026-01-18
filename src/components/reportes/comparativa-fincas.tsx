@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -11,14 +12,52 @@ import { Progress } from "@/src/components/ui/progress";
 import { Badge } from "@/src/components/ui/badge";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
-export function ComparativaFincas() {
-  const { enfundes, cosechas } = useApp();
+interface ComparativaFincasProps {
+  año?: string;
+  periodo?: string;
+}
+
+export function ComparativaFincas({ año = "2025", periodo = "mensual" }: ComparativaFincasProps) {
+  const { enfundes, cosechas, fincas: fincasData } = useApp();
+
+  // Helper para obtener nombre de finca desde UUID
+  const getFincaNombre = (fincaId: string, fincaNombre?: string): string => {
+    if (fincaNombre && fincaNombre !== 'Sin asignar') return fincaNombre;
+    const f = fincasData.find(f => f.id === fincaId || f.nombre === fincaId);
+    return f?.nombre || fincaId;
+  };
+
+  // Filtrar por año
+  const enfundesFiltradosAño = useMemo(() => 
+    enfundes.filter(e => e.año.toString() === año), [enfundes, año]);
+  const cosechasFiltradasAño = useMemo(() => 
+    cosechas.filter(c => c.año.toString() === año), [cosechas, año]);
+
+  // Filtrar según periodo
+  const { enfundesFiltrados, cosechasFiltradas } = useMemo(() => {
+    if (periodo === "semanal") {
+      // Últimas 4 semanas disponibles
+      const semanasUnicas = [...new Set(cosechasFiltradasAño.map(c => c.semana))].sort((a, b) => b - a).slice(0, 4);
+      const semanasEnfundes = [...new Set(enfundesFiltradosAño.map(e => e.semana))].sort((a, b) => b - a).slice(0, 4);
+      return {
+        cosechasFiltradas: cosechasFiltradasAño.filter(c => semanasUnicas.includes(c.semana)),
+        enfundesFiltrados: enfundesFiltradosAño.filter(e => semanasEnfundes.includes(e.semana))
+      };
+    }
+    // Mensual y Anual usan todos los datos del año
+    return { cosechasFiltradas: cosechasFiltradasAño, enfundesFiltrados: enfundesFiltradosAño };
+  }, [cosechasFiltradasAño, enfundesFiltradosAño, periodo]);
+
+  // Título dinámico
+  const tituloComparativa = periodo === "semanal" ? "Comparativa de Fincas (Últimas 4 semanas)" : 
+                            periodo === "mensual" ? `Comparativa de Fincas (${año})` : 
+                            `Comparativa de Fincas - Total ${año}`;
 
   const fincas = ["BABY", "SOLO", "LAURITA", "MARAVILLA"] as const;
 
   const stats = fincas.map((finca) => {
-    const enfundesFinca = enfundes.filter((e) => e.finca === finca);
-    const cosechasFinca = cosechas.filter((c) => c.finca === finca);
+    const enfundesFinca = enfundesFiltrados.filter((e) => getFincaNombre(e.finca, e.fincaNombre) === finca);
+    const cosechasFinca = cosechasFiltradas.filter((c) => getFincaNombre(c.finca, c.fincaNombre) === finca);
 
     // Usar las propiedades correctas
     const totalEnfundes = enfundesFinca.reduce(
@@ -49,7 +88,7 @@ export function ComparativaFincas() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Comparativa de Fincas</CardTitle>
+        <CardTitle>{tituloComparativa}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {stats.map((stat) => (

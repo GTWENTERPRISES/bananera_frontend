@@ -38,6 +38,8 @@ import {
   Legend,
 } from "recharts";
 import { useApp } from "@/src/contexts/app-context";
+import { MapPin } from "lucide-react";
+import { Badge } from "@/src/components/ui/badge";
 
 // Definir tipos para los datos de predicción
 interface PrediccionData {
@@ -71,8 +73,39 @@ export default function PredictivoDashboard() {
   const [confianzaModelo, setConfianzaModelo] = useState("alta");
 
   // Usar el contexto de la aplicación
-  const { cosechas, enfundes, fincas, empleados, recuperacionCintas } =
+  const { cosechas, enfundes, fincas, empleados, recuperacionCintas, currentUser } =
     useApp();
+
+  const fincaAsignadaNombre = (() => {
+    if (!currentUser?.fincaAsignada) return null;
+    const f = fincas.find((fi) => fi.id === currentUser.fincaAsignada || fi.nombre === currentUser.fincaAsignada);
+    return f?.nombre || currentUser.fincaAsignada;
+  })();
+  const esFiltrado = currentUser?.rol === 'supervisor_finca' || currentUser?.rol === 'bodeguero';
+
+  // Factor de confianza para ajustar proyecciones
+  const getFactorConfianza = () => {
+    switch (confianzaModelo) {
+      case "alta": return { crecimiento: 1.10, variacion: 0.05 };
+      case "media": return { crecimiento: 1.08, variacion: 0.08 };
+      case "baja": return { crecimiento: 1.05, variacion: 0.12 };
+      default: return { crecimiento: 1.08, variacion: 0.08 };
+    }
+  };
+
+  // Semanas a proyectar según período
+  const getSemanasProyeccion = () => {
+    switch (periodoProyeccion) {
+      case "1": return 4;   // 1 mes = 4 semanas
+      case "3": return 13;  // 3 meses = 13 semanas
+      case "6": return 26;  // 6 meses = 26 semanas
+      case "12": return 52; // 12 meses = 52 semanas
+      default: return 13;
+    }
+  };
+
+  const factorConfianza = getFactorConfianza();
+  const semanasProyeccion = getSemanasProyeccion();
 
   // Calcular métricas basadas en datos reales
   const calcularMetricasPredictivas = () => {
@@ -86,12 +119,17 @@ export default function PredictivoDashboard() {
     const produccionPromedioSemanal =
       cosechas.length > 0 ? produccionTotal / cosechas.length : 0;
 
-    // Proyección basada en tendencia histórica
+    // Proyección basada en tendencia histórica y período seleccionado
     const produccionProyectada = Math.round(
-      produccionPromedioSemanal * 13 * 1.08
-    ); // 8% de crecimiento
-    const precioProyectado = 10.1;
-    const rentabilidadProyectada = 32.5;
+      produccionPromedioSemanal * semanasProyeccion * factorConfianza.crecimiento
+    );
+    
+    // Precio proyectado ajustado por confianza
+    const precioBase = 8.5;
+    const precioProyectado = Number((precioBase * (1 + (factorConfianza.crecimiento - 1) * 2)).toFixed(2));
+    
+    // Rentabilidad ajustada
+    const rentabilidadProyectada = Number((28 + (factorConfianza.crecimiento - 1) * 100).toFixed(1));
 
     return {
       produccionProyectada,
@@ -122,25 +160,29 @@ export default function PredictivoDashboard() {
       )
       .slice(-6);
 
-    // Datos de producción con proyección
+    // Datos de producción con proyección usando factor de confianza
     const produccionPrediccionData: PrediccionData[] = semanasOrdenadas.map(
       (semana, index) => {
         const produccionActual = produccionPorSemana[semana];
-        const esHistorico = index < semanasOrdenadas.length - 2; // Últimas 2 semanas son "actuales"
+        const esHistorico = index < semanasOrdenadas.length - 2;
 
         return {
           mes: semana,
           actual: produccionActual,
-          prediccion: esHistorico ? null : Math.round(produccionActual * 1.08), // 8% de crecimiento proyectado
+          prediccion: esHistorico ? null : Math.round(produccionActual * factorConfianza.crecimiento),
         };
       }
     );
 
-    // Agregar semanas futuras proyectadas
+    // Agregar semanas futuras proyectadas según período seleccionado
     const ultimaSemana = parseInt(
       semanasOrdenadas[semanasOrdenadas.length - 1]?.replace("Sem ", "") || "1"
     );
-    for (let i = 1; i <= 3; i++) {
+    
+    // Número de semanas a proyectar según período (mostrar máximo 6 en gráfico)
+    const semanasAMostrar = Math.min(semanasProyeccion, 6);
+    
+    for (let i = 1; i <= semanasAMostrar; i++) {
       const semanaProyectada = `Sem ${ultimaSemana + i}`;
       const ultimaProduccion =
         produccionPorSemana[semanasOrdenadas[semanasOrdenadas.length - 1]] ||
@@ -148,7 +190,7 @@ export default function PredictivoDashboard() {
       produccionPrediccionData.push({
         mes: semanaProyectada,
         actual: null,
-        prediccion: Math.round(ultimaProduccion * Math.pow(1.08, i)),
+        prediccion: Math.round(ultimaProduccion * Math.pow(factorConfianza.crecimiento, i)),
       });
     }
 
@@ -324,33 +366,53 @@ export default function PredictivoDashboard() {
       });
     }
 
-    // Recomendación por clima (simulada)
-    recomendaciones.push({
-      tipo: "clima",
-      titulo: "Preparación para Lluvias",
-      descripcion:
-        "El modelo predictivo indica un 68% de probabilidad de lluvias intensas en las próximas 4 semanas. Prepare sistemas de drenaje.",
-      accion: "Revisar infraestructura",
-    });
+    // Recomendación de optimización si hay datos
+    if (cosechas.length > 0 && metricas.produccionPromedioSemanal > 0) {
+      const ratioPromedio = cosechas.reduce((sum, c) => sum + (c.ratio || 0), 0) / cosechas.length;
+      if (ratioPromedio < 2.0) {
+        recomendaciones.push({
+          tipo: "optimizacion",
+          titulo: "Optimización de Ratio",
+          descripcion: `El ratio promedio actual es ${ratioPromedio.toFixed(2)} cajas/racimo. El objetivo óptimo es 2.2. Revise procesos de corte y selección.`,
+          accion: "Analizar procesos",
+        });
+      }
+    }
 
-    return recomendaciones.length > 0
-      ? recomendaciones
-      : [
-          {
-            tipo: "oportunidad",
-            titulo: "Expansión de Producción",
-            descripcion:
-              "El análisis sugiere que aumentar la densidad de siembra en parcelas subutilizadas podría incrementar la producción en un 12%.",
-            accion: "Estudiar expansión",
-          },
-          {
-            tipo: "optimizacion",
-            titulo: "Optimización de Recursos",
-            descripcion:
-              "Reducir el uso de fertilizante tipo B en un 15% y aumentar tipo A en 10% podría mejorar el rendimiento manteniendo costos.",
-            accion: "Ajustar fertilización",
-          },
-        ];
+    // Recomendación de enfundes si hay matas caídas elevadas
+    const totalMatasCaidas = enfundes.reduce((sum, e) => sum + (e.matasCaidas || 0), 0);
+    const totalEnfundesCount = enfundes.reduce((sum, e) => sum + e.cantidadEnfundes, 0);
+    const porcentajeMatas = totalEnfundesCount > 0 ? (totalMatasCaidas / totalEnfundesCount * 100) : 0;
+    
+    if (porcentajeMatas > 3) {
+      recomendaciones.push({
+        tipo: "alerta",
+        titulo: "Matas Caídas Elevadas",
+        descripcion: `Se registran ${totalMatasCaidas.toLocaleString()} matas caídas (${porcentajeMatas.toFixed(1)}% del total). Revise condiciones del cultivo y soporte de plantas.`,
+        accion: "Revisar cultivos",
+      });
+    }
+
+    // Si no hay recomendaciones específicas, mostrar resumen de estado
+    if (recomendaciones.length === 0) {
+      if (cosechas.length === 0) {
+        recomendaciones.push({
+          tipo: "info",
+          titulo: "Sin Datos Suficientes",
+          descripcion: "No hay registros de cosecha para analizar. Comience registrando datos de producción para obtener recomendaciones personalizadas.",
+          accion: "Registrar cosechas",
+        });
+      } else {
+        recomendaciones.push({
+          tipo: "oportunidad",
+          titulo: "Sistema Operando Correctamente",
+          descripcion: `Todos los indicadores están en rangos óptimos. Producción total: ${metricas.produccionTotal.toLocaleString()} cajas. Continúe monitoreando.`,
+          accion: "Ver dashboard",
+        });
+      }
+    }
+
+    return recomendaciones;
   };
 
   const recomendaciones = generarRecomendaciones();
@@ -363,8 +425,8 @@ export default function PredictivoDashboard() {
         return "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800";
       case "optimizacion":
         return "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800";
-      case "clima":
-        return "bg-cyan-50 dark:bg-cyan-900/20 border-cyan-200 dark:border-cyan-800";
+      case "info":
+        return "bg-slate-50 dark:bg-slate-900/20 border-slate-200 dark:border-slate-800";
       default:
         return "bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800";
     }
@@ -378,8 +440,8 @@ export default function PredictivoDashboard() {
         return "text-amber-800 dark:text-amber-300";
       case "optimizacion":
         return "text-blue-800 dark:text-blue-300";
-      case "clima":
-        return "text-cyan-800 dark:text-cyan-300";
+      case "info":
+        return "text-slate-800 dark:text-slate-300";
       default:
         return "text-gray-800 dark:text-gray-300";
     }
@@ -389,10 +451,17 @@ export default function PredictivoDashboard() {
     <div className="container mx-auto p-4 space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Dashboard Predictivo</h1>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl font-bold">Dashboard Predictivo</h1>
+            {esFiltrado && fincaAsignadaNombre && (
+              <Badge variant="outline" className="gap-1">
+                <MapPin className="h-3 w-3" />
+                {fincaAsignadaNombre}
+              </Badge>
+            )}
+          </div>
           <p className="text-muted-foreground">
-            Análisis predictivo y proyecciones basadas en datos reales de
-            producción
+            {esFiltrado && fincaAsignadaNombre ? `Predicciones de ${fincaAsignadaNombre}` : "Análisis predictivo y proyecciones basadas en datos reales de producción"}
           </p>
           <div className="text-sm text-muted-foreground mt-1">
             Datos analizados: {cosechas.length} cosechas, {enfundes.length}{" "}
@@ -440,24 +509,24 @@ export default function PredictivoDashboard() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">Producción Proyectada</CardTitle>
-            <CardDescription>Próximos 3 meses</CardDescription>
+            <CardDescription>Próximos {periodoProyeccion} {periodoProyeccion === "1" ? "mes" : "meses"} (Confianza: {confianzaModelo})</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
               {metricas.produccionProyectada.toLocaleString()} cajas
             </div>
             <div className="text-sm text-green-600 flex items-center">
-              <span>↑ 8.2% vs período anterior</span>
+              <span>↑ {((factorConfianza.crecimiento - 1) * 100).toFixed(1)}% crecimiento estimado</span>
             </div>
             <div className="text-xs text-muted-foreground mt-1">
-              Basado en {cosechas.length} registros históricos
+              Basado en {cosechas.length} registros · ±{(factorConfianza.variacion * 100).toFixed(0)}% variación
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">Precio Proyectado</CardTitle>
-            <CardDescription>Próximos 3 meses</CardDescription>
+            <CardDescription>Próximos {periodoProyeccion} {periodoProyeccion === "1" ? "mes" : "meses"}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
@@ -474,17 +543,17 @@ export default function PredictivoDashboard() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">Rentabilidad Proyectada</CardTitle>
-            <CardDescription>Próximos 3 meses</CardDescription>
+            <CardDescription>Próximos {periodoProyeccion} {periodoProyeccion === "1" ? "mes" : "meses"}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
               {metricas.rentabilidadProyectada}%
             </div>
             <div className="text-sm text-green-600 flex items-center">
-              <span>↑ 2.8% vs período anterior</span>
+              <span>↑ {((factorConfianza.crecimiento - 1) * 50).toFixed(1)}% vs período anterior</span>
             </div>
             <div className="text-xs text-muted-foreground mt-1">
-              Eficiencia operativa mejorada
+              Confianza {confianzaModelo} · {semanasProyeccion} semanas proyectadas
             </div>
           </CardContent>
         </Card>
@@ -578,21 +647,22 @@ export default function PredictivoDashboard() {
                 <h4 className="font-semibold mb-2">Insights del Modelo IA</h4>
                 <ul className="space-y-2 text-sm">
                   <li>
-                    • Se proyecta un incremento sostenido del 3.2% semanal en la
-                    producción
-                  </li>
-                  <li>
-                    • Factores climáticos favorables contribuirán al aumento de
-                    rendimiento
-                  </li>
-                  <li>
-                    • Se recomienda preparar logística para manejar el
-                    incremento proyectado
-                  </li>
-                  <li>
                     • Producción histórica analizada:{" "}
-                    {metricas.produccionTotal.toLocaleString()} cajas totales
+                    {metricas.produccionTotal.toLocaleString()} cajas totales en {cosechas.length} registros
                   </li>
+                  <li>
+                    • Promedio semanal: {Math.round(metricas.produccionPromedioSemanal).toLocaleString()} cajas/semana
+                  </li>
+                  {metricas.produccionPromedioSemanal > 0 && (
+                    <li>
+                      • Proyección próximo trimestre: {metricas.produccionProyectada.toLocaleString()} cajas (+8% estimado)
+                    </li>
+                  )}
+                  {cosechas.length === 0 && (
+                    <li>
+                      • No hay datos suficientes para generar proyecciones. Registre cosechas para obtener insights.
+                    </li>
+                  )}
                 </ul>
               </div>
             </CardContent>
@@ -641,19 +711,18 @@ export default function PredictivoDashboard() {
                 <h4 className="font-semibold mb-2">Insights del Modelo IA</h4>
                 <ul className="space-y-2 text-sm">
                   <li>
-                    • Se proyecta un incremento gradual en los precios del
-                    mercado internacional
+                    • Precio base actual: $8.50/caja - Proyectado: ${metricas.precioProyectado.toFixed(2)}/caja
                   </li>
                   <li>
-                    • La demanda en mercados europeos muestra tendencia al alza
+                    • Valor estimado de producción: ${(metricas.produccionTotal * 8.5).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </li>
+                  {metricas.produccionProyectada > 0 && (
+                    <li>
+                      • Ingreso proyectado próximo trimestre: ${(metricas.produccionProyectada * metricas.precioProyectado).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </li>
+                  )}
                   <li>
-                    • Se recomienda considerar contratos a futuro para asegurar
-                    mejores precios
-                  </li>
-                  <li>
-                    • Análisis basado en tendencias de mercado y producción
-                    local
+                    • Análisis basado en {cosechas.length} registros de producción
                   </li>
                 </ul>
               </div>

@@ -25,12 +25,15 @@ import { DollarSign } from "lucide-react";
 import { useToast } from "@/src/hooks/use-toast";
 import { PrestamoSchema } from "@/src/lib/validation";
 import { Spinner } from "@/src/components/ui/spinner";
+import { FieldFeedback, getInputClassName } from "@/src/components/ui/field-feedback";
 
 export function PrestamoForm() {
-  const { addPrestamo, empleados } = useApp();
+  const { addPrestamo, getFilteredEmpleados } = useApp();
+  const empleados = getFilteredEmpleados();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [formData, setFormData] = useState({
     empleadoId: "",
     monto: "",
@@ -42,6 +45,45 @@ export function PrestamoForm() {
   const valorCuota =
     Number.parseFloat(formData.monto || "0") /
     Number.parseInt(formData.numeroCuotas || "1");
+
+  const validateField = (field: string, value: any): string => {
+    try {
+      const dataToValidate = {
+        empleadoId: formData.empleadoId,
+        monto: formData.monto,
+        numeroCuotas: formData.numeroCuotas,
+        fechaDesembolso: formData.fechaDesembolso,
+        motivo: formData.motivo || undefined,
+        [field]: value,
+      };
+      const parsed = PrestamoSchema.safeParse(dataToValidate);
+      if (!parsed.success) {
+        const flat = parsed.error.flatten().fieldErrors;
+        const fieldError = flat[field as keyof typeof flat];
+        if (fieldError && fieldError.length > 0) {
+          return String(fieldError[0]);
+        }
+      }
+      return "";
+    } catch {
+      return "";
+    }
+  };
+
+  const handleFieldChange = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (touched[field] || value !== "") {
+      const err = validateField(field, value);
+      setErrors(prev => ({ ...prev, [field]: err }));
+    }
+    setTouched(prev => ({ ...prev, [field]: true }));
+  };
+
+  const handleFieldBlur = (field: string, value: any) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+    const err = validateField(field, value);
+    setErrors(prev => ({ ...prev, [field]: err }));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,7 +159,8 @@ export function PrestamoForm() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="empleado">Empleado</Label>
+              <Label htmlFor="empleado">Empleado *</Label>
+              <p className="text-xs text-muted-foreground">Trabajador que recibirá el préstamo</p>
               <Select
                 value={formData.empleadoId}
                 onValueChange={(value) =>
@@ -145,46 +188,53 @@ export function PrestamoForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="monto">Monto del Préstamo ($)</Label>
+              <Label htmlFor="monto">Monto del Préstamo ($) *</Label>
+              <p className="text-xs text-muted-foreground">Valor total a prestar</p>
               <Input
                 id="monto"
                 type="number"
                 step="0.01"
                 min="0"
                 value={formData.monto}
-                onChange={(e) =>
-                  (setFormData({ ...formData, monto: e.target.value }), setErrors((prev) => ({ ...prev, monto: "" })))
-                }
+                onChange={(e) => handleFieldChange("monto", e.target.value)}
+                onBlur={(e) => handleFieldBlur("monto", e.target.value)}
                 disabled={isSubmitting}
                 required
+                className={getInputClassName(errors, touched, "monto", formData.monto)}
               />
-              {errors.monto && (
-                <p className="text-xs text-red-600">{errors.monto}</p>
-              )}
+              <FieldFeedback
+                error={errors.monto}
+                touched={touched.monto}
+                isValid={!errors.monto && !!formData.monto}
+                successMessage="Monto válido"
+              />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="numeroCuotas">Número de Cuotas</Label>{" "}
-              {/* Cambiado id */}
+              <Label htmlFor="numeroCuotas">Número de Cuotas *</Label>
+              <p className="text-xs text-muted-foreground">Cuotas para pagar el préstamo</p>
               <Input
                 id="numeroCuotas"
                 type="number"
                 min="1"
                 value={formData.numeroCuotas}
-                onChange={(e) =>
-                  (setFormData({ ...formData, numeroCuotas: e.target.value }), setErrors((prev) => ({ ...prev, numeroCuotas: "" })))
-                }
+                onChange={(e) => handleFieldChange("numeroCuotas", e.target.value)}
+                onBlur={(e) => handleFieldBlur("numeroCuotas", e.target.value)}
                 disabled={isSubmitting}
                 required
+                className={getInputClassName(errors, touched, "numeroCuotas", formData.numeroCuotas)}
               />
-              {errors.numeroCuotas && (
-                <p className="text-xs text-red-600">{errors.numeroCuotas}</p>
-              )}
+              <FieldFeedback
+                error={errors.numeroCuotas}
+                touched={touched.numeroCuotas}
+                isValid={!errors.numeroCuotas && !!formData.numeroCuotas}
+                successMessage="Número de cuotas válido"
+              />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="fechaDesembolso">Fecha del Desembolso</Label>{" "}
-              {/* Cambiado id */}
+              <Label htmlFor="fechaDesembolso">Fecha del Desembolso *</Label>
+              <p className="text-xs text-muted-foreground">Día que se entregó el dinero</p>
               <Input
                 id="fechaDesembolso"
                 type="date"

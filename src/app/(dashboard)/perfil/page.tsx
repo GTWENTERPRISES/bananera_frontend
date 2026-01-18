@@ -22,7 +22,7 @@ export default function PerfilPage() {
   const [password, setPassword] = useState("");
   const [avatarFileName, setAvatarFileName] = useState<string>("");
 
-  const save = () => {
+  const save = async () => {
     if (!currentUser) return;
     try {
       const validated = UsuarioSchema.parse({
@@ -35,17 +35,35 @@ export default function PerfilPage() {
         activo: currentUser.activo,
       });
 
-      updateUsuario(currentUser.id, {
+      // Actualizar en el backend
+      await updateUsuario(currentUser.id, {
         nombre: validated.nombre,
         email: validated.email,
         telefono: validated.telefono,
         avatar,
         password: validated.password,
       });
-      setCurrentUser({ ...currentUser, nombre: validated.nombre, email: validated.email, telefono: validated.telefono, avatar, password: validated.password || currentUser.password });
+      
+      // Actualizar localmente
+      setCurrentUser({ 
+        ...currentUser, 
+        nombre: validated.nombre, 
+        email: validated.email, 
+        telefono: validated.telefono, 
+        avatar
+      });
+      
       toast({ title: "Perfil actualizado", description: "Tus cambios se guardaron correctamente" });
+      
+      // Limpiar el campo de contraseña
+      setPassword("");
     } catch (err) {
-      toast({ title: "Datos inválidos", description: "Verifica los campos ingresados", variant: "destructive" });
+      console.error("Error guardando perfil:", err);
+      toast({ 
+        title: "Error al guardar", 
+        description: "Verifica los campos ingresados", 
+        variant: "destructive" 
+      });
     }
   };
 

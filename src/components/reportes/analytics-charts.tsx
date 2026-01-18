@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -10,11 +11,6 @@ import { useApp } from "@/src/contexts/app-context";
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -23,80 +19,133 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-export function AnalyticsCharts() {
-  const { enfundes, cosechas, empleados } = useApp();
+interface AnalyticsChartsProps {
+  año?: string;
+  periodo?: string;
+}
+
+export function AnalyticsCharts({ año = "2025", periodo = "mensual" }: AnalyticsChartsProps) {
+  const { enfundes, cosechas, fincas: fincasData } = useApp();
+
+  // Helper para obtener nombre de finca desde UUID
+  const getFincaNombre = (fincaId: string, fincaNombre?: string): string => {
+    if (fincaNombre && fincaNombre !== 'Sin asignar') return fincaNombre;
+    const f = fincasData.find(f => f.id === fincaId || f.nombre === fincaId);
+    return f?.nombre || fincaId;
+  };
+
+  // Filtrar por año
+  const enfundesFiltrados = useMemo(() => 
+    enfundes.filter(e => e.año.toString() === año), [enfundes, año]);
+  const cosechasFiltradas = useMemo(() => 
+    cosechas.filter(c => c.año.toString() === año), [cosechas, año]);
+
+  // Filtrar según periodo
+  const getDataFiltradaPorPeriodo = useMemo(() => {
+    if (periodo === "semanal") {
+      // Últimas 4 semanas disponibles
+      const semanasUnicas = [...new Set(cosechasFiltradas.map(c => c.semana))].sort((a, b) => b - a).slice(0, 4);
+      const semanasEnfundes = [...new Set(enfundesFiltrados.map(e => e.semana))].sort((a, b) => b - a).slice(0, 4);
+      return {
+        cosechas: cosechasFiltradas.filter(c => semanasUnicas.includes(c.semana)),
+        enfundes: enfundesFiltrados.filter(e => semanasEnfundes.includes(e.semana))
+      };
+    }
+    // Mensual y Anual usan todos los datos del año
+    return { cosechas: cosechasFiltradas, enfundes: enfundesFiltrados };
+  }, [cosechasFiltradas, enfundesFiltrados, periodo]);
 
   // Production by farm - usando cantidad en lugar de contar registros
-  const produccionPorFinca = [
-    {
-      finca: "BABY",
-      enfundes: enfundes
-        .filter((e) => e.finca === "BABY")
-        .reduce((sum, e) => sum + e.cantidadEnfundes, 0),
-      cosechas: cosechas
-        .filter((c) => c.finca === "BABY")
-        .reduce((sum, c) => sum + c.cajasProducidas, 0),
-    },
-    {
-      finca: "SOLO",
-      enfundes: enfundes
-        .filter((e) => e.finca === "SOLO")
-        .reduce((sum, e) => sum + e.cantidadEnfundes, 0),
-      cosechas: cosechas
-        .filter((c) => c.finca === "SOLO")
-        .reduce((sum, c) => sum + c.cajasProducidas, 0),
-    },
-    {
-      finca: "LAURITA",
-      enfundes: enfundes
-        .filter((e) => e.finca === "LAURITA")
-        .reduce((sum, e) => sum + e.cantidadEnfundes, 0),
-      cosechas: cosechas
-        .filter((c) => c.finca === "LAURITA")
-        .reduce((sum, c) => sum + c.cajasProducidas, 0),
-    },
-    {
-      finca: "MARAVILLA",
-      enfundes: enfundes
-        .filter((e) => e.finca === "MARAVILLA")
-        .reduce((sum, e) => sum + e.cantidadEnfundes, 0),
-      cosechas: cosechas
-        .filter((c) => c.finca === "MARAVILLA")
-        .reduce((sum, c) => sum + c.cajasProducidas, 0),
-    },
-  ];
+  const produccionPorFinca = useMemo(() => {
+    const { cosechas: cosechasData, enfundes: enfundesData } = getDataFiltradaPorPeriodo;
+    return [
+      {
+        finca: "BABY",
+        enfundes: enfundesData
+          .filter((e) => getFincaNombre(e.finca, e.fincaNombre) === "BABY")
+          .reduce((sum, e) => sum + e.cantidadEnfundes, 0),
+        cosechas: cosechasData
+          .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "BABY")
+          .reduce((sum, c) => sum + c.cajasProducidas, 0),
+      },
+      {
+        finca: "SOLO",
+        enfundes: enfundesData
+          .filter((e) => getFincaNombre(e.finca, e.fincaNombre) === "SOLO")
+          .reduce((sum, e) => sum + e.cantidadEnfundes, 0),
+        cosechas: cosechasData
+          .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "SOLO")
+          .reduce((sum, c) => sum + c.cajasProducidas, 0),
+      },
+      {
+        finca: "LAURITA",
+        enfundes: enfundesData
+          .filter((e) => getFincaNombre(e.finca, e.fincaNombre) === "LAURITA")
+          .reduce((sum, e) => sum + e.cantidadEnfundes, 0),
+        cosechas: cosechasData
+          .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "LAURITA")
+          .reduce((sum, c) => sum + c.cajasProducidas, 0),
+      },
+      {
+        finca: "MARAVILLA",
+        enfundes: enfundesData
+          .filter((e) => getFincaNombre(e.finca, e.fincaNombre) === "MARAVILLA")
+          .reduce((sum, e) => sum + e.cantidadEnfundes, 0),
+        cosechas: cosechasData
+          .filter((c) => getFincaNombre(c.finca, c.fincaNombre) === "MARAVILLA")
+          .reduce((sum, c) => sum + c.cajasProducidas, 0),
+      },
+    ];
+  }, [getDataFiltradaPorPeriodo, fincasData]);
 
-  // Employees by labor (usando la propiedad correcta 'labor' en lugar de 'rol')
-  const empleadosPorLabor = [
-    {
-      labor: "Enfunde",
-      cantidad: empleados.filter((e) => e.labor === "Enfunde").length,
-    },
-    {
-      labor: "Cosecha",
-      cantidad: empleados.filter((e) => e.labor === "Cosecha").length,
-    },
-    {
-      labor: "Calibración",
-      cantidad: empleados.filter((e) => e.labor === "Calibración").length,
-    },
-    {
-      labor: "Varios",
-      cantidad: empleados.filter((e) => e.labor === "Varios").length,
-    },
-    {
-      labor: "Administrador",
-      cantidad: empleados.filter((e) => e.labor === "Administrador").length,
-    },
-  ];
+  // Título dinámico para Producción por Finca
+  const tituloProduccion = periodo === "semanal" ? "Producción por Finca (Últimas 4 semanas)" : 
+                           periodo === "mensual" ? `Producción por Finca (${año})` : 
+                           `Producción por Finca - Total ${año}`;
 
-  // Weekly trend - usando datos reales de cosechas si están disponibles
-  const tendenciaSemanal = [
-    { semana: "Sem 1", produccion: 450 },
-    { semana: "Sem 2", produccion: 520 },
-    { semana: "Sem 3", produccion: 480 },
-    { semana: "Sem 4", produccion: 590 },
-  ];
+
+  // Meses para agrupación mensual
+  const meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
+  // Tendencia según periodo seleccionado
+  const tendenciaData = useMemo(() => {
+    if (periodo === "semanal") {
+      const semanasUnicas = [...new Set(cosechasFiltradas.map((c) => c.semana))].sort((a, b) => a - b).slice(-12);
+      if (semanasUnicas.length === 0) {
+        return [{ label: "Sin datos", produccion: 0 }];
+      }
+      return semanasUnicas.map((sem) => ({
+        label: `Sem ${sem}`,
+        produccion: cosechasFiltradas
+          .filter((c) => c.semana === sem)
+          .reduce((sum, c) => sum + c.cajasProducidas, 0),
+      }));
+    } else if (periodo === "mensual") {
+      return meses.map((mes, idx) => {
+        const mesNum = idx + 1;
+        const cosechasMes = cosechasFiltradas.filter((c) => {
+          const semana = c.semana;
+          const mesCalculado = Math.ceil(semana / 4.33);
+          return mesCalculado === mesNum;
+        });
+        return {
+          label: mes,
+          produccion: cosechasMes.reduce((sum, c) => sum + c.cajasProducidas, 0),
+        };
+      });
+    } else {
+      // Anual - mostrar total del año
+      return [{
+        label: año,
+        produccion: cosechasFiltradas.reduce((sum, c) => sum + c.cajasProducidas, 0),
+      }];
+    }
+  }, [cosechasFiltradas, periodo, año]);
+
+  // Título dinámico según periodo
+  const tituloTendencia = periodo === "semanal" ? "Tendencia Semanal" : 
+                          periodo === "mensual" ? "Tendencia Mensual" : 
+                          "Total Anual";
 
   const COLORS = [
     "var(--chart-1)",
@@ -110,7 +159,7 @@ export function AnalyticsCharts() {
     <div className="grid gap-6 md:grid-cols-2">
       <Card>
         <CardHeader>
-          <CardTitle>Producción por Finca</CardTitle>
+          <CardTitle>{tituloProduccion}</CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
@@ -143,49 +192,13 @@ export function AnalyticsCharts() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Empleados por Labor</CardTitle>
+          <CardTitle>{tituloTendencia} de Producción ({año})</CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={empleadosPorLabor}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ labor, cantidad }) => `${labor}: ${cantidad}`}
-                outerRadius={100}
-                fill="#8884d8"
-                dataKey="cantidad"
-              >
-                {empleadosPorLabor.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={COLORS[index % COLORS.length]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "var(--background)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "8px",
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      <Card className="md:col-span-2">
-        <CardHeader>
-          <CardTitle>Tendencia de Producción Semanal</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={tendenciaSemanal}>
+            <BarChart data={tendenciaData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis dataKey="semana" stroke="var(--muted-foreground)" />
+              <XAxis dataKey="label" stroke="var(--muted-foreground)" />
               <YAxis stroke="var(--muted-foreground)" />
               <Tooltip
                 contentStyle={{
@@ -195,15 +208,12 @@ export function AnalyticsCharts() {
                 }}
               />
               <Legend />
-              <Line
-                type="monotone"
+              <Bar
                 dataKey="produccion"
-                stroke="var(--chart-1)"
-                strokeWidth={2}
-                dot={{ r: 3, stroke: "var(--chart-1)", fill: "var(--chart-1)" }}
+                fill="var(--chart-1)"
                 name="Producción (Cajas)"
               />
-            </LineChart>
+            </BarChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>

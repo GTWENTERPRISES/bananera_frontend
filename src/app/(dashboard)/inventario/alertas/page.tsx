@@ -127,7 +127,15 @@ export default function AlertasInventarioPage() {
     <div className={cn("responsive-container space-y-4 md:space-y-6", isMobile && "px-2")}>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Alertas de Inventario</h2>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Alertas de Inventario</h2>
+            {(currentUser?.rol === 'supervisor_finca' || currentUser?.rol === 'bodeguero') && currentUser?.fincaAsignada && (
+              <Badge variant="outline" className="gap-1">
+                <Package className="h-3 w-3" />
+                {fincas.find(f => f.id === currentUser.fincaAsignada)?.nombre || currentUser.fincaAsignada}
+              </Badge>
+            )}
+          </div>
           <p className="text-muted-foreground">
             Monitorea niveles bajos de stock y productos próximos a caducar
           </p>

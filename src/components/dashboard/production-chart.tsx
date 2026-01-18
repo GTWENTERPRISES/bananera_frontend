@@ -20,7 +20,8 @@ import { useApp } from "@/src/contexts/app-context";
 import { useIsMobile } from "@/src/hooks/use-mobile";
 
 export function ProductionChart() {
-  const { cosechas } = useApp();
+  const { getFilteredCosechas } = useApp();
+  const cosechas = getFilteredCosechas();
   const isMobile = useIsMobile();
 
   const data = cosechas.map((c) => ({

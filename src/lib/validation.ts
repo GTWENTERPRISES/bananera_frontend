@@ -1,8 +1,15 @@
 import { z } from "zod";
 
+// Enums sincronizados con Django backend choices
 const FincaEnum = z.enum(["BABY", "SOLO", "LAURITA", "MARAVILLA"]);
 const CategoriaEnum = z.enum(["fertilizante", "protector", "herramienta", "empaque", "otro"]);
 const UserRoleEnum = z.enum(["administrador", "gerente", "supervisor_finca", "contador_rrhh", "bodeguero"]);
+const LaborEmpleadoEnum = z.enum(["Enfunde", "Cosecha", "Calibración", "Varios", "Administrador", "Supervisor", "Fumigación", "Mantenimiento"]);
+const VariedadBananoEnum = z.enum(["Cavendish", "Clon", "Williams", "Gran Enano", "Otro"]);
+const LoteEnum = z.enum(["A", "B", "C", "D", "E"]);
+const ColorCintaEnum = z.enum(["azul", "rojo", "amarillo", "verde", "naranja", "morado", "rosado", "blanco"]);
+const EstadoFincaEnum = z.enum(["activa", "inactiva", "mantenimiento"]);
+const UnidadMedidaEnum = z.enum(["kg", "L", "unidades", "rollos", "pares", "cajas", "galones", "sacos"]);
 
 export const isValidEcuadorPhone = (raw: string) => {
   const digits = raw.replace(/\D/g, "");
@@ -67,17 +74,17 @@ export const UsuarioSchema = z.object({
 
 export const EmpleadoSchema = z.object({
   nombre: nonEmpty,
-  cedula: nonEmpty.refine((v) => isValidEcuadorCedula(v)),
-  labor: nonEmpty,
-  finca: FincaEnum,
+  cedula: nonEmpty.refine((v) => isValidEcuadorCedula(v), { message: "Cédula ecuatoriana inválida" }),
+  labor: LaborEmpleadoEnum,
+  finca: z.string().min(1, "Selecciona una finca"), // Acepta UUID de finca
   tarifaDiaria: numberString.refine((v) => Number(v) >= 0),
   fechaIngreso: dateString,
   telefono: z
     .string()
     .optional()
-    .refine((v) => !v || isValidEcuadorPhone(v)),
+    .refine((v) => !v || isValidEcuadorPhone(v), { message: "Teléfono ecuatoriano inválido" }),
   activo: z.boolean(),
-  lote: z.string().optional(),
+  lote: LoteEnum.optional(),
   direccion: nonEmpty,
   cuentaBancaria: nonEmpty,
 });
@@ -85,7 +92,7 @@ export const EmpleadoSchema = z.object({
 export const InsumoSchema = z.object({
   nombre: nonEmpty,
   categoria: CategoriaEnum,
-  unidadMedida: nonEmpty,
+  unidadMedida: UnidadMedidaEnum,
   stockActual: numberString.refine((v) => Number(v) >= 0),
   stockMinimo: numberString.refine((v) => Number(v) >= 0),
   stockMaximo: numberString.refine((v) => Number(v) >= 0),
@@ -98,26 +105,26 @@ export const MovimientoInventarioSchema = z.object({
   insumoId: nonEmpty,
   tipo: z.enum(["entrada", "salida"]),
   cantidad: numberString.refine((v) => Number(v) > 0),
-  finca: FincaEnum,
+  finca: z.string().min(1, "Selecciona una finca"), // Acepta UUID de finca
   motivo: nonEmpty,
   responsable: nonEmpty,
 });
 
 export const EnfundeSchema = z.object({
-  finca: FincaEnum,
+  finca: z.string().min(1, "Selecciona una finca"), // Acepta UUID de finca
   semana: intString.refine((v) => {
     const n = Number(v);
     return n >= 1 && n <= 53;
   }),
   año: intString,
-  colorCinta: z.enum(["Azul", "Rojo", "Verde", "Amarillo", "Blanco", "Naranja"]),
+  colorCinta: ColorCintaEnum,
   cantidadEnfundes: intString.refine((v) => Number(v) >= 0),
   matasCaidas: intString.refine((v) => Number(v) >= 0),
   fecha: dateString,
 });
 
 export const CosechaSchema = z.object({
-  finca: FincaEnum,
+  finca: z.string().min(1, "Selecciona una finca"), // Acepta UUID de finca
   semana: intString.refine((v) => {
     const n = Number(v);
     return n >= 1 && n <= 53;
@@ -132,13 +139,13 @@ export const CosechaSchema = z.object({
 });
 
 export const RecuperacionCintaSchema = z.object({
-  finca: FincaEnum,
+  finca: z.string().min(1, "Selecciona una finca"), // Acepta UUID de finca
   semana: intString.refine((v) => {
     const n = Number(v);
     return n >= 1 && n <= 53;
   }),
   año: intString,
-  colorCinta: z.enum(["Azul", "Rojo", "Verde", "Amarillo", "Blanco", "Naranja"]),
+  colorCinta: ColorCintaEnum,
   enfundesIniciales: intString.refine((v) => Number(v) >= 0),
   primeraCalCosecha: intString.refine((v) => Number(v) >= 0),
   segundaCalCosecha: intString.refine((v) => Number(v) >= 0),
@@ -177,13 +184,13 @@ export const FincaSchema = z.object({
   hectareas: numberString.refine((v) => Number(v) > 0),
   ubicacion: z.string().optional(),
   responsable: z.string().optional(),
-  variedad: z.enum(["Cavendish", "Clon", "Otro"]),
+  variedad: VariedadBananoEnum,
   plantasTotales: numberString.refine((v) => Number(v) >= 0),
   fechaSiembra: z.string().optional(),
-  estado: z.enum(["activa", "inactiva"]),
+  estado: EstadoFincaEnum,
   coordenadas: z.string().optional(),
   telefono: z
     .string()
     .optional()
-    .refine((v) => !v || isValidEcuadorPhone(v)),
+    .refine((v) => !v || isValidEcuadorPhone(v), { message: "Teléfono ecuatoriano inválido" }),
 });

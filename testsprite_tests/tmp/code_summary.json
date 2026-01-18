@@ -1,0 +1,198 @@
+{
+  "tech_stack": [
+    "TypeScript",
+    "React 19",
+    "Next.js 16",
+    "TailwindCSS",
+    "shadcn/ui",
+    "Recharts",
+    "Leaflet",
+    "Django REST Framework (Backend)",
+    "PostgreSQL + PostGIS (Database)",
+    "JWT Authentication"
+  ],
+  "features": [
+    {
+      "name": "Authentication",
+      "description": "User login/logout with JWT tokens and role-based access control (admin, gerente, supervisor_finca, contador_rrhh, bodeguero)",
+      "files": [
+        "src/app/(auth)/login/page.tsx",
+        "src/contexts/app-context.tsx",
+        "src/lib/api-client.ts"
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "description": "Main dashboard showing production metrics, weekly stats, alerts, and quick access cards",
+      "files": [
+        "src/app/(dashboard)/page.tsx",
+        "src/components/dashboard/stats-card.tsx",
+        "src/components/dashboard/production-chart.tsx",
+        "src/components/dashboard/trend-chart.tsx",
+        "src/components/dashboard/quick-actions.tsx"
+      ]
+    },
+    {
+      "name": "Enfundes Management",
+      "description": "CRUD operations for banana bagging records including week, year, ribbon color, and fallen plants",
+      "files": [
+        "src/app/(dashboard)/produccion/enfundes/page.tsx",
+        "src/components/produccion/enfundes-table.tsx",
+        "src/components/produccion/enfunde-form.tsx"
+      ]
+    },
+    {
+      "name": "Cosechas Management",
+      "description": "CRUD operations for harvest records including bunches, boxes produced, ratio, and waste percentage",
+      "files": [
+        "src/app/(dashboard)/produccion/cosechas/page.tsx",
+        "src/components/produccion/cosechas-table.tsx",
+        "src/components/produccion/cosecha-form.tsx"
+      ]
+    },
+    {
+      "name": "Productivity Heatmap",
+      "description": "Visual heatmap showing production by lot (A-E) for each farm with color intensity based on output",
+      "files": [
+        "src/app/(dashboard)/produccion/mapa/page.tsx",
+        "src/components/produccion/heatmap-productivity.tsx"
+      ]
+    },
+    {
+      "name": "Ribbon Recovery",
+      "description": "Track ribbon usage and recovery rates across farms and weeks",
+      "files": [
+        "src/app/(dashboard)/produccion/recuperacion-cintas/page.tsx",
+        "src/components/produccion/recuperacion-cintas-table.tsx",
+        "src/components/produccion/recuperacion-cinta-form.tsx"
+      ]
+    },
+    {
+      "name": "Inventory Management",
+      "description": "CRUD for supplies/inputs with stock levels, categories, suppliers, and expiration dates",
+      "files": [
+        "src/app/(dashboard)/inventario/page.tsx",
+        "src/components/inventario/insumos-table.tsx",
+        "src/components/inventario/insumo-form.tsx"
+      ]
+    },
+    {
+      "name": "Inventory Alerts",
+      "description": "Display alerts when stock_actual < stock_minimo for any supply item",
+      "files": [
+        "src/app/(dashboard)/inventario/alertas/page.tsx",
+        "src/components/inventario/alertas-inventario.tsx"
+      ]
+    },
+    {
+      "name": "Inventory Movements",
+      "description": "Track entry/exit movements of supplies with quantity, type, and date",
+      "files": [
+        "src/app/(dashboard)/inventario/movimientos/page.tsx",
+        "src/components/inventario/movimientos-table.tsx",
+        "src/components/inventario/movimiento-form.tsx"
+      ]
+    },
+    {
+      "name": "Employee Management",
+      "description": "CRUD for employees with farm assignment, position, and contact information",
+      "files": [
+        "src/app/(dashboard)/nomina/empleados/page.tsx",
+        "src/components/nomina/empleados-table.tsx",
+        "src/components/nomina/empleado-form.tsx"
+      ]
+    },
+    {
+      "name": "Payroll (Roles de Pago)",
+      "description": "Generate and manage payroll records with salary calculations, bonuses, and deductions",
+      "files": [
+        "src/app/(dashboard)/nomina/roles-pago/page.tsx",
+        "src/components/nomina/roles-pago-table.tsx",
+        "src/components/nomina/rol-pago-form.tsx"
+      ]
+    },
+    {
+      "name": "Loans Management",
+      "description": "Track employee loans with installments and pending balances",
+      "files": [
+        "src/app/(dashboard)/nomina/prestamos/page.tsx",
+        "src/components/nomina/prestamos-table.tsx",
+        "src/components/nomina/prestamo-form.tsx"
+      ]
+    },
+    {
+      "name": "Reports Dashboard",
+      "description": "Interactive charts showing production by farm, trends, and farm comparisons with temporal filters",
+      "files": [
+        "src/app/(dashboard)/reportes/page.tsx",
+        "src/components/reportes/analytics-charts.tsx",
+        "src/components/reportes/comparativa-fincas.tsx",
+        "src/components/reportes/ai-insights.tsx"
+      ]
+    },
+    {
+      "name": "Production Reports",
+      "description": "Detailed production reports with weekly/monthly data and PDF export",
+      "files": [
+        "src/app/(dashboard)/reportes/produccion/page.tsx"
+      ]
+    },
+    {
+      "name": "Predictive Analytics",
+      "description": "AI-powered projections for production, prices, and risks with configurable period and confidence levels",
+      "files": [
+        "src/app/(dashboard)/analytics/predictivo/page.tsx"
+      ]
+    },
+    {
+      "name": "Farm Management",
+      "description": "CRUD for farms with geolocation, lots, and responsible person",
+      "files": [
+        "src/app/(dashboard)/fincas/page.tsx",
+        "src/components/fincas/fincas-table.tsx",
+        "src/components/fincas/finca-form.tsx"
+      ]
+    },
+    {
+      "name": "Interactive Map",
+      "description": "Leaflet-based map showing farm locations and lot boundaries",
+      "files": [
+        "src/app/(dashboard)/mapa/page.tsx",
+        "src/components/mapa/mapa-fincas.tsx"
+      ]
+    },
+    {
+      "name": "User Management",
+      "description": "Admin interface for managing system users and their roles",
+      "files": [
+        "src/app/(dashboard)/usuarios/page.tsx",
+        "src/components/usuarios/usuarios-table.tsx",
+        "src/components/usuarios/usuario-form.tsx"
+      ]
+    },
+    {
+      "name": "App Context",
+      "description": "Global state management using React Context for all data entities and API operations",
+      "files": [
+        "src/contexts/app-context.tsx"
+      ]
+    },
+    {
+      "name": "API Client",
+      "description": "HTTP client for communicating with Django REST backend with JWT authentication",
+      "files": [
+        "src/lib/api-client.ts",
+        "src/lib/api-mapper.ts"
+      ]
+    },
+    {
+      "name": "Layout Components",
+      "description": "App shell with sidebar navigation, header, and responsive design",
+      "files": [
+        "src/components/layout/app-sidebar.tsx",
+        "src/components/layout/app-header.tsx",
+        "src/app/(dashboard)/layout.tsx"
+      ]
+    }
+  ]
+}

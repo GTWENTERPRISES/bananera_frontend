@@ -24,20 +24,23 @@ import type { FincaName, RecuperacionCinta } from "@/src/lib/types"; // Cambia F
 import { Calculator, AlertTriangle } from "lucide-react";
 import { useToast } from "@/src/hooks/use-toast";
 import { RecuperacionCintaSchema } from "@/src/lib/validation";
+import { FieldFeedback, getInputClassName } from "@/src/components/ui/field-feedback";
 import { cn } from "@/src/lib/utils";
 import { useApp } from "@/src/contexts/app-context";
 import { Spinner } from "@/src/components/ui/spinner";
 
 export function RecuperacionForm() {
-  const { addRecuperacionCinta, canAccess, recuperacionCintas } = useApp();
+  const { addRecuperacionCinta, canAccess, recuperacionCintas, fincas } = useApp();
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [registeredWeeks, setRegisteredWeeks] = useState<number[]>([]);
   const [formData, setFormData] = useState({
-    finca: undefined as FincaName | undefined,
+    finca: undefined as string | undefined,
     semana: "",
-    año: "2025",
+    año: new Date().getFullYear().toString(),
     colorCinta: "",
     enfundesIniciales: "",
     primeraCalCosecha: "",
@@ -73,18 +76,81 @@ export function RecuperacionForm() {
         100
       : 0;
 
-  // Función helper para validar el tipo FincaName
-  const isValidFinca = (value: string): value is FincaName => {
-    return ["BABY", "SOLO", "LAURITA", "MARAVILLA"].includes(value);
+  // Función helper para validar UUID de finca
+  const isValidFinca = (value: string): boolean => {
+    return fincas.some(f => f.id === value);
+  };
+  
+  // Helper para obtener el nombre de la finca por UUID
+  const getFincaNombre = (fincaId: string): string => {
+    return fincas.find(f => f.id === fincaId)?.nombre || fincaId;
   };
 
   // Manejar cambio de finca de forma segura
   const handleFincaChange = (value: string) => {
     if (isValidFinca(value)) {
-      setFormData({ ...formData, finca: value });
+      setFormData({ ...formData, finca: value, semana: "" });
+      setErrors(prev => ({ ...prev, finca: "" }));
+      
+      // Filtrar semanas ya registradas para esta finca y año
+      const añoActual = Number.parseInt(formData.año);
+      const fincaNombre = getFincaNombre(value);
+      const weeksForFinca = recuperacionCintas
+        .filter((r) => {
+          const matchFinca = r.finca === value || r.finca === fincaNombre;
+          return matchFinca && r.año === añoActual;
+        })
+        .map((r) => r.semana)
+        .filter((v, i, a) => a.indexOf(v) === i)
+        .sort((a, b) => a - b);
+      setRegisteredWeeks(weeksForFinca);
     } else {
       setFormData({ ...formData, finca: undefined });
     }
+    setTouched(prev => ({ ...prev, finca: true }));
+  };
+
+  const validateField = (field: string, value: any): string => {
+    try {
+      const dataToValidate = {
+        finca: formData.finca || "",
+        semana: formData.semana,
+        año: formData.año,
+        colorCinta: formData.colorCinta,
+        enfundesIniciales: formData.enfundesIniciales,
+        primeraCalCosecha: formData.primeraCalCosecha,
+        segundaCalCosecha: formData.segundaCalCosecha,
+        terceraCalCosecha: formData.terceraCalCosecha,
+        barridaFinal: formData.barridaFinal,
+        [field]: value,
+      };
+      const parsed = RecuperacionCintaSchema.safeParse(dataToValidate);
+      if (!parsed.success) {
+        const flat = parsed.error.flatten().fieldErrors;
+        const fieldError = flat[field as keyof typeof flat];
+        if (fieldError && fieldError.length > 0) {
+          return String(fieldError[0]);
+        }
+      }
+      return "";
+    } catch {
+      return "";
+    }
+  };
+
+  const handleFieldChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (touched[field] || value !== "") {
+      const err = validateField(field, value);
+      setErrors(prev => ({ ...prev, [field]: err }));
+    }
+    setTouched(prev => ({ ...prev, [field]: true }));
+  };
+
+  const handleFieldBlur = (field: string, value: string) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+    const err = validateField(field, value);
+    setErrors(prev => ({ ...prev, [field]: err }));
   };
 
   const allowEdit = canAccess("produccion", "edit");
@@ -128,7 +194,7 @@ export function RecuperacionForm() {
       finca: formData.finca as FincaName,
       semana: Number.parseInt(formData.semana),
       año: Number.parseInt(formData.año),
-      fecha: new Date().toISOString(),
+      fecha: new Date().toISOString().split("T")[0],
       colorCinta: formData.colorCinta,
       enfundesIniciales: Number.parseInt(formData.enfundesIniciales),
       primeraCalCosecha: Number.parseInt(formData.primeraCalCosecha),
@@ -171,9 +237,9 @@ export function RecuperacionForm() {
 
     // Reset form
     setFormData({
-      finca: undefined as FincaName | undefined,
+      finca: undefined as string | undefined,
       semana: "",
-      año: "2025",
+      año: new Date().getFullYear().toString(),
       colorCinta: "",
       enfundesIniciales: "",
       primeraCalCosecha: "",
@@ -182,6 +248,7 @@ export function RecuperacionForm() {
       barridaFinal: "",
     });
     setErrors({});
+    setRegisteredWeeks([]);
     setIsSubmitting(false);
   };
 
@@ -194,7 +261,7 @@ export function RecuperacionForm() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <Label htmlFor="finca">Finca</Label>
+              <Label htmlFor="finca">Finca *</Label>
               <Select
                 value={formData.finca}
                 onValueChange={handleFincaChange}
@@ -205,10 +272,11 @@ export function RecuperacionForm() {
                   <SelectValue placeholder="Seleccionar finca" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="BABY">BABY</SelectItem>
-                  <SelectItem value="SOLO">SOLO</SelectItem>
-                  <SelectItem value="LAURITA">LAURITA</SelectItem>
-                  <SelectItem value="MARAVILLA">MARAVILLA</SelectItem>
+                  {fincas.map((finca) => (
+                    <SelectItem key={finca.id} value={finca.id}>
+                      {finca.nombre}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {errors.finca && (
@@ -217,26 +285,39 @@ export function RecuperacionForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="semana">Semana</Label>
-              <Input
-                id="semana"
-                type="number"
-                min="1"
-                max="52"
+              <Label htmlFor="semana">Semana *</Label>
+              <Select
                 value={formData.semana}
-                onChange={(e) =>
-                  (setFormData({ ...formData, semana: e.target.value }), setErrors((prev) => ({ ...prev, semana: "" })))
-                }
-                disabled={isSubmitting}
+                onValueChange={(value) => handleFieldChange("semana", value)}
+                disabled={isSubmitting || !formData.finca}
                 required
-              />
-              {errors.semana && (
-                <p className="text-xs text-red-600">{errors.semana}</p>
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={formData.finca ? "Seleccionar semana" : "Primero selecciona finca"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {formData.finca && Array.from({ length: 53 }, (_, i) => i + 1)
+                    .filter(week => !registeredWeeks.includes(week))
+                    .map((week) => (
+                      <SelectItem key={week} value={week.toString()}>
+                        Semana {week}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              {!formData.finca && (
+                <p className="text-xs text-gray-500">Selecciona una finca primero</p>
+              )}
+              {formData.finca && (
+                <p className="text-xs text-blue-600">
+                  {53 - registeredWeeks.length} semanas disponibles
+                </p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="colorCinta">Color de Cinta</Label>
+              <Label htmlFor="colorCinta">Color de Cinta *</Label>
+              <p className="text-xs text-muted-foreground">Color de la cinta a recuperar</p>
               <Select
                 value={formData.colorCinta}
                 onValueChange={(value) =>
@@ -249,12 +330,12 @@ export function RecuperacionForm() {
                   <SelectValue placeholder="Seleccionar color" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Azul">Azul</SelectItem>
-                  <SelectItem value="Rojo">Rojo</SelectItem>
-                  <SelectItem value="Verde">Verde</SelectItem>
-                  <SelectItem value="Amarillo">Amarillo</SelectItem>
-                  <SelectItem value="Blanco">Blanco</SelectItem>
-                  <SelectItem value="Naranja">Naranja</SelectItem>
+                  <SelectItem value="azul">Azul</SelectItem>
+                  <SelectItem value="rojo">Rojo</SelectItem>
+                  <SelectItem value="verde">Verde</SelectItem>
+                  <SelectItem value="amarillo">Amarillo</SelectItem>
+                  <SelectItem value="blanco">Blanco</SelectItem>
+                  <SelectItem value="naranja">Naranja</SelectItem>
                 </SelectContent>
               </Select>
               {errors.colorCinta && (
@@ -263,24 +344,25 @@ export function RecuperacionForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="enfundesIniciales">Enfundes Iniciales</Label>
+              <Label htmlFor="enfundesIniciales">Enfundes Iniciales *</Label>
+              <p className="text-xs text-muted-foreground">Total de enfundes colocados a recuperar</p>
               <Input
                 id="enfundesIniciales"
                 type="number"
                 min="0"
                 value={formData.enfundesIniciales}
-                onChange={(e) =>
-                  (setFormData({
-                    ...formData,
-                    enfundesIniciales: e.target.value,
-                  }), setErrors((prev) => ({ ...prev, enfundesIniciales: "" })))
-                }
+                onChange={(e) => handleFieldChange("enfundesIniciales", e.target.value)}
+                onBlur={(e) => handleFieldBlur("enfundesIniciales", e.target.value)}
                 disabled={isSubmitting}
                 required
+                className={getInputClassName(errors, touched, "enfundesIniciales", formData.enfundesIniciales)}
               />
-              {errors.enfundesIniciales && (
-                <p className="text-xs text-red-600">{errors.enfundesIniciales}</p>
-              )}
+              <FieldFeedback
+                error={errors.enfundesIniciales}
+                touched={touched.enfundesIniciales}
+                isValid={!errors.enfundesIniciales && !!formData.enfundesIniciales}
+                successMessage="Cantidad válida"
+              />
             </div>
           </div>
 
@@ -289,26 +371,25 @@ export function RecuperacionForm() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="primeraCalCosecha">
-                  1ª Calibración - Cosecha
-                </Label>
+                <Label htmlFor="primeraCalCosecha">1ª Calibración - Cosecha *</Label>
+              <p className="text-xs text-muted-foreground">Cintas recuperadas en primera calibración</p>
               <Input
                 id="primeraCalCosecha"
                 type="number"
                 min="0"
                 value={formData.primeraCalCosecha}
-                onChange={(e) =>
-                    (setFormData({
-                      ...formData,
-                      primeraCalCosecha: e.target.value,
-                    }), setErrors((prev) => ({ ...prev, primeraCalCosecha: "" })))
-                  }
+                onChange={(e) => handleFieldChange("primeraCalCosecha", e.target.value)}
+                onBlur={(e) => handleFieldBlur("primeraCalCosecha", e.target.value)}
                 disabled={isSubmitting}
                 required
+                className={getInputClassName(errors, touched, "primeraCalCosecha", formData.primeraCalCosecha)}
               />
-              {errors.primeraCalCosecha && (
-                <p className="text-xs text-red-600">{errors.primeraCalCosecha}</p>
-              )}
+              <FieldFeedback
+                error={errors.primeraCalCosecha}
+                touched={touched.primeraCalCosecha}
+                isValid={!errors.primeraCalCosecha && !!formData.primeraCalCosecha}
+                successMessage="Cantidad válida"
+              />
             </div>
               <div className="space-y-2">
                 <Label>1ª Calibración - Saldo</Label>
@@ -316,26 +397,25 @@ export function RecuperacionForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="segundaCalCosecha">
-                  2ª Calibración - Cosecha
-                </Label>
+                <Label htmlFor="segundaCalCosecha">2ª Calibración - Cosecha *</Label>
+              <p className="text-xs text-muted-foreground">Cintas recuperadas en segunda calibración</p>
               <Input
                 id="segundaCalCosecha"
                 type="number"
                 min="0"
                 value={formData.segundaCalCosecha}
-                onChange={(e) =>
-                    (setFormData({
-                      ...formData,
-                      segundaCalCosecha: e.target.value,
-                    }), setErrors((prev) => ({ ...prev, segundaCalCosecha: "" })))
-                  }
+                onChange={(e) => handleFieldChange("segundaCalCosecha", e.target.value)}
+                onBlur={(e) => handleFieldBlur("segundaCalCosecha", e.target.value)}
                 disabled={isSubmitting}
                 required
+                className={getInputClassName(errors, touched, "segundaCalCosecha", formData.segundaCalCosecha)}
               />
-              {errors.segundaCalCosecha && (
-                <p className="text-xs text-red-600">{errors.segundaCalCosecha}</p>
-              )}
+              <FieldFeedback
+                error={errors.segundaCalCosecha}
+                touched={touched.segundaCalCosecha}
+                isValid={!errors.segundaCalCosecha && !!formData.segundaCalCosecha}
+                successMessage="Cantidad válida"
+              />
             </div>
               <div className="space-y-2">
                 <Label>2ª Calibración - Saldo</Label>
@@ -343,26 +423,25 @@ export function RecuperacionForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="terceraCalCosecha">
-                  3ª Calibración - Cosecha
-                </Label>
+                <Label htmlFor="terceraCalCosecha">3ª Calibración - Cosecha *</Label>
+              <p className="text-xs text-muted-foreground">Cintas recuperadas en tercera calibración</p>
               <Input
                 id="terceraCalCosecha"
                 type="number"
                 min="0"
                 value={formData.terceraCalCosecha}
-                onChange={(e) =>
-                    (setFormData({
-                      ...formData,
-                      terceraCalCosecha: e.target.value,
-                    }), setErrors((prev) => ({ ...prev, terceraCalCosecha: "" })))
-                  }
+                onChange={(e) => handleFieldChange("terceraCalCosecha", e.target.value)}
+                onBlur={(e) => handleFieldBlur("terceraCalCosecha", e.target.value)}
                 disabled={isSubmitting}
                 required
+                className={getInputClassName(errors, touched, "terceraCalCosecha", formData.terceraCalCosecha)}
               />
-              {errors.terceraCalCosecha && (
-                <p className="text-xs text-red-600">{errors.terceraCalCosecha}</p>
-              )}
+              <FieldFeedback
+                error={errors.terceraCalCosecha}
+                touched={touched.terceraCalCosecha}
+                isValid={!errors.terceraCalCosecha && !!formData.terceraCalCosecha}
+                successMessage="Cantidad válida"
+              />
             </div>
               <div className="space-y-2">
                 <Label>3ª Calibración - Saldo</Label>
@@ -370,21 +449,25 @@ export function RecuperacionForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="barridaFinal">Barrida Final</Label>
+                <Label htmlFor="barridaFinal">Barrida Final *</Label>
+              <p className="text-xs text-muted-foreground">Cintas recuperadas en barrida final</p>
               <Input
                 id="barridaFinal"
                 type="number"
                 min="0"
                 value={formData.barridaFinal}
-                onChange={(e) =>
-                    (setFormData({ ...formData, barridaFinal: e.target.value }), setErrors((prev) => ({ ...prev, barridaFinal: "" })))
-                  }
+                onChange={(e) => handleFieldChange("barridaFinal", e.target.value)}
+                onBlur={(e) => handleFieldBlur("barridaFinal", e.target.value)}
                 disabled={isSubmitting}
                 required
+                className={getInputClassName(errors, touched, "barridaFinal", formData.barridaFinal)}
               />
-              {errors.barridaFinal && (
-                <p className="text-xs text-red-600">{errors.barridaFinal}</p>
-              )}
+              <FieldFeedback
+                error={errors.barridaFinal}
+                touched={touched.barridaFinal}
+                isValid={!errors.barridaFinal && !!formData.barridaFinal}
+                successMessage="Cantidad válida"
+              />
             </div>
             </div>
           </div>

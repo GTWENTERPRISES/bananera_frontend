@@ -61,12 +61,13 @@ export function PrestamosTable() {
       // Verificar si el préstamo está completamente pagado
       const estaCompletamentePagado =
         nuevasCuotasPagadas >= prestamo.numeroCuotas;
-      const nuevoEstado = estaCompletamentePagado ? "finalizado" : "activo"; // Cambiado de "cancelado" a "finalizado"
+      const nuevoEstado = estaCompletamentePagado ? "finalizado" : "activo";
 
       // Actualizar solo las propiedades que cambian (Partial<Prestamo>)
+      // Redondear saldoPendiente a 2 decimales para evitar errores de validación
       updatePrestamo(prestamoId, {
         cuotasPagadas: nuevasCuotasPagadas,
-        saldoPendiente: Math.max(0, nuevoSaldo), // Asegurar que no sea negativo
+        saldoPendiente: Number(Math.max(0, nuevoSaldo).toFixed(2)),
         estado: nuevoEstado,
       });
     }
@@ -78,7 +79,7 @@ export function PrestamosTable() {
         <CardTitle>Gestión de Préstamos</CardTitle>
         <ExportButton
           data={prestamos.map((p) => ({
-            empleado: p.empleado?.nombre || "N/A",
+            empleado: (p as any).empleadoNombre || p.empleado?.nombre || "N/A",
             monto: p.monto,
             valorCuota: p.valorCuota,
             cuotasPagadas: p.cuotasPagadas,
@@ -186,7 +187,7 @@ export function PrestamosTable() {
                 return (
                   <TableRow key={prestamo.id} className="odd:bg-muted/50 hover:bg-muted transition-colors">
                     <TableCell className="font-medium truncate max-w-[160px]">
-                      {prestamo.empleado?.nombre || "Empleado no encontrado"}
+                      {(prestamo as any).empleadoNombre || prestamo.empleado?.nombre || "Empleado no encontrado"}
                     </TableCell>
                     <TableCell className="text-right tabular-nums whitespace-nowrap">
                       ${prestamo.monto.toLocaleString("es-EC", { minimumFractionDigits: 2 })}

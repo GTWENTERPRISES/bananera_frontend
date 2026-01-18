@@ -15,7 +15,20 @@ import {
   ChevronDown,
   Menu,
   X,
-  Map,
+  Wallet,
+  ClipboardList,
+  Boxes,
+  AlertTriangle,
+  TruckIcon,
+  PieChart,
+  TrendingUp,
+  UserCog,
+  Building2,
+  Shield,
+  Leaf,
+  Scissors,
+  RefreshCw,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 import { Button } from "@/src/components/ui/button";
@@ -24,6 +37,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/src/components/ui/collapsible";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/src/components/ui/tooltip";
 import { useState, useEffect } from "react";
 import { useIsMobile } from "@/src/hooks/use-mobile";
 import { useApp } from "@/src/hooks/useApp";
@@ -32,7 +51,8 @@ interface NavItem {
   title: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
-  children?: { title: string; href: string }[];
+  description?: string;
+  children?: { title: string; href: string; icon?: React.ComponentType<{ className?: string }>; description?: string }[];
 }
 
 const navItems: NavItem[] = [
@@ -40,74 +60,77 @@ const navItems: NavItem[] = [
     title: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
+    description: "Vista general del sistema",
   },
   {
     title: "Perfil",
     href: "/perfil",
     icon: Users,
+    description: "Tu información personal",
   },
   {
     title: "Producción",
     href: "/produccion",
     icon: Sprout,
+    description: "Gestión de cultivos y cosechas",
     children: [
-      { title: "Enfundes", href: "/produccion/enfundes" },
-      { title: "Cosechas", href: "/produccion/cosechas" },
-      { title: "Recuperación", href: "/produccion/recuperacion" },
+      { title: "Enfundes", href: "/produccion/enfundes", icon: Leaf, description: "Registro de enfundes por semana" },
+      { title: "Cosechas", href: "/produccion/cosechas", icon: Scissors, description: "Control de racimos y cajas" },
+      { title: "Recuperación", href: "/produccion/recuperacion", icon: RefreshCw, description: "Racimos recuperados" },
     ],
   },
   {
     title: "Nómina",
     href: "/nomina",
-    icon: Users,
+    icon: Wallet,
+    description: "Gestión de personal y pagos",
     children: [
-      { title: "Roles de Pago", href: "/nomina/roles" },
-      { title: "Empleados", href: "/nomina/empleados" },
-      { title: "Préstamos", href: "/nomina/prestamos" },
+      { title: "Roles de Pago", href: "/nomina/roles", icon: ClipboardList, description: "Pagos semanales" },
+      { title: "Empleados", href: "/nomina/empleados", icon: Users, description: "Directorio de trabajadores" },
+      { title: "Préstamos", href: "/nomina/prestamos", icon: Wallet, description: "Adelantos y cuotas" },
     ],
   },
   {
     title: "Inventario",
     href: "/inventario",
     icon: Package,
+    description: "Control de insumos y stock",
     children: [
-      { title: "Insumos", href: "/inventario/insumos" },
-      { title: "Alertas", href: "/inventario/alertas" },
-      { title: "Movimientos", href: "/inventario/movimientos" },
+      { title: "Insumos", href: "/inventario/insumos", icon: Boxes, description: "Lista de materiales" },
+      { title: "Alertas", href: "/inventario/alertas", icon: AlertTriangle, description: "Stock bajo y vencimientos" },
+      { title: "Movimientos", href: "/inventario/movimientos", icon: TruckIcon, description: "Entradas y salidas" },
     ],
   },
   {
     title: "Reportes",
     href: "/reportes",
     icon: FileText,
+    description: "Informes y análisis",
     children: [
-      { title: "Dashboard", href: "/reportes" },
-      { title: "Producción", href: "/reportes/produccion" },
-      { title: "Financieros", href: "/reportes/financiero" },
+      { title: "Dashboard", href: "/reportes", icon: PieChart, description: "Resumen ejecutivo" },
+      { title: "Producción", href: "/reportes/produccion", icon: Sprout, description: "Métricas de campo" },
+      { title: "Financieros", href: "/reportes/financiero", icon: Wallet, description: "Costos y gastos" },
     ],
   },
   {
     title: "Analytics",
     href: "/analytics",
     icon: BarChart3,
+    description: "Análisis avanzado con IA",
     children: [
-      { title: "Dashboard", href: "/analytics" },
-      { title: "Predictivo", href: "/analytics/predictivo" },
+      { title: "Dashboard", href: "/analytics", icon: PieChart, description: "Métricas en tiempo real" },
+      { title: "Predictivo", href: "/analytics/predictivo", icon: TrendingUp, description: "Proyecciones y tendencias" },
     ],
-  },
-  {
-    title: "Geovisualización",
-    href: "/geovisualizacion",
-    icon: Map,
   },
   {
     title: "Configuración",
     href: "/configuracion",
     icon: Settings,
+    description: "Ajustes del sistema",
     children: [
-      { title: "Usuarios", href: "/configuracion/usuarios" },
-      { title: "Fincas", href: "/configuracion/fincas" },
-      { title: "Permisos", href: "/configuracion/permisos" },
+      { title: "Usuarios", href: "/configuracion/usuarios", icon: UserCog, description: "Gestión de cuentas" },
+      { title: "Fincas", href: "/configuracion/fincas", icon: Building2, description: "Propiedades registradas" },
+      { title: "Permisos", href: "/configuracion/permisos", icon: Shield, description: "Control de acceso" },
     ],
   },
 ];
@@ -129,7 +152,6 @@ export function AppSidebar() {
     | "inventario"
     | "reportes"
     | "analytics"
-    | "geovisualizacion"
     | "configuracion" => {
     if (href.startsWith("/dashboard")) return "dashboard";
     if (href.startsWith("/produccion")) return "produccion";
@@ -137,7 +159,6 @@ export function AppSidebar() {
     if (href.startsWith("/inventario")) return "inventario";
     if (href.startsWith("/reportes")) return "reportes";
     if (href.startsWith("/analytics")) return "analytics";
-    if (href.startsWith("/geovisualizacion")) return "geovisualizacion";
     if (href.startsWith("/configuracion")) return "configuracion";
     return "dashboard";
   };
@@ -233,21 +254,34 @@ export function AppSidebar() {
                     />
                   </Button>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="mt-1 space-y-1 pl-6">
+                <CollapsibleContent className="mt-1 space-y-1 pl-4">
                   {item.children.map((child) => {
                     const isChildActive = pathname === child.href;
+                    const ChildIcon = child.icon;
                     return (
-                      <Link key={child.href} href={child.href}>
-                        <Button
-                          variant="ghost"
-                          className={cn(
-                            "w-full justify-start text-sm",
-                            isChildActive && "bg-accent text-accent-foreground"
+                      <TooltipProvider key={child.href} delayDuration={300}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Link href={child.href}>
+                              <Button
+                                variant="ghost"
+                                className={cn(
+                                  "w-full justify-start gap-2 text-sm transition-all hover:translate-x-1",
+                                  isChildActive && "bg-accent text-accent-foreground font-medium"
+                                )}
+                              >
+                                {ChildIcon && <ChildIcon className="h-3.5 w-3.5 text-muted-foreground" />}
+                                {child.title}
+                              </Button>
+                            </Link>
+                          </TooltipTrigger>
+                          {child.description && (
+                            <TooltipContent side="right" className="max-w-[200px]">
+                              <p className="text-xs">{child.description}</p>
+                            </TooltipContent>
                           )}
-                        >
-                          {child.title}
-                        </Button>
-                      </Link>
+                        </Tooltip>
+                      </TooltipProvider>
                     );
                   })}
                 </CollapsibleContent>
@@ -256,18 +290,29 @@ export function AppSidebar() {
           }
 
           return (
-            <Link key={item.href} href={item.href}>
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start gap-3",
-                  isActive && "bg-accent text-accent-foreground"
+            <TooltipProvider key={item.href} delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link href={item.href}>
+                    <Button
+                      variant="ghost"
+                      className={cn(
+                        "w-full justify-start gap-3 transition-all hover:translate-x-1",
+                        isActive && "bg-accent text-accent-foreground font-medium"
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span className="text-sm font-medium">{item.title}</span>
+                    </Button>
+                  </Link>
+                </TooltipTrigger>
+                {item.description && (
+                  <TooltipContent side="right" className="max-w-[200px]">
+                    <p className="text-xs">{item.description}</p>
+                  </TooltipContent>
                 )}
-              >
-                <Icon className="h-4 w-4" />
-                <span className="text-sm font-medium">{item.title}</span>
-              </Button>
-            </Link>
+              </Tooltip>
+            </TooltipProvider>
           );
         })}
       </nav>

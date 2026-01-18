@@ -32,7 +32,8 @@ import { toast } from "sonner";
 import { EmpleadoSchema } from "@/src/lib/validation";
 
 export function EmpleadosTable() {
-  const { empleados, fincas, updateEmpleado, deleteEmpleado, canAccess } = useApp();
+  const { getFilteredEmpleados, fincas, updateEmpleado, deleteEmpleado, canAccess } = useApp();
+  const empleados = getFilteredEmpleados();
   const [searchTerm, setSearchTerm] = useState("");
   const [fincaSel, setFincaSel] = useState<string>("all");
   const [startDate, setStartDate] = useState("");
@@ -56,7 +57,8 @@ export function EmpleadosTable() {
         empleado.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
         empleado.labor.toLowerCase().includes(searchTerm.toLowerCase()) ||
         empleado.cedula.includes(searchTerm);
-      const matchesFinca = fincaSel === "all" ? true : empleado.finca === fincaSel;
+      const fincaName = empleado.fincaNombre || empleado.finca;
+      const matchesFinca = fincaSel === "all" ? true : fincaName === fincaSel;
       const d = new Date(empleado.fechaIngreso);
       const matchesStart = startDate ? d >= new Date(startDate) : true;
       const matchesEnd = endDate ? d <= new Date(endDate) : true;
@@ -74,7 +76,7 @@ export function EmpleadosTable() {
         case "labor":
           return a.labor.localeCompare(b.labor) * dir;
         case "finca":
-          return a.finca.localeCompare(b.finca) * dir as any;
+          return ((a.fincaNombre || a.finca).localeCompare(b.fincaNombre || b.finca)) * dir as any;
         case "fechaIngreso":
         default: {
           const av = new Date(a.fechaIngreso).getTime();
@@ -287,18 +289,21 @@ export function EmpleadosTable() {
         </DialogHeader>
         {editing && (
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Nombre</Label>
+            <div className="space-y-1">
+              <Label>Nombre *</Label>
+              <p className="text-xs text-muted-foreground">Nombres y apellidos</p>
               <Input className="h-11" value={editForm.nombre} onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })} />
               {editErrors.nombre && (<p className="text-xs text-red-600">{editErrors.nombre}</p>)}
             </div>
-            <div className="space-y-2">
-              <Label>Cédula</Label>
+            <div className="space-y-1">
+              <Label>Cédula *</Label>
+              <p className="text-xs text-muted-foreground">10 dígitos</p>
               <Input className="h-11" value={editForm.cedula} onChange={(e) => setEditForm({ ...editForm, cedula: e.target.value })} />
               {editErrors.cedula && (<p className="text-xs text-red-600">{editErrors.cedula}</p>)}
             </div>
-            <div className="space-y-2">
-              <Label>Labor</Label>
+            <div className="space-y-1">
+              <Label>Labor *</Label>
+              <p className="text-xs text-muted-foreground">Actividad principal</p>
               <Select value={editForm.labor} onValueChange={(v) => setEditForm({ ...editForm, labor: v })}>
                 <SelectTrigger className="h-11">
                   <SelectValue placeholder="Seleccionar labor" />
@@ -314,8 +319,9 @@ export function EmpleadosTable() {
               </Select>
               {editErrors.labor && (<p className="text-xs text-red-600">{editErrors.labor}</p>)}
             </div>
-            <div className="space-y-2">
-              <Label>Finca</Label>
+            <div className="space-y-1">
+              <Label>Finca *</Label>
+              <p className="text-xs text-muted-foreground">Lugar de trabajo</p>
               <Select value={editForm.finca} onValueChange={handleFincaChange}>
                 <SelectTrigger className="h-11">
                   <SelectValue placeholder="Seleccionar finca" />
@@ -329,8 +335,9 @@ export function EmpleadosTable() {
               </Select>
               {editErrors.finca && (<p className="text-xs text-red-600">{editErrors.finca}</p>)}
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Label>Lote</Label>
+              <p className="text-xs text-muted-foreground">Sector en finca</p>
               <Select value={editForm.lote} onValueChange={(v) => setEditForm({ ...editForm, lote: v })} disabled={!editForm.finca}>
                 <SelectTrigger className="h-11">
                   <SelectValue placeholder="Seleccionar lote" />
@@ -346,34 +353,41 @@ export function EmpleadosTable() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Tarifa Diaria ($)</Label>
+            <div className="space-y-1">
+              <Label>Tarifa Diaria ($) *</Label>
+              <p className="text-xs text-muted-foreground">Salario por día</p>
               <Input className="h-11" type="number" step="0.01" min="0" value={String(editForm.tarifaDiaria)} onChange={(e) => setEditForm({ ...editForm, tarifaDiaria: Number.parseFloat(e.target.value || "0") })} />
               {editErrors.tarifaDiaria && (<p className="text-xs text-red-600">{editErrors.tarifaDiaria}</p>)}
             </div>
-            <div className="space-y-2">
-              <Label>Fecha Ingreso</Label>
+            <div className="space-y-1">
+              <Label>Fecha Ingreso *</Label>
+              <p className="text-xs text-muted-foreground">Inicio de labores</p>
               <Input className="h-11" type="date" value={editForm.fechaIngreso} onChange={(e) => setEditForm({ ...editForm, fechaIngreso: e.target.value })} />
               {editErrors.fechaIngreso && (<p className="text-xs text-red-600">{editErrors.fechaIngreso}</p>)}
             </div>
-            <div className="space-y-2">
-              <Label>Activo</Label>
-              <div className="flex items-center gap-2">
+            <div className="space-y-1">
+              <Label>Estado</Label>
+              <p className="text-xs text-muted-foreground">¿Actualmente labora?</p>
+              <div className="flex items-center gap-2 mt-2">
                 <Switch checked={editForm.activo} onCheckedChange={(v) => setEditForm({ ...editForm, activo: !!v })} />
+                <span className="text-sm">{editForm.activo ? "Activo" : "Inactivo"}</span>
               </div>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Label>Teléfono</Label>
+              <p className="text-xs text-muted-foreground">Número de contacto</p>
               <Input className="h-11" value={editForm.telefono} onChange={(e) => setEditForm({ ...editForm, telefono: e.target.value })} />
               {editErrors.telefono && (<p className="text-xs text-red-600">{editErrors.telefono}</p>)}
             </div>
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-1 md:col-span-2">
               <Label>Dirección</Label>
+              <p className="text-xs text-muted-foreground">Domicilio del empleado</p>
               <Input className="h-11" value={editForm.direccion} onChange={(e) => setEditForm({ ...editForm, direccion: e.target.value })} />
               {editErrors.direccion && (<p className="text-xs text-red-600">{editErrors.direccion}</p>)}
             </div>
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-1 md:col-span-2">
               <Label>Cuenta Bancaria</Label>
+              <p className="text-xs text-muted-foreground">Para depósito de salario</p>
               <Input className="h-11" value={editForm.cuentaBancaria} onChange={(e) => setEditForm({ ...editForm, cuentaBancaria: e.target.value })} />
               {editErrors.cuentaBancaria && (<p className="text-xs text-red-600">{editErrors.cuentaBancaria}</p>)}
             </div>
