@@ -157,3 +157,12 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
 }
+
+# Email Settings
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'corporacionamericano01@gmail.com'
+EMAIL_HOST_PASSWORD = 'gqnc uahr ppdd oxzz'
+DEFAULT_FROM_EMAIL = 'Bananera HG <corporacionamericano01@gmail.com>'

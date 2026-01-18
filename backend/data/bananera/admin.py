@@ -3,10 +3,10 @@ Admin para la app Bananera
 """
 
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin
 from .models import (
     Finca, Usuario, Enfunde, Cosecha, RecuperacionCinta,
-    Empleado, RolPago, Prestamo, Insumo, MovimientoInventario, Alerta
+    Empleado, RolPago, Prestamo, Insumo, MovimientoInventario, Alerta,
+    PasswordResetCode
 )
 
 
@@ -18,24 +18,24 @@ class FincaAdmin(admin.ModelAdmin):
 
 
 @admin.register(Usuario)
-class UsuarioAdmin(UserAdmin):
-    list_display = ['email', 'nombre', 'rol', 'finca_asignada', 'activo']
-    list_filter = ['rol', 'activo', 'finca_asignada']
+class UsuarioAdmin(admin.ModelAdmin):
+    list_display = ['email', 'nombre', 'rol', 'finca_asignada', 'activo', 'is_staff']
+    list_filter = ['rol', 'activo', 'finca_asignada', 'is_staff']
     search_fields = ['email', 'nombre']
     ordering = ['email']
+    readonly_fields = ['last_login']
     
     fieldsets = (
-        (None, {'fields': ('email', 'password')}),
+        ('Credenciales', {'fields': ('email', 'password')}),
         ('Información Personal', {'fields': ('nombre', 'telefono', 'avatar')}),
         ('Permisos', {'fields': ('rol', 'finca_asignada', 'activo', 'is_staff', 'is_superuser')}),
-        ('Grupos', {'fields': ('groups', 'user_permissions')}),
+        ('Info', {'fields': ('last_login',)}),
     )
-    add_fieldsets = (
-        (None, {
-            'classes': ('wide',),
-            'fields': ('email', 'nombre', 'password1', 'password2', 'rol', 'finca_asignada'),
-        }),
-    )
+    
+    def save_model(self, request, obj, form, change):
+        if 'password' in form.changed_data:
+            obj.set_password(form.cleaned_data['password'])
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(Enfunde)
@@ -98,3 +98,11 @@ class AlertaAdmin(admin.ModelAdmin):
     list_display = ['titulo', 'tipo', 'prioridad', 'finca', 'leida', 'fecha_creacion']
     list_filter = ['tipo', 'prioridad', 'leida', 'finca']
     search_fields = ['titulo', 'mensaje']
+
+
+@admin.register(PasswordResetCode)
+class PasswordResetCodeAdmin(admin.ModelAdmin):
+    list_display = ['usuario', 'codigo', 'usado', 'fecha_creacion', 'fecha_expiracion']
+    list_filter = ['usado', 'fecha_creacion']
+    search_fields = ['usuario__email', 'codigo']
+    readonly_fields = ['codigo', 'fecha_creacion']

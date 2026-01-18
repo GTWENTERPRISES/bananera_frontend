@@ -10,7 +10,8 @@ from .views import (
     CosechaViewSet, RecuperacionCintaViewSet,
     EmpleadoViewSet, RolPagoViewSet, PrestamoViewSet,
     InsumoViewSet, MovimientoInventarioViewSet,
-    AlertaViewSet, ReporteViewSet
+    AlertaViewSet, ReporteViewSet,
+    request_password_reset, verify_reset_code, reset_password
 )
 
 router = DefaultRouter()
@@ -30,6 +31,10 @@ router.register(r'reportes', ReporteViewSet, basename='reporte')
 urlpatterns = [
     path('', include(router.urls)),
     path('login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    # Password Reset
+    path('password-reset/request/', request_password_reset, name='password_reset_request'),
+    path('password-reset/verify/', verify_reset_code, name='password_reset_verify'),
+    path('password-reset/confirm/', reset_password, name='password_reset_confirm'),
 ]
 
 

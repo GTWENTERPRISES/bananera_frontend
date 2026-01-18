@@ -31,6 +31,8 @@ import {
 } from "@/src/lib/mock-data";
 import { Loader2 } from "lucide-react";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+
 interface AppState {
   currentUser: User | null;
   isAuthenticated: boolean;
@@ -190,6 +192,43 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     initializeAuth();
   }, []);
 
+  // Cargar usuarios desde el backend
+  useEffect(() => {
+    const loadUsersFromBackend = async () => {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+      
+      try {
+        const res = await fetch(`${API_URL}/usuarios/`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        
+        if (res.ok) {
+          const users = await res.json();
+          setState((prev) => ({
+            ...prev,
+            usuarios: users.map((u: any) => ({
+              id: u.id,
+              email: u.email,
+              nombre: u.nombre,
+              rol: u.rol,
+              fincaAsignada: u.finca_asignada,
+              fincaNombre: u.finca_nombre,
+              telefono: u.telefono,
+              activo: u.activo,
+            })),
+          }));
+        }
+      } catch (error) {
+        console.error('Error loading users from backend:', error);
+      }
+    };
+    
+    if (state.isAuthenticated) {
+      loadUsersFromBackend();
+    }
+  }, [state.isAuthenticated]);
+
   // Sembrar datos de 2024 si faltan para reportes
   useEffect(() => {
     const tiene2024 = state.cosechas.some((c) => c.año === 2024) || state.enfundes.some((e) => e.año === 2024);
@@ -251,7 +290,61 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     email: string,
     password: string
   ): Promise<{ success: boolean; message?: string }> => {
+    console.log('[login] Intentando login con:', email);
+    
     try {
+      // Intentar login con el backend
+      const res = await fetch(`${API_URL}/login/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      
+      console.log('[login] Backend response status:', res.status);
+      
+      if (res.ok) {
+        const data = await res.json();
+        console.log('[login] Token recibido, guardando...');
+        localStorage.setItem('accessToken', data.access);
+        localStorage.setItem('refreshToken', data.refresh);
+        
+        // Obtener datos del usuario
+        const userRes = await fetch(`${API_URL}/usuarios/me/`, {
+          headers: { 'Authorization': `Bearer ${data.access}` },
+        });
+        
+        console.log('[login] /me response status:', userRes.status);
+        
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          console.log('[login] Usuario cargado desde backend:', userData.email);
+          const user: User = {
+            id: userData.id,
+            email: userData.email,
+            nombre: userData.nombre,
+            rol: userData.rol,
+            fincaAsignada: userData.finca_asignada,
+            fincaNombre: userData.finca_nombre,
+            telefono: userData.telefono,
+            activo: userData.activo,
+          };
+          
+          setState((prev) => ({
+            ...prev,
+            currentUser: user,
+            isAuthenticated: true,
+          }));
+          
+          localStorage.setItem("currentUser", JSON.stringify(user));
+          return { success: true };
+        }
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        console.log('[login] Backend error:', errorData);
+      }
+      
+      // Si falla el backend, intentar con mock data (fallback)
+      console.log('[login] Fallback a mock data...');
       const user = mockUsers.find(
         (u) => u.email === email && u.password === password
       );
@@ -267,7 +360,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         };
       }
 
-      // Guardar en estado y localStorage
+      // NO guardar token cuando es mock data
+      console.log('[login] Login con mock data (sin token JWT)');
       setState((prev) => ({
         ...prev,
         currentUser: user,
@@ -278,6 +372,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       return { success: true };
     } catch (error) {
+      console.error('[login] Exception:', error);
       return { success: false, message: "Error al iniciar sesión" };
     }
   };
@@ -289,6 +384,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       isAuthenticated: false,
     }));
     localStorage.removeItem("currentUser");
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
   };
 
   const setCurrentUser = (user: User | null) => {
@@ -697,20 +794,151 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
-  const addUsuario = (usuario: User) => {
-    setState((prev) => ({ ...prev, usuarios: [...prev.usuarios, usuario] }));
+  const addUsuario = async (usuario: User) => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(`${API_URL}/usuarios/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          email: usuario.email,
+          nombre: usuario.nombre,
+          password: usuario.password || '123456',
+          rol: usuario.rol,
+          finca_asignada: usuario.fincaAsignada || null,
+          telefono: usuario.telefono || '',
+          activo: usuario.activo ?? true,
+        }),
+      });
+      
+      if (res.ok) {
+        const newUser = await res.json();
+        setState((prev) => ({ 
+          ...prev, 
+          usuarios: [...prev.usuarios, {
+            id: newUser.id,
+            email: newUser.email,
+            nombre: newUser.nombre,
+            rol: newUser.rol,
+            fincaAsignada: newUser.finca_asignada,
+            telefono: newUser.telefono,
+            activo: newUser.activo,
+          }] 
+        }));
+        return { success: true };
+      } else {
+        const error = await res.json();
+        console.error('Error creating user:', error);
+        return { success: false, error };
+      }
+    } catch (error) {
+      console.error('Error creating user:', error);
+      // Fallback to local state
+      setState((prev) => ({ ...prev, usuarios: [...prev.usuarios, usuario] }));
+      return { success: false };
+    }
   };
 
-  const updateUsuario = (id: string, usuario: Partial<User>) => {
+  const updateUsuario = async (id: string, usuario: Partial<User>) => {
+    const token = localStorage.getItem('accessToken');
+    
+    console.log('[updateUsuario] Token exists:', !!token, token ? token.substring(0, 20) + '...' : 'NO TOKEN');
+    
+    if (!token) {
+      console.error('[updateUsuario] No hay token JWT. Debes iniciar sesión con el backend.');
+      // Solo actualizar local state
+      setState((prev) => ({
+        ...prev,
+        usuarios: prev.usuarios.map((u) =>
+          String(u.id) === String(id) ? { ...u, ...usuario } : u
+        ),
+      }));
+      return { success: false, error: 'No hay token JWT' };
+    }
+    
+    const body: any = {};
+    if (usuario.email !== undefined) body.email = usuario.email;
+    if (usuario.nombre !== undefined) body.nombre = usuario.nombre;
+    if (usuario.password !== undefined && usuario.password !== '') body.password = usuario.password;
+    if (usuario.rol !== undefined) body.rol = usuario.rol;
+    if (usuario.fincaAsignada !== undefined) body.finca_asignada = usuario.fincaAsignada || null;
+    if (usuario.telefono !== undefined) body.telefono = usuario.telefono;
+    if (usuario.activo !== undefined) body.activo = usuario.activo;
+    
+    console.log('[updateUsuario] ID:', id, 'Body:', body);
+    
+    try {
+      const res = await fetch(`${API_URL}/usuarios/${id}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(body),
+      });
+      
+      console.log('[updateUsuario] Response status:', res.status);
+      
+      if (res.ok) {
+        const updatedUser = await res.json();
+        console.log('[updateUsuario] Success:', updatedUser);
+        setState((prev) => ({
+          ...prev,
+          usuarios: prev.usuarios.map((u) =>
+            String(u.id) === String(id) ? { 
+              ...u, 
+              email: updatedUser.email,
+              nombre: updatedUser.nombre,
+              rol: updatedUser.rol,
+              fincaAsignada: updatedUser.finca_asignada,
+              telefono: updatedUser.telefono,
+              activo: updatedUser.activo,
+            } : u
+          ),
+        }));
+        return { success: true };
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('[updateUsuario] Error response:', res.status, errorData);
+      }
+    } catch (error) {
+      console.error('[updateUsuario] Exception:', error);
+    }
+    
+    // Fallback to local state only
     setState((prev) => ({
       ...prev,
       usuarios: prev.usuarios.map((u) =>
-        u.id === id ? { ...u, ...usuario } : u
+        String(u.id) === String(id) ? { ...u, ...usuario } : u
       ),
     }));
+    return { success: false };
   };
 
-  const deleteUsuario = (id: string) => {
+  const deleteUsuario = async (id: string) => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(`${API_URL}/usuarios/${id}/`, {
+        method: 'DELETE',
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+      });
+      
+      if (res.ok || res.status === 204) {
+        setState((prev) => ({
+          ...prev,
+          usuarios: prev.usuarios.filter((u) => u.id !== id),
+        }));
+        return { success: true };
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error);
+    }
+    // Fallback to local state
     setState((prev) => ({
       ...prev,
       usuarios: prev.usuarios.filter((u) => u.id !== id),

@@ -19,16 +19,33 @@ class FincaSerializer(serializers.ModelSerializer):
 class UsuarioSerializer(serializers.ModelSerializer):
     """Serializador para Usuario"""
     finca_nombre = serializers.CharField(source='finca_asignada.nombre', read_only=True, allow_null=True)
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
     
     class Meta:
         model = Usuario
         fields = [
-            'id', 'email', 'nombre', 'rol', 'finca_asignada', 'finca_nombre',
+            'id', 'email', 'nombre', 'password', 'rol', 'finca_asignada', 'finca_nombre',
             'telefono', 'activo', 'avatar', 'fecha_creacion'
         ]
-        extra_kwargs = {
-            'password': {'write_only': True, 'required': False}
-        }
+    
+    def create(self, validated_data):
+        password = validated_data.pop('password', None)
+        user = Usuario(**validated_data)
+        if password:
+            user.set_password(password)
+        else:
+            user.set_password('123456')  # Default password
+        user.save()
+        return user
+    
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if password:
+            instance.set_password(password)
+        instance.save()
+        return instance
 
 
 class EnfundeSerializer(serializers.ModelSerializer):

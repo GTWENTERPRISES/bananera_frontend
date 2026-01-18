@@ -9,10 +9,14 @@ import { Button } from "@/src/components/ui/button"
 import { Input } from "@/src/components/ui/input"
 import { Label } from "@/src/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
-import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react"
+import { AlertCircle, CheckCircle2, Loader2, ArrowLeft, Mail, KeyRound, Lock } from "lucide-react"
 import { Alert, AlertDescription } from "@/src/components/ui/alert"
 import { LoginSchema } from "@/src/lib/validation"
 import { FieldFeedback, getInputClassName } from "@/src/components/ui/field-feedback"
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+
+type ResetStep = 'login' | 'request' | 'verify' | 'reset' | 'success';
 
 export default function LoginPage() {
   const router = useRouter()
@@ -23,6 +27,15 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [isLoading, setIsLoading] = useState(false)
+  
+  // Password reset states
+  const [resetStep, setResetStep] = useState<ResetStep>('login')
+  const [resetEmail, setResetEmail] = useState("")
+  const [resetCode, setResetCode] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [resetMessage, setResetMessage] = useState("")
+  const [resetError, setResetError] = useState("")
 
   const validateField = (field: "email" | "password", value: string): string => {
     const data = { email, password, [field]: value };
@@ -78,6 +91,279 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Password Reset Functions
+  const handleRequestReset = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setResetError("")
+    setResetMessage("")
+    setIsLoading(true)
+
+    try {
+      const res = await fetch(`${API_URL}/password-reset/request/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resetEmail }),
+      })
+      const data = await res.json()
+      
+      if (res.ok) {
+        setResetMessage(data.message || "Si el email existe, recibirás un código")
+        setResetStep('verify')
+      } else {
+        setResetError(data.error || "Error al enviar código")
+      }
+    } catch {
+      setResetError("Error de conexión con el servidor")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setResetError("")
+    setIsLoading(true)
+
+    try {
+      const res = await fetch(`${API_URL}/password-reset/verify/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resetEmail, codigo: resetCode }),
+      })
+      const data = await res.json()
+      
+      if (res.ok && data.valid) {
+        setResetStep('reset')
+      } else {
+        setResetError(data.error || "Código inválido o expirado")
+      }
+    } catch {
+      setResetError("Error de conexión con el servidor")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setResetError("")
+
+    if (newPassword !== confirmPassword) {
+      setResetError("Las contraseñas no coinciden")
+      return
+    }
+    if (newPassword.length < 6) {
+      setResetError("La contraseña debe tener al menos 6 caracteres")
+      return
+    }
+
+    setIsLoading(true)
+
+    try {
+      const res = await fetch(`${API_URL}/password-reset/confirm/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: resetEmail, 
+          codigo: resetCode, 
+          new_password: newPassword 
+        }),
+      })
+      const data = await res.json()
+      
+      if (res.ok) {
+        setResetStep('success')
+      } else {
+        setResetError(data.error || "Error al cambiar contraseña")
+      }
+    } catch {
+      setResetError("Error de conexión con el servidor")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const resetToLogin = () => {
+    setResetStep('login')
+    setResetEmail("")
+    setResetCode("")
+    setNewPassword("")
+    setConfirmPassword("")
+    setResetError("")
+    setResetMessage("")
+  }
+
+  // Password Reset UI
+  if (resetStep !== 'login') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/10 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-1 text-center">
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center">
+                {resetStep === 'request' && <Mail className="h-8 w-8 text-primary-foreground" />}
+                {resetStep === 'verify' && <KeyRound className="h-8 w-8 text-primary-foreground" />}
+                {resetStep === 'reset' && <Lock className="h-8 w-8 text-primary-foreground" />}
+                {resetStep === 'success' && <CheckCircle2 className="h-8 w-8 text-primary-foreground" />}
+              </div>
+            </div>
+            <CardTitle className="text-2xl font-bold">
+              {resetStep === 'request' && "Recuperar Contraseña"}
+              {resetStep === 'verify' && "Verificar Código"}
+              {resetStep === 'reset' && "Nueva Contraseña"}
+              {resetStep === 'success' && "¡Contraseña Actualizada!"}
+            </CardTitle>
+            <CardDescription>
+              {resetStep === 'request' && "Ingresa tu correo para recibir un código"}
+              {resetStep === 'verify' && "Ingresa el código de 6 dígitos enviado a tu correo"}
+              {resetStep === 'reset' && "Crea una nueva contraseña segura"}
+              {resetStep === 'success' && "Ya puedes iniciar sesión con tu nueva contraseña"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {resetStep === 'request' && (
+              <form onSubmit={handleRequestReset} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="resetEmail">Correo electrónico</Label>
+                  <Input
+                    id="resetEmail"
+                    type="email"
+                    placeholder="usuario@bananerahg.com"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    required
+                    disabled={isLoading}
+                  />
+                </div>
+                {resetError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{resetError}</AlertDescription>
+                  </Alert>
+                )}
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Enviar Código
+                </Button>
+              </form>
+            )}
+
+            {resetStep === 'verify' && (
+              <form onSubmit={handleVerifyCode} className="space-y-4">
+                {resetMessage && (
+                  <Alert>
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <AlertDescription>{resetMessage}</AlertDescription>
+                  </Alert>
+                )}
+                <div className="space-y-2">
+                  <Label htmlFor="resetCode">Código de verificación</Label>
+                  <Input
+                    id="resetCode"
+                    type="text"
+                    placeholder="123456"
+                    value={resetCode}
+                    onChange={(e) => setResetCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    required
+                    disabled={isLoading}
+                    className="text-center text-2xl tracking-widest"
+                    maxLength={6}
+                  />
+                  <p className="text-xs text-muted-foreground text-center">
+                    Revisa tu bandeja de entrada y spam
+                  </p>
+                </div>
+                {resetError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{resetError}</AlertDescription>
+                  </Alert>
+                )}
+                <Button type="submit" className="w-full" disabled={isLoading || resetCode.length !== 6}>
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Verificar Código
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  className="w-full"
+                  onClick={() => { setResetStep('request'); setResetCode(""); setResetError(""); }}
+                >
+                  Reenviar código
+                </Button>
+              </form>
+            )}
+
+            {resetStep === 'reset' && (
+              <form onSubmit={handleResetPassword} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">Nueva contraseña</Label>
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    disabled={isLoading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    disabled={isLoading}
+                  />
+                </div>
+                {resetError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{resetError}</AlertDescription>
+                  </Alert>
+                )}
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Cambiar Contraseña
+                </Button>
+              </form>
+            )}
+
+            {resetStep === 'success' && (
+              <div className="space-y-4">
+                <Alert>
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <AlertDescription>
+                    Tu contraseña ha sido actualizada correctamente.
+                  </AlertDescription>
+                </Alert>
+                <Button className="w-full" onClick={resetToLogin}>
+                  Ir a Iniciar Sesión
+                </Button>
+              </div>
+            )}
+
+            {resetStep !== 'success' && (
+              <Button 
+                type="button" 
+                variant="link" 
+                className="w-full mt-4"
+                onClick={resetToLogin}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Volver al inicio de sesión
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -153,9 +439,18 @@ export default function LoginPage() {
                 "Iniciar sesión"
               )}
             </Button>
+
+            <Button 
+              type="button" 
+              variant="link" 
+              className="w-full text-sm"
+              onClick={() => setResetStep('request')}
+            >
+              ¿Olvidaste tu contraseña?
+            </Button>
           </form>
 
-          <div className="mt-6 p-4 bg-muted rounded-lg">
+          <div className="mt-4 p-4 bg-muted rounded-lg">
             <p className="text-sm font-medium mb-2">Usuarios de prueba:</p>
             <div className="space-y-1 text-xs text-muted-foreground">
               <p>

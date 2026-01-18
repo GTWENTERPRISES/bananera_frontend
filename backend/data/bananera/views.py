@@ -2,18 +2,23 @@
 ViewSets para la API REST de Bananera
 """
 
+import random
+import string
 from rest_framework import viewsets, status, filters
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Sum, Avg, Count, F
 from django.utils import timezone
+from django.core.mail import send_mail
+from django.conf import settings
 from datetime import timedelta
 
 from .models import (
     Finca, Usuario, Enfunde, Cosecha, RecuperacionCinta,
-    Empleado, RolPago, Prestamo, Insumo, MovimientoInventario, Alerta
+    Empleado, RolPago, Prestamo, Insumo, MovimientoInventario, Alerta,
+    PasswordResetCode
 )
 from .serializers import (
     FincaSerializer, UsuarioSerializer, EnfundeSerializer,
@@ -55,6 +60,12 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['rol', 'activo', 'finca_asignada']
     search_fields = ['nombre', 'email']
+
+    @action(detail=False, methods=['get'])
+    def me(self, request):
+        """Obtener datos del usuario autenticado"""
+        serializer = self.get_serializer(request.user)
+        return Response(serializer.data)
 
 
 class EnfundeViewSet(viewsets.ModelViewSet):
@@ -368,3 +379,166 @@ class ReporteViewSet(viewsets.ViewSet):
             'resumen': resumen,
             'por_categoria': list(por_categoria)
         })
+
+
+# ==================== Password Reset Views ====================
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def request_password_reset(request):
+    """Solicitar código de recuperación de contraseña"""
+    email = request.data.get('email', '').lower().strip()
+    
+    if not email:
+        return Response(
+            {'error': 'El email es requerido'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        usuario = Usuario.objects.get(email=email)
+    except Usuario.DoesNotExist:
+        # Por seguridad, no revelamos si el email existe o no
+        return Response({
+            'message': 'Si el email existe, recibirás un código de recuperación'
+        })
+    
+    # Invalidar códigos anteriores
+    PasswordResetCode.objects.filter(usuario=usuario, usado=False).update(usado=True)
+    
+    # Generar código de 6 dígitos
+    codigo = ''.join(random.choices(string.digits, k=6))
+    
+    # Crear código con expiración de 15 minutos
+    reset_code = PasswordResetCode.objects.create(
+        usuario=usuario,
+        codigo=codigo,
+        fecha_expiracion=timezone.now() + timedelta(minutes=15)
+    )
+    
+    # Enviar email
+    try:
+        send_mail(
+            subject='Código de Recuperación - Bananera HG',
+            message=f'''
+Hola {usuario.nombre},
+
+Tu código de recuperación de contraseña es: {codigo}
+
+Este código expira en 15 minutos.
+
+Si no solicitaste este código, ignora este mensaje.
+
+Saludos,
+Bananera HG
+            ''',
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            fail_silently=False,
+        )
+    except Exception as e:
+        # En desarrollo, mostrar el código en consola
+        print(f"[DEV] Código de recuperación para {email}: {codigo}")
+    
+    return Response({
+        'message': 'Si el email existe, recibirás un código de recuperación'
+    })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def verify_reset_code(request):
+    """Verificar código de recuperación"""
+    email = request.data.get('email', '').lower().strip()
+    codigo = request.data.get('codigo', '').strip()
+    
+    if not email or not codigo:
+        return Response(
+            {'error': 'Email y código son requeridos'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        usuario = Usuario.objects.get(email=email)
+        reset_code = PasswordResetCode.objects.filter(
+            usuario=usuario,
+            codigo=codigo,
+            usado=False,
+            fecha_expiracion__gt=timezone.now()
+        ).first()
+        
+        if not reset_code:
+            return Response(
+                {'error': 'Código inválido o expirado'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        return Response({
+            'valid': True,
+            'message': 'Código válido'
+        })
+        
+    except Usuario.DoesNotExist:
+        return Response(
+            {'error': 'Código inválido o expirado'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def reset_password(request):
+    """Restablecer contraseña con código"""
+    email = request.data.get('email', '').lower().strip()
+    codigo = request.data.get('codigo', '').strip()
+    new_password = request.data.get('new_password', '')
+    
+    if not email or not codigo or not new_password:
+        return Response(
+            {'error': 'Email, código y nueva contraseña son requeridos'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    if len(new_password) < 6:
+        return Response(
+            {'error': 'La contraseña debe tener al menos 6 caracteres'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        usuario = Usuario.objects.get(email=email)
+        reset_code = PasswordResetCode.objects.filter(
+            usuario=usuario,
+            codigo=codigo,
+            usado=False,
+            fecha_expiracion__gt=timezone.now()
+        ).first()
+        
+        if not reset_code:
+            return Response(
+                {'error': 'Código inválido o expirado'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Cambiar contraseña
+        usuario.set_password(new_password)
+        usuario.save()
+        
+        # Marcar código como usado
+        reset_code.usado = True
+        reset_code.save()
+        
+        # Invalidar otros códigos del usuario
+        PasswordResetCode.objects.filter(
+            usuario=usuario, usado=False
+        ).update(usado=True)
+        
+        return Response({
+            'message': 'Contraseña actualizada correctamente'
+        })
+        
+    except Usuario.DoesNotExist:
+        return Response(
+            {'error': 'Código inválido o expirado'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
