@@ -43,7 +43,7 @@ export function EmpleadosTable() {
   const allowEdit = canAccess("nomina", "edit");
   const [editing, setEditing] = useState<any | null>(null);
   const [toDelete, setToDelete] = useState<any | null>(null);
-  const [editForm, setEditForm] = useState({ nombre: "", cedula: "", labor: "", finca: "" as FincaName | "", lote: "", tarifaDiaria: 0, fechaIngreso: "", telefono: "", direccion: "", cuentaBancaria: "", activo: true });
+  const [editForm, setEditForm] = useState({ nombre: "", cedula: "", labor: "", finca: "", lote: "", tarifaDiaria: 0, fechaIngreso: "", telefono: "", direccion: "", cuentaBancaria: "", activo: true });
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const isValidFinca = (value: string): value is FincaName => ["BABY","SOLO","LAURITA","MARAVILLA"].includes(value);
   const handleFincaChange = (value: string) => setEditForm({ ...editForm, finca: isValidFinca(value) ? value : "" });
@@ -55,7 +55,7 @@ export function EmpleadosTable() {
     return empleados.filter((empleado) => {
       const matchesSearch =
         empleado.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        empleado.labor.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (empleado.labor || empleado.cargo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         empleado.cedula.includes(searchTerm);
       const fincaName = empleado.fincaNombre || empleado.finca;
       const matchesFinca = fincaSel === "all" ? true : fincaName === fincaSel;
@@ -74,7 +74,7 @@ export function EmpleadosTable() {
         case "nombre":
           return a.nombre.localeCompare(b.nombre) * dir;
         case "labor":
-          return a.labor.localeCompare(b.labor) * dir;
+          return (a.labor || a.cargo || '').localeCompare(b.labor || b.cargo || '') * dir;
         case "finca":
           return ((a.fincaNombre || a.finca).localeCompare(b.fincaNombre || b.finca)) * dir as any;
         case "fechaIngreso":
@@ -235,7 +235,7 @@ export function EmpleadosTable() {
                   <TableCell className="whitespace-nowrap">
                     {new Date(empleado.fechaIngreso).toLocaleDateString("es-ES", { year: "numeric", month: "short", day: "numeric" })}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums whitespace-nowrap">${empleado.tarifaDiaria.toLocaleString("es-EC", { minimumFractionDigits: 2 })}</TableCell>
+                  <TableCell className="text-right tabular-nums whitespace-nowrap">${(empleado.tarifaDiaria || empleado.salarioBase || 0).toLocaleString("es-EC", { minimumFractionDigits: 2 })}</TableCell>
                   <TableCell>
                     <Badge
                       variant={empleado.activo ? "default" : "destructive"}
@@ -245,7 +245,7 @@ export function EmpleadosTable() {
                   </TableCell>
                   <TableCell className="w-[84px] min-w-[84px] text-right">
                     <div className="inline-flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="icon" disabled={!allowEdit} onClick={() => { setEditing(empleado); setEditForm({ nombre: empleado.nombre, cedula: empleado.cedula, labor: empleado.labor, finca: empleado.finca, lote: empleado.lote || "", tarifaDiaria: empleado.tarifaDiaria, fechaIngreso: empleado.fechaIngreso, telefono: empleado.telefono || "", direccion: empleado.direccion || "", cuentaBancaria: empleado.cuentaBancaria || "", activo: empleado.activo }); }}>
+                      <Button variant="ghost" size="icon" disabled={!allowEdit} onClick={() => { setEditing(empleado); setEditForm({ nombre: empleado.nombre, cedula: empleado.cedula, labor: empleado.labor || empleado.cargo || "", finca: empleado.finca, lote: empleado.lote || "", tarifaDiaria: empleado.tarifaDiaria || empleado.salarioBase || 0, fechaIngreso: empleado.fechaIngreso, telefono: empleado.telefono || "", direccion: empleado.direccion || "", cuentaBancaria: empleado.cuentaBancaria || "", activo: empleado.activo }); }}>
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon" disabled={!allowEdit} onClick={() => setToDelete(empleado)}>

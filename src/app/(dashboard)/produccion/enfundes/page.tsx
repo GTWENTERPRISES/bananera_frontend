@@ -1,13 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { EnfundeForm } from "@/src/components/produccion/enfunde-form";
 import { EnfundesTable } from "@/src/components/produccion/enfundes-table";
 import { useApp } from "@/src/contexts/app-context";
 import { Badge } from "@/src/components/ui/badge";
-import { MapPin } from "lucide-react";
+import { Button } from "@/src/components/ui/button";
+import { MapPin, Plus, X } from "lucide-react";
 
 export default function EnfundesPage() {
   const { fincas, currentUser } = useApp();
+  const [showForm, setShowForm] = useState(false);
   
   const fincaAsignadaNombre = (() => {
     if (!currentUser?.fincaAsignada) return null;
@@ -18,24 +21,30 @@ export default function EnfundesPage() {
 
   return (
     <div className="responsive-container space-y-4 md:space-y-6">
-      <div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-            Gestión de Enfundes
-          </h1>
-          {esFiltrado && fincaAsignadaNombre && (
-            <Badge variant="outline" className="gap-1">
-              <MapPin className="h-3 w-3" />
-              {fincaAsignadaNombre}
-            </Badge>
-          )}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+              Gestión de Enfundes
+            </h1>
+            {esFiltrado && fincaAsignadaNombre && (
+              <Badge variant="outline" className="gap-1">
+                <MapPin className="h-3 w-3" />
+                {fincaAsignadaNombre}
+              </Badge>
+            )}
+          </div>
+          <p className="text-sm md:text-base text-muted-foreground">
+            Registro y seguimiento de enfundes {esFiltrado && fincaAsignadaNombre ? `de ${fincaAsignadaNombre}` : "por finca y semana"}
+          </p>
         </div>
-        <p className="text-sm md:text-base text-muted-foreground">
-          Registro y seguimiento de enfundes {esFiltrado && fincaAsignadaNombre ? `de ${fincaAsignadaNombre}` : "por finca y semana"}
-        </p>
+        <Button onClick={() => setShowForm(!showForm)} variant={showForm ? "outline" : "default"}>
+          {showForm ? <X className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+          {showForm ? "Cancelar" : "Nuevo Enfunde"}
+        </Button>
       </div>
 
-      <EnfundeForm />
+      {showForm && <EnfundeForm onSuccess={() => setShowForm(false)} />}
       <EnfundesTable />
     </div>
   );

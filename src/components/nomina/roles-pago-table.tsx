@@ -44,9 +44,9 @@ export function RolesPagoTable() {
   const sorted = (() => {
     const data = [...(rolesPago || [])];
     return data.sort((a, b) => {
-      const ta = a.fecha ? new Date(a.fecha).getTime() : new Date(a.año, 0, 1 + (a.semana - 1) * 7).getTime();
-      const tb = b.fecha ? new Date(b.fecha).getTime() : new Date(b.año, 0, 1 + (b.semana - 1) * 7).getTime();
-      const cmp = ta - tb;
+      const ta = a.fecha || a.fechaPago ? new Date(a.fecha || a.fechaPago || '').getTime() : new Date(a.año || 2025, 0, 1 + ((a.semana || 1) - 1) * 7).getTime();
+      const tb = b.fecha || b.fechaPago ? new Date(b.fecha || b.fechaPago || '').getTime() : new Date(b.año || 2025, 0, 1 + ((b.semana || 1) - 1) * 7).getTime();
+      const cmp = (isNaN(ta) ? 0 : ta) - (isNaN(tb) ? 0 : tb);
       return sortDir === "asc" ? cmp : -cmp;
     });
   })();
@@ -212,7 +212,7 @@ export function RolesPagoTable() {
                   if (pdfMode === 'semanas') {
                     s = Number(pdfSemanaInicio || '0');
                     e = Number(pdfSemanaFin || (s ? String(s + 1) : '0'));
-                    filtered = filtered.filter((r) => r.año === yr && r.semana >= s && r.semana <= e);
+                    filtered = filtered.filter((r) => r.año === yr && (r.semana || 0) >= s && (r.semana || 0) <= e);
                   } else {
                     const mes = Number(pdfMes || '1');
                     const startDay = pdfQuincena === '1' ? 1 : 16;
@@ -220,10 +220,10 @@ export function RolesPagoTable() {
                     const from = new Date(yr, mes - 1, startDay);
                     const to = new Date(yr, mes - 1, endDay);
                     filtered = filtered.filter((r) => {
-                      const d = r.fecha ? new Date(r.fecha) : getDateFromYearSemana(r.año, r.semana);
+                      const d = r.fecha ? new Date(r.fecha) : getDateFromYearSemana(r.año || 2025, r.semana || 1);
                       return d >= from && d <= to;
                     });
-                    const weeks = filtered.map((r) => r.semana);
+                    const weeks = filtered.map((r) => r.semana || 0).filter((w): w is number => w > 0);
                     s = weeks.length ? Math.min(...weeks) : 0;
                     e = weeks.length ? Math.max(...weeks) : 0;
                   }
@@ -348,7 +348,17 @@ export function RolesPagoTable() {
                   </TableCell>
                   <TableCell>S{rol.semana}</TableCell>
                   <TableCell className="whitespace-nowrap">
-                    {(rol.fecha ? new Date(rol.fecha) : getDateFromYearSemana(rol.año, rol.semana)).toLocaleDateString("es-ES", { year: "numeric", month: "short", day: "numeric" })}
+                    {(() => {
+                      const fecha = rol.fecha || rol.fechaPago;
+                      if (fecha) {
+                        const d = new Date(fecha);
+                        return isNaN(d.getTime()) ? `S${rol.semana || 0}/${rol.año || 0}` : d.toLocaleDateString("es-ES", { year: "numeric", month: "short", day: "numeric" });
+                      }
+                      if (rol.año && rol.semana) {
+                        return getDateFromYearSemana(rol.año, rol.semana).toLocaleDateString("es-ES", { year: "numeric", month: "short", day: "numeric" });
+                      }
+                      return `S${rol.semana || 0}/${rol.año || 0}`;
+                    })()}
                   </TableCell>
                   <TableCell className="text-right tabular-nums whitespace-nowrap">
                     {rol.diasLaborados || 0}

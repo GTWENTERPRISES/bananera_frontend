@@ -28,7 +28,11 @@ import { EnfundeSchema } from "@/src/lib/validation";
 import { Spinner } from "@/src/components/ui/spinner";
 import { Badge } from "@/src/components/ui/badge";
 
-export function EnfundeForm() {
+interface EnfundeFormProps {
+  onSuccess?: () => void;
+}
+
+export function EnfundeForm({ onSuccess }: EnfundeFormProps) {
   const { addEnfunde, getFilteredEnfundes, fincas } = useApp();
   const enfundes = getFilteredEnfundes();
   const { toast } = useToast();
@@ -163,6 +167,7 @@ export function EnfundeForm() {
         setErrors({});
         setTouched({});
         setRegisteredWeeks([]);
+        onSuccess?.();
       })
       .catch((error) => {
         console.error("Error al guardar enfunde:", error);

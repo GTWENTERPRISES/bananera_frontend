@@ -132,22 +132,33 @@ export function PrestamoForm() {
       estado: "activo",
     };
 
-    addPrestamo(newPrestamo);
-    toast({
-      title: "Préstamo registrado",
-      description: `$${formData.monto} para ${empleado.nombre} en ${formData.numeroCuotas} cuotas`,
-    });
-
-    // Reset form
-    setFormData({
-      empleadoId: "",
-      monto: "",
-      numeroCuotas: "",
-      fechaDesembolso: new Date().toISOString().split("T")[0],
-      motivo: "",
-    });
-    setErrors({});
-    setIsSubmitting(false);
+    addPrestamo(newPrestamo)
+      .then(() => {
+        toast({
+          title: "Préstamo registrado",
+          description: `$${formData.monto} para ${empleado.nombre} en ${formData.numeroCuotas} cuotas`,
+        });
+        // Reset form
+        setFormData({
+          empleadoId: "",
+          monto: "",
+          numeroCuotas: "",
+          fechaDesembolso: new Date().toISOString().split("T")[0],
+          motivo: "",
+        });
+        setErrors({});
+      })
+      .catch((error: Error) => {
+        console.error("Error al guardar préstamo:", error);
+        toast({
+          title: "Error al guardar",
+          description: error?.message || "No se pudo crear el préstamo",
+          variant: "destructive",
+        });
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
   };
 
   return (

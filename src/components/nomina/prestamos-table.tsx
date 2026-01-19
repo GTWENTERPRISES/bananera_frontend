@@ -37,16 +37,16 @@ export function PrestamosTable() {
   const sorted = (() => {
     const data = [...prestamos];
     return data.sort((a, b) => {
-      const av = new Date(a.fechaDesembolso).getTime();
-      const bv = new Date(b.fechaDesembolso).getTime();
-      return sortDir === "asc" ? av - bv : bv - av;
+      const av = new Date(a.fechaDesembolso || '').getTime();
+      const bv = new Date(b.fechaDesembolso || '').getTime();
+      return sortDir === "asc" ? (isNaN(av) ? 0 : av) - (isNaN(bv) ? 0 : bv) : (isNaN(bv) ? 0 : bv) - (isNaN(av) ? 0 : av);
     });
   })();
   const paginated = sorted.slice(startIdx, endIdx);
 
-  const totalPrestado = prestamos.reduce((sum, p) => sum + p.monto, 0);
+  const totalPrestado = prestamos.reduce((sum, p) => sum + (p.monto || 0), 0);
   const totalPendiente = prestamos.reduce(
-    (sum, p) => sum + p.saldoPendiente,
+    (sum, p) => sum + (p.saldoPendiente || 0),
     0
   );
   const activos = prestamos.filter((p) => p.estado === "activo").length;
@@ -55,12 +55,12 @@ export function PrestamosTable() {
   const pagarCuotaPrestamo = (prestamoId: string) => {
     const prestamo = prestamos.find((p) => p.id === prestamoId);
     if (prestamo && prestamo.estado === "activo") {
-      const nuevasCuotasPagadas = prestamo.cuotasPagadas + 1;
-      const nuevoSaldo = prestamo.saldoPendiente - prestamo.valorCuota;
+      const nuevasCuotasPagadas = (prestamo.cuotasPagadas || 0) + 1;
+      const nuevoSaldo = (prestamo.saldoPendiente || 0) - (prestamo.valorCuota || 0);
 
       // Verificar si el préstamo está completamente pagado
       const estaCompletamentePagado =
-        nuevasCuotasPagadas >= prestamo.numeroCuotas;
+        nuevasCuotasPagadas >= (prestamo.numeroCuotas || 0);
       const nuevoEstado = estaCompletamentePagado ? "finalizado" : "activo";
 
       // Actualizar solo las propiedades que cambian (Partial<Prestamo>)
@@ -183,17 +183,17 @@ export function PrestamosTable() {
               <TableBody className="animate-in fade-in duration-200">
                 {paginated.map((prestamo) => {
                 const progreso =
-                  (prestamo.cuotasPagadas / prestamo.numeroCuotas) * 100;
+                  prestamo.numeroCuotas ? ((prestamo.cuotasPagadas || 0) / prestamo.numeroCuotas) * 100 : 0;
                 return (
                   <TableRow key={prestamo.id} className="odd:bg-muted/50 hover:bg-muted transition-colors">
                     <TableCell className="font-medium truncate max-w-[160px]">
                       {(prestamo as any).empleadoNombre || prestamo.empleado?.nombre || "Empleado no encontrado"}
                     </TableCell>
                     <TableCell className="text-right tabular-nums whitespace-nowrap">
-                      ${prestamo.monto.toLocaleString("es-EC", { minimumFractionDigits: 2 })}
+                      ${(prestamo.monto || 0).toLocaleString("es-EC", { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell className="text-right tabular-nums whitespace-nowrap">
-                      ${prestamo.valorCuota.toLocaleString("es-EC", { minimumFractionDigits: 2 })}
+                      ${(prestamo.valorCuota || 0).toLocaleString("es-EC", { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1">
@@ -205,12 +205,13 @@ export function PrestamosTable() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums whitespace-nowrap">
-                      ${prestamo.saldoPendiente.toLocaleString("es-EC", { minimumFractionDigits: 2 })}
+                      ${(prestamo.saldoPendiente || 0).toLocaleString("es-EC", { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
-                      {new Date(prestamo.fechaDesembolso).toLocaleDateString(
-                        "es-ES"
-                      )}
+                       {(() => {
+                        const d = new Date(prestamo.fechaDesembolso || '');
+                        return isNaN(d.getTime()) ? 'Sin fecha' : d.toLocaleDateString("es-ES");
+                      })()}
                     </TableCell>
                     <TableCell>
                       <Badge

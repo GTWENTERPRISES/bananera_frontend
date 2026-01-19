@@ -20,7 +20,7 @@ import {
   CardTitle,
 } from "@/src/components/ui/card";
 import { useApp } from "@/src/contexts/app-context";
-import type { Empleado, FincaName, LaborEmpleado, Lote } from "@/src/lib/types";
+import type { Empleado, FincaName } from "@/src/lib/types";
 import { UserPlus } from "lucide-react";
 import { useToast } from "@/src/hooks/use-toast";
 import { EmpleadoSchema } from "@/src/lib/validation";
@@ -37,20 +37,27 @@ export function EmpleadoForm() {
   const [formData, setFormData] = useState({
     nombre: "",
     cedula: "",
-    labor: "" as LaborEmpleado | "",
-    finca: undefined as FincaName | undefined,
+    cargo: "",
+    labor: "",
+    finca: undefined as string | undefined,
+    salarioBase: "",
     tarifaDiaria: "",
     fechaIngreso: new Date().toISOString().split("T")[0],
     telefono: "",
     activo: true,
-    lote: "" as Lote | "",
+    lote: "",
     direccion: "",
     cuentaBancaria: "",
   });
 
-  // Función helper para validar el tipo FincaName
-  const isValidFinca = (value: string): value is FincaName => {
-    return ["BABY", "SOLO", "LAURITA", "MARAVILLA"].includes(value);
+  // Función helper para validar UUID de finca
+  const isValidFinca = (value: string): boolean => {
+    return fincas.some(f => f.id === value);
+  };
+  
+  // Helper para obtener el nombre de la finca por UUID
+  const getFincaNombre = (fincaId: string): string => {
+    return fincas.find(f => f.id === fincaId)?.nombre || fincaId;
   };
 
   // Manejar cambio de finca de forma segura
@@ -156,39 +163,54 @@ export function EmpleadoForm() {
       id: Date.now().toString(),
       nombre: formData.nombre,
       cedula: formData.cedula,
-      labor: formData.labor as LaborEmpleado,
-      finca: formData.finca as FincaName,
-      tarifaDiaria: Number.parseFloat(formData.tarifaDiaria),
+      cargo: formData.cargo || formData.labor,
+      labor: formData.labor || undefined,
+      finca: formData.finca as string,
+      salarioBase: Number.parseFloat(formData.salarioBase) || 0,
+      tarifaDiaria: Number.parseFloat(formData.tarifaDiaria) || undefined,
       fechaIngreso: formData.fechaIngreso,
-      telefono: formData.telefono,
+      telefono: formData.telefono || undefined,
       activo: formData.activo,
-      lote: (formData.lote || undefined) as Lote | undefined,
-      direccion: formData.direccion,
-      cuentaBancaria: formData.cuentaBancaria,
+      lote: formData.lote || undefined,
+      direccion: formData.direccion || undefined,
+      cuentaBancaria: formData.cuentaBancaria || undefined,
     };
 
-    addEmpleado(newEmpleado);
-    toast({
-      title: "Empleado registrado",
-      description: `${formData.nombre} ha sido agregado al sistema`,
-    });
-
-    // Reset form
-    setFormData({
-      nombre: "",
-      cedula: "",
-      labor: "",
-      finca: undefined as FincaName | undefined,
-      tarifaDiaria: "",
-      fechaIngreso: new Date().toISOString().split("T")[0],
-      telefono: "",
-      activo: true,
-      lote: "",
-      direccion: "",
-      cuentaBancaria: "",
-    });
-    setErrors({});
-    setIsSubmitting(false);
+    addEmpleado(newEmpleado)
+      .then(() => {
+        toast({
+          title: "Empleado registrado",
+          description: `${formData.nombre} ha sido agregado al sistema`,
+        });
+        // Reset form
+        setFormData({
+          nombre: "",
+          cedula: "",
+          cargo: "",
+          labor: "",
+          finca: undefined,
+          salarioBase: "",
+          tarifaDiaria: "",
+          fechaIngreso: new Date().toISOString().split("T")[0],
+          telefono: "",
+          activo: true,
+          lote: "",
+          direccion: "",
+          cuentaBancaria: "",
+        });
+        setErrors({});
+      })
+      .catch((error: Error) => {
+        console.error("Error al guardar empleado:", error);
+        toast({
+          title: "Error al guardar",
+          description: error?.message || "No se pudo crear el empleado",
+          variant: "destructive",
+        });
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
   };
 
   return (
@@ -247,7 +269,7 @@ export function EmpleadoForm() {
               <Select
                 value={formData.labor}
                 onValueChange={(value) =>
-                  (setFormData({ ...formData, labor: value as LaborEmpleado }), setErrors((prev) => ({ ...prev, labor: "" })))
+                  (setFormData({ ...formData, labor: value, cargo: value }), setErrors((prev) => ({ ...prev, labor: "" })))
                 }
                 disabled={isSubmitting || !allowEdit}
                 required
@@ -342,7 +364,7 @@ export function EmpleadoForm() {
               <p className="text-xs text-muted-foreground">Sector de trabajo en la finca</p>
               <Select
                 value={formData.lote}
-                onValueChange={(value) => setFormData({ ...formData, lote: value as Lote })}
+                onValueChange={(value) => setFormData({ ...formData, lote: value })}
                 disabled={isSubmitting || !allowEdit || !formData.finca}
               >
                 <SelectTrigger>

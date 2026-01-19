@@ -214,17 +214,17 @@ export function CosechasTable() {
   };
 
   const totalCajas = filteredCosechas.reduce(
-    (sum, c) => sum + c.cajasProducidas,
+    (sum, c) => sum + (c.cajasProducidas || 0),
     0
   );
   const avgRatio =
     filteredCosechas.length > 0
-      ? filteredCosechas.reduce((sum, c) => sum + c.ratio, 0) /
+      ? filteredCosechas.reduce((sum, c) => sum + (c.ratio || 0), 0) /
         filteredCosechas.length
       : 0;
   const avgMerma =
     filteredCosechas.length > 0
-      ? filteredCosechas.reduce((sum, c) => sum + c.merma, 0) /
+      ? filteredCosechas.reduce((sum, c) => sum + (c.merma || 0), 0) /
         filteredCosechas.length
       : 0;
 
@@ -243,15 +243,15 @@ export function CosechasTable() {
       count: arr.length,
     };
     for (const c of arr) {
-      totals.racimosCorta += c.racimosCorta;
-      totals.racimosRechazados += c.racimosRechazados;
-      totals.racimosRecuperados += c.racimosRecuperados;
-      totals.cajasProducidas += c.cajasProducidas;
-      totals.pesoPromedio += c.pesoPromedio;
-      totals.calibracion += c.calibracion;
-      totals.numeroManos += c.numeroManos;
-      totals.ratio += c.ratio;
-      totals.merma += c.merma;
+      totals.racimosCorta += c.racimosCorta || 0;
+      totals.racimosRechazados += c.racimosRechazados || 0;
+      totals.racimosRecuperados += c.racimosRecuperados || 0;
+      totals.cajasProducidas += c.cajasProducidas || 0;
+      totals.pesoPromedio += c.pesoPromedio || 0;
+      totals.calibracion += c.calibracion || 0;
+      totals.numeroManos += c.numeroManos || 0;
+      totals.ratio += c.ratio || 0;
+      totals.merma += c.merma || 0;
     }
     const avg = (v: number) => (totals.count ? v / totals.count : 0);
     return {
@@ -412,7 +412,7 @@ export function CosechasTable() {
                 {latestRecord.fincaNombre || latestRecord.finca}
               </span>{" "}
               · S{latestRecord.semana} · {latestRecord.año} · Cajas{" "}
-              {latestRecord.cajasProducidas.toLocaleString()}
+              {(latestRecord.cajasProducidas || 0).toLocaleString()}
             </div>
             <Button variant="outline" size="sm" onClick={applyLatestFilters}>
               Ver
@@ -825,24 +825,24 @@ export function CosechasTable() {
                     <TableCell className="text-right tabular-nums whitespace-nowrap">{cosecha.año}</TableCell>
                     <TableCell className="truncate max-w-[160px]">{fincaName}</TableCell>
                     <TableCell className="text-right tabular-nums whitespace-nowrap">
-                      {cosecha.racimosCorta.toLocaleString()}
+                      {(cosecha.racimosCorta || 0).toLocaleString()}
                     </TableCell>
                     <TableCell className="text-right tabular-nums whitespace-nowrap">
-                      {cosecha.racimosRechazados.toLocaleString()}
+                      {(cosecha.racimosRechazados || 0).toLocaleString()}
                     </TableCell>
                     <TableCell className="text-right tabular-nums whitespace-nowrap">
-                      {cosecha.racimosRecuperados.toLocaleString()}
+                      {(cosecha.racimosRecuperados || 0).toLocaleString()}
                     </TableCell>
                     <TableCell className="text-right tabular-nums whitespace-nowrap">
-                      {cosecha.cajasProducidas.toLocaleString()}
+                      {(cosecha.cajasProducidas || 0).toLocaleString()}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums whitespace-nowrap">{cosecha.pesoPromedio.toFixed(1)} lb</TableCell>
-                    <TableCell className="text-right tabular-nums whitespace-nowrap">{cosecha.calibracion}</TableCell>
-                    <TableCell className="text-right tabular-nums whitespace-nowrap">{cosecha.numeroManos.toFixed(1)}</TableCell>
-                    <TableCell className="text-right tabular-nums whitespace-nowrap">{cosecha.ratio.toFixed(2)}</TableCell>
+                    <TableCell className="text-right tabular-nums whitespace-nowrap">{(cosecha.pesoPromedio || 0).toFixed(1)} lb</TableCell>
+                    <TableCell className="text-right tabular-nums whitespace-nowrap">{cosecha.calibracion || 0}</TableCell>
+                    <TableCell className="text-right tabular-nums whitespace-nowrap">{(cosecha.numeroManos || 0).toFixed(1)}</TableCell>
+                    <TableCell className="text-right tabular-nums whitespace-nowrap">{(cosecha.ratio || 0).toFixed(2)}</TableCell>
                     <TableCell>
-                      <span className={getMermaColor(cosecha.merma)}>
-                        {cosecha.merma.toFixed(2)}%
+                      <span className={getMermaColor(cosecha.merma || 0)}>
+                        {(cosecha.merma || 0).toFixed(2)}%
                       </span>
                     </TableCell>
                     <TableCell className="truncate max-w-[140px] whitespace-nowrap">

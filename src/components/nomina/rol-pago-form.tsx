@@ -104,8 +104,10 @@ export function RolPagoForm() {
       semana: Number.parseInt(formData.semana),
       año: Number.parseInt(formData.año),
       fecha: new Date().toISOString().split("T")[0],
+      fechaPago: new Date().toISOString().split("T")[0],
       diasLaborados: diasLaborados,
       horasExtras: Number.parseFloat(horasExtras.toFixed(2)),
+      salarioBase: Number.parseFloat(sueldoBase.toFixed(2)),
       sueldoBase: Number.parseFloat(sueldoBase.toFixed(2)),
       cosecha: Number.parseFloat(cosecha.toFixed(2)),
       tareasEspeciales: Number.parseFloat(tareasEspeciales.toFixed(2)),
@@ -119,28 +121,37 @@ export function RolPagoForm() {
       prestamoAplicado: false,
     };
 
-    addRolPago(newRolPago);
-    toast({
-      title: "Rol de pago generado",
-      description: `Neto a pagar: $${netoAPagar.toFixed(2)} para ${
-        empleado.nombre
-      }`,
-    });
-
-    // Reset form
-    setFormData({
-      empleadoId: "",
-      semana: "",
-      año: "2025",
-      diasLaborados: "",
-      horasExtras: "",
-      cosecha: "",
-      tareasEspeciales: "",
-      multas: "",
-      prestamos: "",
-    });
-    setErrors({});
-    setIsSubmitting(false);
+    addRolPago(newRolPago)
+      .then(() => {
+        toast({
+          title: "Rol de pago generado",
+          description: `Neto a pagar: $${netoAPagar.toFixed(2)} para ${empleado.nombre}`,
+        });
+        // Reset form
+        setFormData({
+          empleadoId: "",
+          semana: "",
+          año: "2025",
+          diasLaborados: "",
+          horasExtras: "",
+          cosecha: "",
+          tareasEspeciales: "",
+          multas: "",
+          prestamos: "",
+        });
+        setErrors({});
+      })
+      .catch((error: Error) => {
+        console.error("Error al guardar rol de pago:", error);
+        toast({
+          title: "Error al guardar",
+          description: error?.message || "No se pudo crear el rol de pago",
+          variant: "destructive",
+        });
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
   };
 
   return (
@@ -158,7 +169,7 @@ export function RolPagoForm() {
                 value={formData.empleadoId}
                 onValueChange={(value) => {
                   const p = prestamos.find((x) => x.empleadoId === value && x.estado === "activo");
-                  const cuota = p ? String(Number(p.valorCuota.toFixed(2))) : "";
+                  const cuota = p && p.valorCuota ? String(Number(p.valorCuota.toFixed(2))) : "";
                   setFormData({ ...formData, empleadoId: value, prestamos: cuota });
                   setErrors((prev) => ({ ...prev, empleadoId: "" }));
                 }}
@@ -363,7 +374,7 @@ export function RolPagoForm() {
                   return (
                     <div className="space-y-1">
                       <p className="text-xs text-muted-foreground">Préstamo activo</p>
-                      <p className="text-sm font-medium text-foreground">Saldo ${p.saldoPendiente.toFixed(2)} · Cuota ${p.valorCuota.toFixed(2)}</p>
+                      <p className="text-sm font-medium text-foreground">Saldo ${(p.saldoPendiente || 0).toFixed(2)} · Cuota ${(p.valorCuota || 0).toFixed(2)}</p>
                     </div>
                   );
                 })()}

@@ -1,6 +1,7 @@
 "use client";
 
-import { Bell, Moon, Sun, User, LogOut, AlertCircle, AlertTriangle, Info } from "lucide-react";
+import { useState } from "react";
+import { Bell, Moon, Sun, User, LogOut, AlertCircle, AlertTriangle, Info, Search, Users, Package, Sprout, FileText } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/src/components/ui/button";
 import {
@@ -11,6 +12,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/src/components/ui/dropdown-menu";
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/src/components/ui/command";
 import { Badge } from "@/src/components/ui/badge";
 import { ScrollArea } from "@/src/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/src/components/ui/avatar";
@@ -23,11 +32,30 @@ export function AppHeader() {
   const pathname = usePathname();
   const { currentUser, theme, toggleTheme, alertas, fincas, logout, canAccess, marcarAlertaLeida } = useApp();
   const isMobile = useIsMobile();
+  const [searchOpen, setSearchOpen] = useState(false);
+  
   const fincaAsignadaNombre = (() => {
     if (!currentUser?.fincaAsignada) return undefined;
     const f = fincas.find((fi) => fi.id === currentUser.fincaAsignada);
     return f?.nombre;
   })();
+
+  // Módulos del sidebar para búsqueda
+  const modulos = [
+    { id: 'dashboard', label: 'Dashboard', description: 'Vista general', href: '/dashboard', icon: Sprout },
+    { id: 'enfundes', label: 'Enfundes', description: 'Registro de enfundes', href: '/produccion/enfundes', icon: Sprout },
+    { id: 'cosechas', label: 'Cosechas', description: 'Control de cosechas', href: '/produccion/cosechas', icon: Sprout },
+    { id: 'recuperacion', label: 'Recuperación', description: 'Cintas recuperadas', href: '/produccion/recuperacion', icon: Sprout },
+    { id: 'empleados', label: 'Empleados', description: 'Gestión de personal', href: '/nomina/empleados', icon: Users },
+    { id: 'roles', label: 'Roles de Pago', description: 'Nómina semanal', href: '/nomina/roles', icon: FileText },
+    { id: 'prestamos', label: 'Préstamos', description: 'Adelantos y cuotas', href: '/nomina/prestamos', icon: FileText },
+    { id: 'insumos', label: 'Insumos', description: 'Inventario', href: '/inventario/insumos', icon: Package },
+    { id: 'movimientos', label: 'Movimientos', description: 'Entradas y salidas', href: '/inventario/movimientos', icon: Package },
+    { id: 'alertas', label: 'Alertas', description: 'Stock bajo', href: '/inventario/alertas', icon: Package },
+    { id: 'reportes', label: 'Reportes', description: 'Análisis y métricas', href: '/reportes', icon: FileText },
+    { id: 'usuarios', label: 'Usuarios', description: 'Gestión de cuentas', href: '/configuracion/usuarios', icon: Users },
+    { id: 'fincas', label: 'Fincas', description: 'Propiedades', href: '/configuracion/fincas', icon: Sprout },
+  ];
 
   const alertasVisibles = (alertas || []).filter((a) => {
     if (!currentUser) return false;
@@ -81,9 +109,22 @@ export function AppHeader() {
   };
 
   return (
+    <>
     <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
       <div className="flex flex-1 items-center gap-4">
-        {/* Espacio reservado para mantener el layout */}
+        {/* Búsqueda global */}
+        <Button
+          variant="outline"
+          className="relative h-9 w-full max-w-sm justify-start text-sm text-muted-foreground sm:pr-12"
+          onClick={() => setSearchOpen(true)}
+        >
+          <Search className="mr-2 h-4 w-4" />
+          <span className="hidden lg:inline-flex">Buscar módulos...</span>
+          <span className="inline-flex lg:hidden">Buscar...</span>
+          <kbd className="pointer-events-none absolute right-1.5 top-1.5 hidden h-6 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+            <span className="text-xs">⌘</span>K
+          </kbd>
+        </Button>
       </div>
 
       <div className="flex items-center gap-2">
@@ -223,5 +264,29 @@ export function AppHeader() {
         </DropdownMenu>
       </div>
     </header>
+
+    {/* Búsqueda global con CommandDialog */}
+    <CommandDialog open={searchOpen} onOpenChange={setSearchOpen}>
+      <CommandInput placeholder="Buscar módulos..." />
+      <CommandList>
+        <CommandEmpty>No se encontraron resultados.</CommandEmpty>
+        <CommandGroup heading="Módulos">
+          {modulos.map((item) => (
+            <CommandItem
+              key={item.id}
+              onSelect={() => {
+                router.push(item.href);
+                setSearchOpen(false);
+              }}
+            >
+              <item.icon className="mr-2 h-4 w-4" />
+              <span>{item.label}</span>
+              <span className="ml-2 text-xs text-muted-foreground">{item.description}</span>
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      </CommandList>
+    </CommandDialog>
+    </>
   );
 }

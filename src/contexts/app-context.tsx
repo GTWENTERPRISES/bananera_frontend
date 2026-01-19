@@ -16,19 +16,7 @@ import type {
   Finca,
   UserRole,
 } from "@/src/lib/types";
-import {
-  mockUsers,
-  mockEnfundes,
-  mockCosechas,
-  mockEmpleados,
-  mockRolesPago,
-  mockPrestamos,
-  mockInsumos,
-  mockMovimientosInventario,
-  mockAlertas,
-  mockRecuperacionCintas,
-  mockFincas,
-} from "@/src/lib/mock-data";
+// Mock data removido - todos los datos vienen del backend API
 import { Loader2 } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -68,30 +56,30 @@ interface AppContextType {
   toggleTheme: () => void;
 
   // Producción
-  addEnfunde: (enfunde: Enfunde) => void;
-  addCosecha: (cosecha: Cosecha) => void;
-  updateEnfunde: (id: string, enfunde: Partial<Enfunde>) => void;
-  updateCosecha: (id: string, cosecha: Partial<Cosecha>) => void;
-  deleteEnfunde: (id: string) => void;
-  deleteCosecha: (id: string) => void;
+  addEnfunde: (enfunde: Enfunde) => Promise<any>;
+  addCosecha: (cosecha: Cosecha) => Promise<any>;
+  updateEnfunde: (id: string, enfunde: Partial<Enfunde>) => Promise<void>;
+  updateCosecha: (id: string, cosecha: Partial<Cosecha>) => Promise<void>;
+  deleteEnfunde: (id: string) => Promise<void>;
+  deleteCosecha: (id: string) => Promise<void>;
   replaceEnfundes: (data: Enfunde[]) => void;
-  addRecuperacionCinta: (recuperacion: RecuperacionCinta) => void;
+  addRecuperacionCinta: (recuperacion: RecuperacionCinta) => Promise<any>;
   updateRecuperacionCinta: (id: string, recuperacion: Partial<RecuperacionCinta>) => void;
-  deleteRecuperacionCinta: (id: string) => void;
+  deleteRecuperacionCinta: (id: string) => Promise<void>;
 
   // Nómina
-  addEmpleado: (empleado: Empleado) => void;
-  updateEmpleado: (id: string, empleado: Partial<Empleado>) => void;
-  deleteEmpleado: (id: string) => void;
-  addRolPago: (rol: RolPago) => void;
-  addPrestamo: (prestamo: Prestamo) => void;
-  updatePrestamo: (id: string, prestamo: Partial<Prestamo>) => void;
+  addEmpleado: (empleado: Empleado) => Promise<any>;
+  updateEmpleado: (id: string, empleado: Partial<Empleado>) => Promise<void>;
+  deleteEmpleado: (id: string) => Promise<void>;
+  addRolPago: (rol: RolPago) => Promise<any>;
+  addPrestamo: (prestamo: Prestamo) => Promise<any>;
+  updatePrestamo: (id: string, prestamo: Partial<Prestamo>) => Promise<void>;
   updateRolPagoEstado: (id: string, estado: "pendiente" | "pagado") => void;
 
   // Inventario
-  addInsumo: (insumo: Insumo) => void;
-  updateInsumo: (id: string, insumo: Partial<Insumo>) => void;
-  addMovimientoInventario: (movimiento: MovimientoInventario) => void;
+  addInsumo: (insumo: Insumo) => Promise<any>;
+  updateInsumo: (id: string, insumo: Partial<Insumo>) => Promise<void>;
+  addMovimientoInventario: (movimiento: MovimientoInventario) => Promise<void>;
   generarOrdenCompra: (insumoId: string) => void;
 
   // Alertas
@@ -99,9 +87,9 @@ interface AppContextType {
   marcarAlertaLeida: (id: string) => void;
 
   // Configuración
-  addFinca: (finca: Finca) => void;
-  updateFinca: (id: string, finca: Partial<Finca>) => void;
-  deleteFinca: (id: string) => void;
+  addFinca: (finca: Finca) => Promise<any>;
+  updateFinca: (id: string, finca: Partial<Finca>) => Promise<void>;
+  deleteFinca: (id: string) => Promise<void>;
   addUsuario: (usuario: User) => void;
   updateUsuario: (id: string, usuario: Partial<User>) => void;
   deleteUsuario: (id: string) => void;
@@ -138,17 +126,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     currentUser: null,
     isAuthenticated: false,
     theme: "light",
-    enfundes: mockEnfundes,
-    cosechas: mockCosechas,
-    recuperacionCintas: mockRecuperacionCintas,
-    empleados: mockEmpleados,
-    rolesPago: mockRolesPago,
-    prestamos: mockPrestamos,
-    insumos: mockInsumos,
-    movimientosInventario: mockMovimientosInventario,
-    alertas: mockAlertas,
-    fincas: mockFincas,
-    usuarios: mockUsers,
+    enfundes: [],
+    cosechas: [],
+    recuperacionCintas: [],
+    empleados: [],
+    rolesPago: [],
+    prestamos: [],
+    insumos: [],
+    movimientosInventario: [],
+    alertas: [],
+    fincas: [],
+    usuarios: [],
   });
 
   const [isInitialized, setIsInitialized] = useState(false);
@@ -192,92 +180,216 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     initializeAuth();
   }, []);
 
-  // Cargar usuarios desde el backend
+  // Cargar TODOS los datos desde el backend cuando el usuario está autenticado
   useEffect(() => {
-    const loadUsersFromBackend = async () => {
+    const loadAllDataFromBackend = async () => {
       const token = localStorage.getItem('accessToken');
       if (!token) return;
       
+      const headers = { 'Authorization': `Bearer ${token}` };
+      
       try {
-        const res = await fetch(`${API_URL}/usuarios/`, {
-          headers: { 'Authorization': `Bearer ${token}` },
+        console.log('[API] Cargando todos los datos del backend...');
+        
+        // Cargar todos los endpoints en paralelo
+        const [
+          fincasRes, usuariosRes, enfundesRes, cosechasRes, recuperacionesRes,
+          empleadosRes, rolesRes, prestamosRes, insumosRes, movimientosRes, alertasRes
+        ] = await Promise.all([
+          fetch(`${API_URL}/fincas/`, { headers }),
+          fetch(`${API_URL}/usuarios/`, { headers }),
+          fetch(`${API_URL}/enfundes/`, { headers }),
+          fetch(`${API_URL}/cosechas/`, { headers }),
+          fetch(`${API_URL}/recuperaciones/`, { headers }),
+          fetch(`${API_URL}/empleados/`, { headers }),
+          fetch(`${API_URL}/roles-pago/`, { headers }),
+          fetch(`${API_URL}/prestamos/`, { headers }),
+          fetch(`${API_URL}/insumos/`, { headers }),
+          fetch(`${API_URL}/movimientos-inventario/`, { headers }),
+          fetch(`${API_URL}/alertas/`, { headers }),
+        ]);
+        
+        // Parsear respuestas
+        const fincas = fincasRes.ok ? await fincasRes.json() : [];
+        const usuarios = usuariosRes.ok ? await usuariosRes.json() : [];
+        const enfundes = enfundesRes.ok ? await enfundesRes.json() : [];
+        const cosechas = cosechasRes.ok ? await cosechasRes.json() : [];
+        const recuperaciones = recuperacionesRes.ok ? await recuperacionesRes.json() : [];
+        const empleados = empleadosRes.ok ? await empleadosRes.json() : [];
+        const rolesPago = rolesRes.ok ? await rolesRes.json() : [];
+        const prestamos = prestamosRes.ok ? await prestamosRes.json() : [];
+        const insumos = insumosRes.ok ? await insumosRes.json() : [];
+        const movimientos = movimientosRes.ok ? await movimientosRes.json() : [];
+        const alertas = alertasRes.ok ? await alertasRes.json() : [];
+        
+        console.log('[API] Datos cargados:', {
+          fincas: fincas.length,
+          usuarios: usuarios.length,
+          enfundes: enfundes.length,
+          cosechas: cosechas.length,
+          empleados: empleados.length,
+          rolesPago: rolesPago.length,
+          insumos: insumos.length,
         });
         
-        if (res.ok) {
-          const users = await res.json();
-          setState((prev) => ({
-            ...prev,
-            usuarios: users.map((u: any) => ({
-              id: u.id,
-              email: u.email,
-              nombre: u.nombre,
-              rol: u.rol,
-              fincaAsignada: u.finca_asignada,
-              fincaNombre: u.finca_nombre,
-              telefono: u.telefono,
-              activo: u.activo,
-            })),
-          }));
-        }
+        // Mapear datos del backend al formato del frontend
+        setState((prev) => ({
+          ...prev,
+          fincas: fincas.map((f: any) => ({
+            id: f.id,
+            nombre: f.nombre,
+            ubicacion: f.ubicacion,
+            hectareas: Number(f.hectareas),
+            responsable: f.responsable,
+            activa: f.activa,
+          })),
+          usuarios: usuarios.map((u: any) => ({
+            id: u.id,
+            email: u.email,
+            nombre: u.nombre,
+            rol: u.rol,
+            fincaAsignada: u.finca_asignada,
+            fincaNombre: u.finca_nombre,
+            telefono: u.telefono,
+            activo: u.activo,
+          })),
+          enfundes: enfundes.map((e: any) => ({
+            id: e.id,
+            finca: e.finca_nombre,
+            fincaId: e.finca,
+            fecha: e.fecha,
+            semana: e.semana,
+            año: e.año,
+            colorCinta: e.color_cinta,
+            cantidadEnfundes: e.cantidad_enfundes,
+            matasCaidas: e.matas_caidas,
+            observaciones: e.observaciones,
+          })),
+          cosechas: cosechas.map((c: any) => ({
+            id: c.id,
+            finca: c.finca_nombre,
+            fincaId: c.finca,
+            fecha: c.fecha,
+            semana: c.semana,
+            año: c.año,
+            lote: c.lote,
+            cajasProducidas: c.cajas_producidas,
+            racimosRecuperados: c.racimos_recuperados,
+            pesoPromedio: Number(c.peso_promedio),
+            calibracion: Number(c.calibracion),
+            numeroManos: c.manos,
+            ratio: Number(c.ratio),
+          })),
+          recuperacionCintas: recuperaciones.map((r: any) => ({
+            id: r.id,
+            enfundeId: r.enfunde,
+            fincaNombre: r.finca_nombre,
+            fecha: r.fecha,
+            cintasRecuperadas: r.cintas_recuperadas,
+            porcentajeRecuperacion: Number(r.porcentaje_recuperacion),
+            observaciones: r.observaciones,
+          })),
+          empleados: empleados.map((e: any) => ({
+            id: e.id,
+            finca: e.finca_nombre,
+            fincaId: e.finca,
+            nombre: e.nombre,
+            cedula: e.cedula,
+            cargo: e.cargo,
+            salarioBase: Number(e.salario_base),
+            fechaIngreso: e.fecha_ingreso,
+            telefono: e.telefono,
+            direccion: e.direccion,
+            activo: e.activo,
+          })),
+          rolesPago: rolesPago.map((r: any) => ({
+            id: r.id,
+            empleadoId: r.empleado,
+            empleadoNombre: r.empleado_nombre,
+            finca: r.finca_nombre,
+            fincaNombre: r.finca_nombre,
+            fechaPago: r.fecha_pago,
+            periodoInicio: r.periodo_inicio,
+            periodoFin: r.periodo_fin,
+            salarioBase: Number(r.salario_base),
+            horasExtras: Number(r.horas_extras),
+            bonificaciones: Number(r.bonificaciones),
+            deducciones: Number(r.deducciones),
+            totalIngresos: Number(r.salario_base) + Number(r.horas_extras) + Number(r.bonificaciones),
+            totalEgresos: Number(r.deducciones),
+            netoAPagar: Number(r.total_pagar),
+            estado: r.estado,
+          })),
+          prestamos: prestamos.map((p: any) => ({
+            id: p.id,
+            empleadoId: p.empleado,
+            empleadoNombre: p.empleado_nombre,
+            fincaNombre: p.finca_nombre,
+            monto: Number(p.monto),
+            montoPagado: Number(p.monto_pagado),
+            saldoPendiente: Number(p.saldo_pendiente),
+            cuotas: p.cuotas,
+            numeroCuotas: p.cuotas,
+            cuotasPagadas: p.cuotas_pagadas,
+            valorCuota: Number(p.monto) / p.cuotas,
+            fechaSolicitud: p.fecha_solicitud,
+            fechaAprobacion: p.fecha_aprobacion,
+            estado: p.estado,
+            motivo: p.motivo,
+          })),
+          insumos: insumos.map((i: any) => ({
+            id: i.id,
+            finca: i.finca_nombre,
+            fincaId: i.finca,
+            nombre: i.nombre,
+            categoria: i.categoria,
+            proveedor: i.proveedor,
+            unidadMedida: i.unidad_medida,
+            stockActual: Number(i.stock_actual),
+            stockMinimo: Number(i.stock_minimo),
+            stockMaximo: Number(i.stock_maximo),
+            precioUnitario: Number(i.precio_unitario),
+            fechaVencimiento: i.fecha_vencimiento,
+            pedidoGenerado: i.pedido_generado,
+          })),
+          movimientosInventario: movimientos.map((m: any) => ({
+            id: m.id,
+            insumoId: m.insumo,
+            insumoNombre: m.insumo_nombre,
+            finca: m.finca_nombre,
+            fincaId: m.finca,
+            tipo: m.tipo,
+            cantidad: m.cantidad,
+            fecha: m.fecha,
+            responsable: m.responsable_nombre,
+            observaciones: m.observaciones,
+          })),
+          alertas: alertas.map((a: any) => ({
+            id: a.id,
+            tipo: a.tipo === 'stock_bajo' ? 'advertencia' : a.tipo === 'pago_pendiente' ? 'info' : a.prioridad === 'alta' || a.prioridad === 'critica' ? 'critico' : 'info',
+            modulo: a.tipo === 'stock_bajo' ? 'inventario' : a.tipo === 'pago_pendiente' ? 'nomina' : a.tipo === 'cosecha' ? 'produccion' : 'sistema',
+            titulo: a.titulo,
+            descripcion: a.mensaje,
+            fecha: a.fecha_creacion,
+            leida: a.leida,
+            finca: a.finca_nombre,
+            prioridad: a.prioridad,
+            rolesPermitidos: ['administrador', 'gerente', 'supervisor_finca', 'contador_rrhh', 'bodeguero'],
+          })),
+        }));
+        
+        console.log('[API] Datos cargados exitosamente');
       } catch (error) {
-        console.error('Error loading users from backend:', error);
+        console.error('[API] Error cargando datos del backend:', error);
       }
     };
     
     if (state.isAuthenticated) {
-      loadUsersFromBackend();
+      loadAllDataFromBackend();
     }
   }, [state.isAuthenticated]);
 
-  // Sembrar datos de 2024 si faltan para reportes
-  useEffect(() => {
-    const tiene2024 = state.cosechas.some((c) => c.año === 2024) || state.enfundes.some((e) => e.año === 2024);
-    if (!tiene2024) {
-      const fincas = ["BABY","SOLO","LAURITA","MARAVILLA"] as const;
-      const semanas = [1, 10, 20, 30, 45];
-      const nuevosEnfundes: Enfunde[] = [];
-      const nuevasCosechas: Cosecha[] = [];
-
-      fincas.forEach((finca, fi) => {
-        semanas.forEach((sem, si) => {
-          const base = 900 + fi * 120 + si * 60;
-          const cajas = 1800 + fi * 200 + si * 120;
-          nuevosEnfundes.push({
-            id: `seed-2024-enf-${finca}-${sem}`,
-            finca,
-            semana: sem,
-            año: 2024,
-            colorCinta: "Azul",
-            cantidadEnfundes: base,
-            matasCaidas: 5 + si,
-            fecha: `2024-01-01`,
-          } as Enfunde);
-          nuevasCosechas.push({
-            id: `seed-2024-cos-${finca}-${sem}`,
-            finca,
-            semana: sem,
-            año: 2024,
-            racimosCorta: Math.round(base * 0.9),
-            racimosRechazados: 30 + si,
-            racimosRecuperados: Math.round(base * 0.88),
-            cajasProducidas: cajas,
-            pesoPromedio: 42,
-            calibracion: 46,
-            numeroManos: 9,
-            ratio: 2.2,
-            merma: 3.5,
-            cajasPorLote: { A: Math.round(cajas * 0.35), B: Math.round(cajas * 0.25), C: Math.round(cajas * 0.2), D: Math.round(cajas * 0.12), E: Math.round(cajas * 0.08) },
-          } as Cosecha);
-        });
-      });
-
-      setState((prev) => ({
-        ...prev,
-        enfundes: [...prev.enfundes, ...nuevosEnfundes],
-        cosechas: [...prev.cosechas, ...nuevasCosechas],
-      }));
-    }
-  }, [state.enfundes, state.cosechas]);
+  // Los datos de 2024+ ahora vienen del backend - no se generan localmente
 
   // Mantener sincronizado con localStorage
   useEffect(() => {
@@ -343,37 +455,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         console.log('[login] Backend error:', errorData);
       }
       
-      // Si falla el backend, intentar con mock data (fallback)
-      console.log('[login] Fallback a mock data...');
-      const user = mockUsers.find(
-        (u) => u.email === email && u.password === password
-      );
-
-      if (!user) {
-        return { success: false, message: "Credenciales incorrectas" };
-      }
-
-      if (!user.activo) {
-        return {
-          success: false,
-          message: "Usuario inactivo. Contacte al administrador",
-        };
-      }
-
-      // NO guardar token cuando es mock data
-      console.log('[login] Login con mock data (sin token JWT)');
-      setState((prev) => ({
-        ...prev,
-        currentUser: user,
-        isAuthenticated: true,
-      }));
-
-      localStorage.setItem("currentUser", JSON.stringify(user));
-
-      return { success: true };
+      // Si falla el backend, mostrar error
+      console.log('[login] Error de autenticación con el backend');
+      return { success: false, message: "Credenciales incorrectas" };
     } catch (error) {
       console.error('[login] Exception:', error);
-      return { success: false, message: "Error al iniciar sesión" };
+      return { success: false, message: "Error al conectar con el servidor" };
     }
   };
 
@@ -399,56 +486,215 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.classList.toggle("dark", newTheme === "dark");
   };
 
-  // Producción functions
-  const addEnfunde = (enfunde: Enfunde) => {
-    setState((prev) => ({ ...prev, enfundes: [enfunde, ...prev.enfundes] }));
+  // Helper para obtener headers con token
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('accessToken');
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    };
+  };
+
+  // Producción functions - con API backend
+  const addEnfunde = async (enfunde: Enfunde) => {
+    try {
+      const res = await fetch(`${API_URL}/enfundes/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          finca: enfunde.fincaId || enfunde.finca,
+          fecha: enfunde.fecha,
+          semana: enfunde.semana,
+          año: enfunde.año,
+          color_cinta: enfunde.colorCinta,
+          cantidad_enfundes: enfunde.cantidadEnfundes,
+          matas_caidas: enfunde.matasCaidas || 0,
+          observaciones: enfunde.observaciones || '',
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const newEnfunde = {
+          id: data.id,
+          finca: data.finca_nombre,
+          fincaId: data.finca,
+          fecha: data.fecha,
+          semana: data.semana,
+          año: data.año,
+          colorCinta: data.color_cinta,
+          cantidadEnfundes: data.cantidad_enfundes,
+          matasCaidas: data.matas_caidas,
+          observaciones: data.observaciones,
+        };
+        setState((prev) => ({ ...prev, enfundes: [newEnfunde, ...prev.enfundes] }));
+        return { success: true };
+      }
+      throw new Error('Error al crear enfunde');
+    } catch (error) {
+      console.error('Error creating enfunde:', error);
+      throw error;
+    }
   };
 
   const replaceEnfundes = (data: Enfunde[]) => {
     setState((prev) => ({ ...prev, enfundes: data }));
   };
 
-  const addCosecha = (cosecha: Cosecha) => {
-    setState((prev) => ({ ...prev, cosechas: [cosecha, ...prev.cosechas] }));
+  const addCosecha = async (cosecha: Cosecha) => {
+    try {
+      const res = await fetch(`${API_URL}/cosechas/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          finca: cosecha.fincaId || cosecha.finca,
+          fecha: cosecha.fecha,
+          semana: cosecha.semana,
+          año: cosecha.año,
+          lote: cosecha.lote || 'A',
+          cajas_producidas: cosecha.cajasProducidas,
+          racimos_recuperados: cosecha.racimosRecuperados || 0,
+          peso_promedio: cosecha.pesoPromedio || 0,
+          calibracion: cosecha.calibracion || 0,
+          manos: cosecha.numeroManos || 0,
+          ratio: cosecha.ratio || 0,
+          observaciones: cosecha.observaciones || '',
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const newCosecha = {
+          id: data.id,
+          finca: data.finca_nombre,
+          fincaId: data.finca,
+          fecha: data.fecha,
+          semana: data.semana,
+          año: data.año,
+          lote: data.lote,
+          cajasProducidas: data.cajas_producidas,
+          racimosRecuperados: data.racimos_recuperados,
+          pesoPromedio: Number(data.peso_promedio),
+          calibracion: Number(data.calibracion),
+          numeroManos: data.manos,
+          ratio: Number(data.ratio),
+        };
+        setState((prev) => ({ ...prev, cosechas: [newCosecha, ...prev.cosechas] }));
+        return { success: true };
+      }
+      throw new Error('Error al crear cosecha');
+    } catch (error) {
+      console.error('Error creating cosecha:', error);
+      throw error;
+    }
   };
 
-  const updateEnfunde = (id: string, enfunde: Partial<Enfunde>) => {
-    setState((prev) => ({
-      ...prev,
-      enfundes: prev.enfundes.map((e) =>
-        e.id === id ? { ...e, ...enfunde } : e
-      ),
-    }));
+  const updateEnfunde = async (id: string, enfunde: Partial<Enfunde>) => {
+    try {
+      const body: any = {};
+      if (enfunde.finca) body.finca = enfunde.fincaId || enfunde.finca;
+      if (enfunde.colorCinta) body.color_cinta = enfunde.colorCinta;
+      if (enfunde.cantidadEnfundes) body.cantidad_enfundes = enfunde.cantidadEnfundes;
+      if (enfunde.matasCaidas !== undefined) body.matas_caidas = enfunde.matasCaidas;
+      
+      const res = await fetch(`${API_URL}/enfundes/${id}/`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        setState((prev) => ({
+          ...prev,
+          enfundes: prev.enfundes.map((e) => e.id === id ? { ...e, ...enfunde } : e),
+        }));
+      }
+    } catch (error) {
+      console.error('Error updating enfunde:', error);
+    }
   };
 
-  const deleteEnfunde = (id: string) => {
-    setState((prev) => ({
-      ...prev,
-      enfundes: prev.enfundes.filter((e) => e.id !== id),
-    }));
+  const deleteEnfunde = async (id: string) => {
+    try {
+      await fetch(`${API_URL}/enfundes/${id}/`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      setState((prev) => ({
+        ...prev,
+        enfundes: prev.enfundes.filter((e) => e.id !== id),
+      }));
+    } catch (error) {
+      console.error('Error deleting enfunde:', error);
+    }
   };
 
-  const updateCosecha = (id: string, cosecha: Partial<Cosecha>) => {
-    setState((prev) => ({
-      ...prev,
-      cosechas: prev.cosechas.map((c) =>
-        c.id === id ? { ...c, ...cosecha } : c
-      ),
-    }));
+  const updateCosecha = async (id: string, cosecha: Partial<Cosecha>) => {
+    try {
+      const body: any = {};
+      if (cosecha.cajasProducidas) body.cajas_producidas = cosecha.cajasProducidas;
+      if (cosecha.pesoPromedio) body.peso_promedio = cosecha.pesoPromedio;
+      if (cosecha.ratio) body.ratio = cosecha.ratio;
+      
+      const res = await fetch(`${API_URL}/cosechas/${id}/`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        setState((prev) => ({
+          ...prev,
+          cosechas: prev.cosechas.map((c) => c.id === id ? { ...c, ...cosecha } : c),
+        }));
+      }
+    } catch (error) {
+      console.error('Error updating cosecha:', error);
+    }
   };
 
-  const deleteCosecha = (id: string) => {
-    setState((prev) => ({
-      ...prev,
-      cosechas: prev.cosechas.filter((c) => c.id !== id),
-    }));
+  const deleteCosecha = async (id: string) => {
+    try {
+      await fetch(`${API_URL}/cosechas/${id}/`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      setState((prev) => ({
+        ...prev,
+        cosechas: prev.cosechas.filter((c) => c.id !== id),
+      }));
+    } catch (error) {
+      console.error('Error deleting cosecha:', error);
+    }
   };
 
-  const addRecuperacionCinta = (recuperacion: RecuperacionCinta) => {
-    setState((prev) => ({
-      ...prev,
-      recuperacionCintas: [recuperacion, ...prev.recuperacionCintas],
-    }));
+  const addRecuperacionCinta = async (recuperacion: RecuperacionCinta) => {
+    try {
+      const res = await fetch(`${API_URL}/recuperaciones/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          enfunde: recuperacion.enfundeId,
+          fecha: recuperacion.fecha,
+          cintas_recuperadas: recuperacion.cintasRecuperadas,
+          porcentaje_recuperacion: recuperacion.porcentajeRecuperacion,
+          observaciones: recuperacion.observaciones || '',
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setState((prev) => ({
+          ...prev,
+          recuperacionCintas: [{
+            id: data.id,
+            enfundeId: data.enfunde,
+            fincaNombre: data.finca_nombre,
+            fecha: data.fecha,
+            cintasRecuperadas: data.cintas_recuperadas,
+            porcentajeRecuperacion: Number(data.porcentaje_recuperacion),
+            observaciones: data.observaciones,
+          }, ...prev.recuperacionCintas],
+        }));
+      }
+    } catch (error) {
+      console.error('Error creating recuperacion:', error);
+    }
   };
 
   const updateRecuperacionCinta = (id: string, recuperacion: Partial<RecuperacionCinta>) => {
@@ -460,49 +706,203 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
-  const deleteRecuperacionCinta = (id: string) => {
-    setState((prev) => ({
-      ...prev,
-      recuperacionCintas: prev.recuperacionCintas.filter((r) => r.id !== id),
-    }));
+  const deleteRecuperacionCinta = async (id: string) => {
+    try {
+      await fetch(`${API_URL}/recuperaciones/${id}/`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      setState((prev) => ({
+        ...prev,
+        recuperacionCintas: prev.recuperacionCintas.filter((r) => r.id !== id),
+      }));
+    } catch (error) {
+      console.error('Error deleting recuperacion:', error);
+    }
   };
 
-  // Nómina functions
-  const addEmpleado = (empleado: Empleado) => {
-    setState((prev) => ({ ...prev, empleados: [empleado, ...prev.empleados] }));
+  // Nómina functions - con API backend
+  const addEmpleado = async (empleado: Empleado) => {
+    try {
+      const res = await fetch(`${API_URL}/empleados/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          finca: empleado.fincaId || empleado.finca,
+          nombre: empleado.nombre,
+          cedula: empleado.cedula,
+          cargo: empleado.cargo || empleado.labor,
+          salario_base: empleado.salarioBase || empleado.tarifaDiaria || 0,
+          fecha_ingreso: empleado.fechaIngreso,
+          telefono: empleado.telefono || '',
+          direccion: empleado.direccion || '',
+          activo: empleado.activo ?? true,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setState((prev) => ({ ...prev, empleados: [{
+          id: data.id,
+          finca: data.finca_nombre,
+          fincaId: data.finca,
+          nombre: data.nombre,
+          cedula: data.cedula,
+          cargo: data.cargo,
+          labor: data.cargo,
+          salarioBase: Number(data.salario_base),
+          tarifaDiaria: Number(data.salario_base),
+          fechaIngreso: data.fecha_ingreso,
+          telefono: data.telefono,
+          direccion: data.direccion,
+          activo: data.activo,
+        }, ...prev.empleados] }));
+        return { success: true };
+      }
+      throw new Error('Error al crear empleado');
+    } catch (error) {
+      console.error('Error creating empleado:', error);
+      throw error;
+    }
   };
 
-  const updateEmpleado = (id: string, empleado: Partial<Empleado>) => {
-    setState((prev) => ({
-      ...prev,
-      empleados: prev.empleados.map((e) =>
-        e.id === id ? { ...e, ...empleado } : e
-      ),
-    }));
+  const updateEmpleado = async (id: string, empleado: Partial<Empleado>) => {
+    try {
+      const body: any = {};
+      if (empleado.nombre) body.nombre = empleado.nombre;
+      if (empleado.cargo || empleado.labor) body.cargo = empleado.cargo || empleado.labor;
+      if (empleado.salarioBase || empleado.tarifaDiaria) body.salario_base = empleado.salarioBase || empleado.tarifaDiaria;
+      if (empleado.telefono !== undefined) body.telefono = empleado.telefono;
+      if (empleado.activo !== undefined) body.activo = empleado.activo;
+      
+      await fetch(`${API_URL}/empleados/${id}/`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(body),
+      });
+      setState((prev) => ({
+        ...prev,
+        empleados: prev.empleados.map((e) => e.id === id ? { ...e, ...empleado } : e),
+      }));
+    } catch (error) {
+      console.error('Error updating empleado:', error);
+    }
   };
 
-  const deleteEmpleado = (id: string) => {
-    setState((prev) => ({
-      ...prev,
-      empleados: prev.empleados.filter((e) => e.id !== id),
-    }));
+  const deleteEmpleado = async (id: string) => {
+    try {
+      await fetch(`${API_URL}/empleados/${id}/`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      setState((prev) => ({
+        ...prev,
+        empleados: prev.empleados.filter((e) => e.id !== id),
+      }));
+    } catch (error) {
+      console.error('Error deleting empleado:', error);
+    }
   };
 
-  const addRolPago = (rol: RolPago) => {
-    setState((prev) => ({ ...prev, rolesPago: [rol, ...prev.rolesPago] }));
+  const addRolPago = async (rol: RolPago) => {
+    try {
+      const res = await fetch(`${API_URL}/roles-pago/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          empleado: rol.empleadoId,
+          fecha_pago: rol.fechaPago,
+          periodo_inicio: rol.periodoInicio,
+          periodo_fin: rol.periodoFin,
+          salario_base: rol.salarioBase,
+          horas_extras: rol.horasExtras || 0,
+          bonificaciones: rol.bonificaciones || 0,
+          deducciones: rol.deducciones || 0,
+          total_pagar: rol.netoAPagar || rol.totalIngresos,
+          estado: rol.estado || 'pendiente',
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setState((prev) => ({ ...prev, rolesPago: [{
+          id: data.id,
+          empleadoId: data.empleado,
+          empleadoNombre: data.empleado_nombre,
+          finca: data.finca_nombre,
+          fincaNombre: data.finca_nombre,
+          fechaPago: data.fecha_pago,
+          periodoInicio: data.periodo_inicio,
+          periodoFin: data.periodo_fin,
+          salarioBase: Number(data.salario_base),
+          horasExtras: Number(data.horas_extras),
+          bonificaciones: Number(data.bonificaciones),
+          deducciones: Number(data.deducciones),
+          totalIngresos: Number(data.salario_base) + Number(data.horas_extras) + Number(data.bonificaciones),
+          totalEgresos: Number(data.deducciones),
+          netoAPagar: Number(data.total_pagar),
+          estado: data.estado,
+        }, ...prev.rolesPago] }));
+      }
+    } catch (error) {
+      console.error('Error creating rol pago:', error);
+    }
   };
 
-  const addPrestamo = (prestamo: Prestamo) => {
-    setState((prev) => ({ ...prev, prestamos: [prestamo, ...prev.prestamos] }));
+  const addPrestamo = async (prestamo: Prestamo) => {
+    try {
+      const res = await fetch(`${API_URL}/prestamos/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          empleado: prestamo.empleadoId,
+          monto: prestamo.monto,
+          cuotas: prestamo.cuotas || prestamo.numeroCuotas,
+          fecha_solicitud: prestamo.fechaSolicitud,
+          estado: prestamo.estado || 'pendiente',
+          motivo: prestamo.motivo || '',
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setState((prev) => ({ ...prev, prestamos: [{
+          id: data.id,
+          empleadoId: data.empleado,
+          empleadoNombre: data.empleado_nombre,
+          fincaNombre: data.finca_nombre,
+          monto: Number(data.monto),
+          montoPagado: Number(data.monto_pagado),
+          saldoPendiente: Number(data.saldo_pendiente),
+          cuotas: data.cuotas,
+          numeroCuotas: data.cuotas,
+          cuotasPagadas: data.cuotas_pagadas,
+          valorCuota: Number(data.monto) / data.cuotas,
+          fechaSolicitud: data.fecha_solicitud,
+          estado: data.estado,
+          motivo: data.motivo,
+        }, ...prev.prestamos] }));
+      }
+    } catch (error) {
+      console.error('Error creating prestamo:', error);
+    }
   };
 
-  const updatePrestamo = (id: string, prestamo: Partial<Prestamo>) => {
-    setState((prev) => ({
-      ...prev,
-      prestamos: prev.prestamos.map((p) =>
-        p.id === id ? { ...p, ...prestamo } : p
-      ),
-    }));
+  const updatePrestamo = async (id: string, prestamo: Partial<Prestamo>) => {
+    try {
+      const body: any = {};
+      if (prestamo.estado) body.estado = prestamo.estado;
+      if (prestamo.cuotasPagadas !== undefined) body.cuotas_pagadas = prestamo.cuotasPagadas;
+      
+      await fetch(`${API_URL}/prestamos/${id}/`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(body),
+      });
+      setState((prev) => ({
+        ...prev,
+        prestamos: prev.prestamos.map((p) => p.id === id ? { ...p, ...prestamo } : p),
+      }));
+    } catch (error) {
+      console.error('Error updating prestamo:', error);
+    }
   };
 
   const updateRolPagoEstado = (id: string, estado: "pendiente" | "pagado") => {
@@ -584,42 +984,121 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  // Inventario functions
-  const addInsumo = (insumo: Insumo) => {
-    setState((prev) => ({ ...prev, insumos: [insumo, ...prev.insumos] }));
-  };
-
-  const updateInsumo = (id: string, insumo: Partial<Insumo>) => {
-    setState((prev) => ({
-      ...prev,
-      insumos: prev.insumos.map((i) => (i.id === id ? { ...i, ...insumo } : i)),
-    }));
-  };
-
-  const addMovimientoInventario = (movimiento: MovimientoInventario) => {
-    setState((prev) => {
-      const newMovimientos = [movimiento, ...prev.movimientosInventario];
-
-      const insumo = prev.insumos.find((i) => i.id === movimiento.insumoId);
-      if (insumo) {
-        const newStock =
-          movimiento.tipo === "entrada"
-            ? insumo.stockActual + movimiento.cantidad
-            : insumo.stockActual - movimiento.cantidad;
-
-        const newInsumos = prev.insumos.map((i) =>
-          i.id === movimiento.insumoId ? { ...i, stockActual: newStock } : i
-        );
-
-        return {
-          ...prev,
-          movimientosInventario: newMovimientos,
-          insumos: newInsumos,
-        };
+  // Inventario functions - con API backend
+  const addInsumo = async (insumo: Insumo) => {
+    try {
+      const res = await fetch(`${API_URL}/insumos/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          finca: insumo.fincaId || insumo.finca,
+          nombre: insumo.nombre,
+          categoria: insumo.categoria,
+          proveedor: insumo.proveedor || '',
+          unidad_medida: insumo.unidadMedida,
+          stock_actual: insumo.stockActual,
+          stock_minimo: insumo.stockMinimo,
+          stock_maximo: insumo.stockMaximo || 1000,
+          precio_unitario: insumo.precioUnitario || 0,
+          fecha_vencimiento: insumo.fechaVencimiento || null,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setState((prev) => ({ ...prev, insumos: [{
+          id: data.id,
+          finca: data.finca_nombre,
+          fincaId: data.finca,
+          nombre: data.nombre,
+          categoria: data.categoria,
+          proveedor: data.proveedor,
+          unidadMedida: data.unidad_medida,
+          stockActual: Number(data.stock_actual),
+          stockMinimo: Number(data.stock_minimo),
+          stockMaximo: Number(data.stock_maximo),
+          precioUnitario: Number(data.precio_unitario),
+          fechaVencimiento: data.fecha_vencimiento,
+          pedidoGenerado: data.pedido_generado,
+        }, ...prev.insumos] }));
+        return { success: true };
       }
+      throw new Error('Error al crear insumo');
+    } catch (error) {
+      console.error('Error creating insumo:', error);
+      throw error;
+    }
+  };
 
-      return { ...prev, movimientosInventario: newMovimientos };
-    });
+  const updateInsumo = async (id: string, insumo: Partial<Insumo>) => {
+    try {
+      const body: any = {};
+      if (insumo.nombre) body.nombre = insumo.nombre;
+      if (insumo.stockActual !== undefined) body.stock_actual = insumo.stockActual;
+      if (insumo.stockMinimo !== undefined) body.stock_minimo = insumo.stockMinimo;
+      if (insumo.precioUnitario !== undefined) body.precio_unitario = insumo.precioUnitario;
+      if (insumo.pedidoGenerado !== undefined) body.pedido_generado = insumo.pedidoGenerado;
+      
+      await fetch(`${API_URL}/insumos/${id}/`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(body),
+      });
+      setState((prev) => ({
+        ...prev,
+        insumos: prev.insumos.map((i) => (i.id === id ? { ...i, ...insumo } : i)),
+      }));
+    } catch (error) {
+      console.error('Error updating insumo:', error);
+    }
+  };
+
+  const addMovimientoInventario = async (movimiento: MovimientoInventario) => {
+    try {
+      const res = await fetch(`${API_URL}/movimientos-inventario/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          insumo: movimiento.insumoId,
+          finca: movimiento.fincaId || movimiento.finca,
+          tipo: movimiento.tipo,
+          cantidad: movimiento.cantidad,
+          fecha: movimiento.fecha,
+          observaciones: movimiento.observaciones || '',
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const newMov = {
+          id: data.id,
+          insumoId: data.insumo,
+          insumoNombre: data.insumo_nombre,
+          finca: data.finca_nombre,
+          fincaId: data.finca,
+          tipo: data.tipo,
+          cantidad: data.cantidad,
+          fecha: data.fecha,
+          responsable: data.responsable_nombre,
+          observaciones: data.observaciones,
+        };
+        
+        setState((prev) => {
+          const insumo = prev.insumos.find((i) => i.id === movimiento.insumoId);
+          if (insumo) {
+            const newStock = movimiento.tipo === "entrada"
+              ? insumo.stockActual + movimiento.cantidad
+              : insumo.stockActual - movimiento.cantidad;
+            return {
+              ...prev,
+              movimientosInventario: [newMov, ...prev.movimientosInventario],
+              insumos: prev.insumos.map((i) => i.id === movimiento.insumoId ? { ...i, stockActual: newStock } : i),
+            };
+          }
+          return { ...prev, movimientosInventario: [newMov, ...prev.movimientosInventario] };
+        });
+      }
+    } catch (error) {
+      console.error('Error creating movimiento:', error);
+    }
   };
 
   // Generar orden de compra para un insumo y manejar alertas asociadas
@@ -775,23 +1254,75 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.insumos]);
 
-  // Configuración functions
-  const addFinca = (finca: Finca) => {
-    setState((prev) => ({ ...prev, fincas: [...prev.fincas, finca] }));
+  // Configuración functions - con API backend
+  const addFinca = async (finca: Finca) => {
+    try {
+      const res = await fetch(`${API_URL}/fincas/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          nombre: finca.nombre,
+          ubicacion: finca.ubicacion || '',
+          hectareas: finca.hectareas || 0,
+          responsable: finca.responsable || '',
+          telefono: finca.telefono || '',
+          activa: true,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setState((prev) => ({ ...prev, fincas: [...prev.fincas, {
+          id: data.id,
+          nombre: data.nombre,
+          ubicacion: data.ubicacion,
+          hectareas: Number(data.hectareas),
+          responsable: data.responsable,
+          activa: data.activa,
+        }] }));
+        return { success: true };
+      }
+      throw new Error('Error al crear finca');
+    } catch (error) {
+      console.error('Error creating finca:', error);
+      throw error;
+    }
   };
 
-  const updateFinca = (id: string, finca: Partial<Finca>) => {
-    setState((prev) => ({
-      ...prev,
-      fincas: prev.fincas.map((f) => (f.id === id ? { ...f, ...finca } : f)),
-    }));
+  const updateFinca = async (id: string, finca: Partial<Finca>) => {
+    try {
+      const body: any = {};
+      if (finca.nombre) body.nombre = finca.nombre;
+      if (finca.ubicacion !== undefined) body.ubicacion = finca.ubicacion;
+      if (finca.hectareas !== undefined) body.hectareas = finca.hectareas;
+      if (finca.responsable !== undefined) body.responsable = finca.responsable;
+      
+      await fetch(`${API_URL}/fincas/${id}/`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(body),
+      });
+      setState((prev) => ({
+        ...prev,
+        fincas: prev.fincas.map((f) => (f.id === id ? { ...f, ...finca } : f)),
+      }));
+    } catch (error) {
+      console.error('Error updating finca:', error);
+    }
   };
 
-  const deleteFinca = (id: string) => {
-    setState((prev) => ({
-      ...prev,
-      fincas: prev.fincas.filter((f) => f.id !== id),
-    }));
+  const deleteFinca = async (id: string) => {
+    try {
+      await fetch(`${API_URL}/fincas/${id}/`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      setState((prev) => ({
+        ...prev,
+        fincas: prev.fincas.filter((f) => f.id !== id),
+      }));
+    } catch (error) {
+      console.error('Error deleting finca:', error);
+    }
   };
 
   const addUsuario = async (usuario: User) => {

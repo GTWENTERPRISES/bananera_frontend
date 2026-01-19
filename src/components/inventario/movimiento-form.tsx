@@ -184,24 +184,34 @@ export function MovimientoForm() {
       responsable: formData.responsable,
     };
 
-    addMovimientoInventario(newMovimiento);
-
-    toast({
-      title: `${formData.tipo === "entrada" ? "Entrada" : "Salida"} registrada`,
-      description: `${insumo.nombre}: ${cantidad} ${insumo.unidadMedida}`,
-    });
-
-    // Reset form
-    setFormData({
-      insumoId: "",
-      tipo: "" as "entrada" | "salida",
-      cantidad: "",
-      finca: "" as FincaName | "",
-      motivo: "",
-      responsable: "",
-    });
-    setErrors({});
-    setIsSubmitting(false);
+    addMovimientoInventario(newMovimiento)
+      .then(() => {
+        toast({
+          title: `${formData.tipo === "entrada" ? "Entrada" : "Salida"} registrada`,
+          description: `${insumo.nombre}: ${cantidad} ${insumo.unidadMedida}`,
+        });
+        // Reset form
+        setFormData({
+          insumoId: "",
+          tipo: "" as "entrada" | "salida",
+          cantidad: "",
+          finca: "" as FincaName | "",
+          motivo: "",
+          responsable: "",
+        });
+        setErrors({});
+      })
+      .catch((error: Error) => {
+        console.error("Error al guardar movimiento:", error);
+        toast({
+          title: "Error al guardar",
+          description: error?.message || "No se pudo registrar el movimiento",
+          variant: "destructive",
+        });
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
   };
 
   return (

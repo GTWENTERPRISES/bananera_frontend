@@ -63,12 +63,6 @@ const navItems: NavItem[] = [
     description: "Vista general del sistema",
   },
   {
-    title: "Perfil",
-    href: "/perfil",
-    icon: Users,
-    description: "Tu información personal",
-  },
-  {
     title: "Producción",
     href: "/produccion",
     icon: Sprout,
@@ -76,7 +70,7 @@ const navItems: NavItem[] = [
     children: [
       { title: "Enfundes", href: "/produccion/enfundes", icon: Leaf, description: "Registro de enfundes por semana" },
       { title: "Cosechas", href: "/produccion/cosechas", icon: Scissors, description: "Control de racimos y cajas" },
-      { title: "Recuperación", href: "/produccion/recuperacion", icon: RefreshCw, description: "Racimos recuperados" },
+      { title: "Recuperación", href: "/produccion/recuperacion", icon: RefreshCw, description: "Cintas recuperadas" },
     ],
   },
   {
@@ -85,8 +79,8 @@ const navItems: NavItem[] = [
     icon: Wallet,
     description: "Gestión de personal y pagos",
     children: [
-      { title: "Roles de Pago", href: "/nomina/roles", icon: ClipboardList, description: "Pagos semanales" },
       { title: "Empleados", href: "/nomina/empleados", icon: Users, description: "Directorio de trabajadores" },
+      { title: "Roles de Pago", href: "/nomina/roles", icon: ClipboardList, description: "Pagos semanales" },
       { title: "Préstamos", href: "/nomina/prestamos", icon: Wallet, description: "Adelantos y cuotas" },
     ],
   },
@@ -97,29 +91,19 @@ const navItems: NavItem[] = [
     description: "Control de insumos y stock",
     children: [
       { title: "Insumos", href: "/inventario/insumos", icon: Boxes, description: "Lista de materiales" },
-      { title: "Alertas", href: "/inventario/alertas", icon: AlertTriangle, description: "Stock bajo y vencimientos" },
       { title: "Movimientos", href: "/inventario/movimientos", icon: TruckIcon, description: "Entradas y salidas" },
+      { title: "Alertas", href: "/inventario/alertas", icon: AlertTriangle, description: "Stock bajo y vencimientos" },
     ],
   },
   {
     title: "Reportes",
     href: "/reportes",
-    icon: FileText,
+    icon: BarChart3,
     description: "Informes y análisis",
     children: [
-      { title: "Dashboard", href: "/reportes", icon: PieChart, description: "Resumen ejecutivo" },
+      { title: "General", href: "/reportes", icon: PieChart, description: "Resumen ejecutivo" },
       { title: "Producción", href: "/reportes/produccion", icon: Sprout, description: "Métricas de campo" },
-      { title: "Financieros", href: "/reportes/financiero", icon: Wallet, description: "Costos y gastos" },
-    ],
-  },
-  {
-    title: "Analytics",
-    href: "/analytics",
-    icon: BarChart3,
-    description: "Análisis avanzado con IA",
-    children: [
-      { title: "Dashboard", href: "/analytics", icon: PieChart, description: "Métricas en tiempo real" },
-      { title: "Predictivo", href: "/analytics/predictivo", icon: TrendingUp, description: "Proyecciones y tendencias" },
+      { title: "Financiero", href: "/reportes/financiero", icon: Wallet, description: "Costos y nómina" },
     ],
   },
   {
@@ -128,10 +112,15 @@ const navItems: NavItem[] = [
     icon: Settings,
     description: "Ajustes del sistema",
     children: [
-      { title: "Usuarios", href: "/configuracion/usuarios", icon: UserCog, description: "Gestión de cuentas" },
+      { title: "Usuarios", href: "/configuracion/usuarios", icon: UserCog, description: "Gestión de cuentas y permisos" },
       { title: "Fincas", href: "/configuracion/fincas", icon: Building2, description: "Propiedades registradas" },
-      { title: "Permisos", href: "/configuracion/permisos", icon: Shield, description: "Control de acceso" },
     ],
+  },
+  {
+    title: "Mi Perfil",
+    href: "/perfil",
+    icon: Users,
+    description: "Tu información personal",
   },
 ];
 
@@ -151,14 +140,12 @@ export function AppSidebar() {
     | "nomina"
     | "inventario"
     | "reportes"
-    | "analytics"
     | "configuracion" => {
-    if (href.startsWith("/dashboard")) return "dashboard";
+    if (href.startsWith("/dashboard") || href.startsWith("/perfil")) return "dashboard";
     if (href.startsWith("/produccion")) return "produccion";
     if (href.startsWith("/nomina")) return "nomina";
     if (href.startsWith("/inventario")) return "inventario";
     if (href.startsWith("/reportes")) return "reportes";
-    if (href.startsWith("/analytics")) return "analytics";
     if (href.startsWith("/configuracion")) return "configuracion";
     return "dashboard";
   };

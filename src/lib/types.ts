@@ -50,9 +50,11 @@ export interface Enfunde {
   id: string;
   finca: string;
   fincaId?: string;
+  fincaNombre?: string;
   semana: number;
   año: number;
   colorCinta: string;
+  lote?: string;
   cantidadEnfundes: number;
   matasCaidas: number;
   fecha: string;
@@ -63,18 +65,19 @@ export interface Cosecha {
   id: string;
   finca: string;
   fincaId?: string;
+  fincaNombre?: string;
   semana: number;
   año: number;
   fecha?: string;
   lote?: string;
   racimosCorta?: number;
   racimosRechazados?: number;
-  racimosRecuperados: number;
-  cajasProducidas: number;
-  pesoPromedio: number;
-  calibracion: number;
-  numeroManos: number;
-  ratio: number;
+  racimosRecuperados?: number;
+  cajasProducidas?: number;
+  pesoPromedio?: number;
+  calibracion?: number;
+  numeroManos?: number;
+  ratio?: number;
   merma?: number;
   observaciones?: string;
   cajasPorLote?: {
@@ -92,6 +95,7 @@ export interface Empleado {
   cedula: string;
   finca: string;
   fincaId?: string;
+  fincaNombre?: string;
   cargo: string;
   labor?: string;
   lote?: string;

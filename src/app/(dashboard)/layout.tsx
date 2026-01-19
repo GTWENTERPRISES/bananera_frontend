@@ -5,10 +5,12 @@ import { AppSidebar } from "@/src/components/layout/app-sidebar";
 import { AppHeader } from "@/src/components/layout/app-header";
 import { Breadcrumbs } from "@/src/components/layout/breadcrumbs";
 import { ProtectedRoute } from "@/src/components/auth/protected-route";
+import { OnboardingTour } from "@/src/components/shared/onboarding-tour";
 import { usePathname } from "next/navigation";
 import { useApp } from "@/src/contexts/app-context";
 import { Suspense, useEffect, useState } from "react";
 import { Spinner } from "@/src/components/ui/spinner";
+import { useKeyboardShortcuts } from "@/src/hooks/use-keyboard-shortcuts";
 
 export default function DashboardLayout({
   children,
@@ -18,6 +20,9 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const { canAccess } = useApp();
   const [isTransitioning, setIsTransitioning] = useState(false);
+
+  // Atajos de teclado globales
+  useKeyboardShortcuts();
 
   useEffect(() => {
     setIsTransitioning(true);
@@ -50,15 +55,14 @@ export default function DashboardLayout({
 
   return (
     <ProtectedRoute>
+      <OnboardingTour />
       <div className="flex h-screen overflow-hidden">
         <AppSidebar />
         <div className="flex flex-1 flex-col overflow-hidden">
           <AppHeader />
           <main className="flex-1 overflow-y-auto">
             <div className="container mx-auto p-4 md:p-6">
-              <div className="mb-6">
-                <Breadcrumbs />
-              </div>
+              <Breadcrumbs />
               {allowView ? (
                 <Suspense
                   fallback={

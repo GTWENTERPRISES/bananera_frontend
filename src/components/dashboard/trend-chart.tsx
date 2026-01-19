@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -15,23 +16,40 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { useApp } from "@/src/contexts/app-context";
 
 export function TrendChart() {
-  // Mock data for last 12 weeks
-  const data = [
-    { semana: "S40", ratio: 2.15, merma: 3.8 },
-    { semana: "S41", ratio: 2.18, merma: 3.5 },
-    { semana: "S42", ratio: 2.22, merma: 3.2 },
-    { semana: "S43", ratio: 2.19, merma: 3.6 },
-    { semana: "S44", ratio: 2.25, merma: 3.1 },
-    { semana: "S45", ratio: 2.21, merma: 3.4 },
-    { semana: "S46", ratio: 2.28, merma: 2.9 },
-    { semana: "S47", ratio: 2.24, merma: 3.3 },
-    { semana: "S48", ratio: 2.3, merma: 2.8 },
-    { semana: "S49", ratio: 2.26, merma: 3.2 },
-    { semana: "S50", ratio: 2.23, merma: 3.5 },
-    { semana: "S51", ratio: 2.2, merma: 3.6 },
-  ];
+  const { cosechas } = useApp();
+  
+  // Agrupar cosechas por semana y calcular ratio/merma promedio
+  const data = useMemo(() => {
+    const grouped: Record<string, { ratioTotal: number; mermaTotal: number; count: number; cajas: number }> = {};
+    
+    cosechas.forEach((c) => {
+      const key = `S${c.semana}`;
+      if (!grouped[key]) {
+        grouped[key] = { ratioTotal: 0, mermaTotal: 0, count: 0, cajas: 0 };
+      }
+      grouped[key].ratioTotal += Number(c.ratio) || 0;
+      grouped[key].mermaTotal += Number(c.merma) || 0;
+      grouped[key].count += 1;
+      grouped[key].cajas += c.cajasProducidas || 0;
+    });
+    
+    return Object.entries(grouped)
+      .map(([semana, values]) => ({
+        semana,
+        ratio: values.count > 0 ? Number((values.ratioTotal / values.count).toFixed(2)) : 0,
+        merma: values.count > 0 ? Number((values.mermaTotal / values.count).toFixed(2)) : 0,
+        cajas: values.cajas,
+      }))
+      .sort((a, b) => {
+        const numA = parseInt(a.semana.replace('S', ''));
+        const numB = parseInt(b.semana.replace('S', ''));
+        return numA - numB;
+      })
+      .slice(-12); // Últimas 12 semanas
+  }, [cosechas]);
 
   return (
     <Card>

@@ -203,27 +203,38 @@ export function CosechaForm() {
       return;
     }
 
-    addCosecha(newCosecha);
-    toast({
-      title: "Cosecha registrada",
-      description: `${fincaNombre} - Semana ${newCosecha.semana} | Ratio: ${ratio.toFixed(2)} | Merma: ${merma.toFixed(2)}%`,
-    });
-
-    // Reset form
-    setFormData({
-      finca: undefined as string | undefined,
-      semana: "",
-      año: new Date().getFullYear().toString(),
-      racimosCorta: "",
-      racimosRechazados: "",
-      cajasProducidas: "",
-      pesoPromedio: "",
-      calibracion: "",
-      numeroManos: "",
-    });
-    setErrors({});
-    setRegisteredWeeks([]);
-    setIsSubmitting(false);
+    addCosecha(newCosecha)
+      .then(() => {
+        toast({
+          title: "Cosecha registrada",
+          description: `${fincaNombre} - Semana ${newCosecha.semana} | Ratio: ${ratio.toFixed(2)} | Merma: ${merma.toFixed(2)}%`,
+        });
+        // Reset form
+        setFormData({
+          finca: undefined as string | undefined,
+          semana: "",
+          año: new Date().getFullYear().toString(),
+          racimosCorta: "",
+          racimosRechazados: "",
+          cajasProducidas: "",
+          pesoPromedio: "",
+          calibracion: "",
+          numeroManos: "",
+        });
+        setErrors({});
+        setRegisteredWeeks([]);
+      })
+      .catch((error) => {
+        console.error("Error al guardar cosecha:", error);
+        toast({
+          title: "Error al guardar",
+          description: error?.message || "No se pudo crear la cosecha",
+          variant: "destructive",
+        });
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
   };
 
   return (

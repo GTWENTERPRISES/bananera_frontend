@@ -20,7 +20,7 @@ import {
   CardTitle,
 } from "@/src/components/ui/card";
 import { useApp } from "@/src/contexts/app-context";
-import type { Insumo, FincaName, UnidadMedida } from "@/src/lib/types";
+import type { Insumo, FincaName } from "@/src/lib/types";
 import { Package } from "lucide-react";
 import { useToast } from "@/src/hooks/use-toast";
 import { InsumoSchema } from "@/src/lib/validation";
@@ -180,7 +180,7 @@ export function InsumoForm() {
       id: Date.now().toString(),
       nombre: formData.nombre,
       categoria: formData.categoria,
-      unidadMedida: formData.unidadMedida as UnidadMedida,
+      unidadMedida: formData.unidadMedida,
       stockActual: Number.parseFloat(formData.stockActual),
       stockMinimo: Number.parseFloat(formData.stockMinimo),
       stockMaximo: Number.parseFloat(formData.stockMaximo),
@@ -189,40 +189,45 @@ export function InsumoForm() {
       finca: formData.finca || undefined,
     };
 
-    addInsumo(newInsumo);
-
-    if (newInsumo.stockActual < newInsumo.stockMinimo) {
-      toast({
-        title: "Alerta: Stock Bajo",
-        description: `${formData.nombre} está por debajo del stock mínimo`,
-        variant: "destructive",
+    addInsumo(newInsumo)
+      .then(() => {
+        if (newInsumo.stockActual < newInsumo.stockMinimo) {
+          toast({
+            title: "Alerta: Stock Bajo",
+            description: `${formData.nombre} está por debajo del stock mínimo`,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Insumo registrado",
+            description: `${formData.nombre} agregado al inventario`,
+          });
+        }
+        // Reset form
+        setFormData({
+          nombre: "",
+          categoria: "" as "fertilizante" | "protector" | "herramienta" | "empaque" | "otro",
+          unidadMedida: "",
+          stockActual: "",
+          stockMinimo: "",
+          stockMaximo: "",
+          precioUnitario: "",
+          proveedor: "",
+          finca: "" as FincaName | "",
+        });
+        setErrors({});
+      })
+      .catch((error: Error) => {
+        console.error("Error al guardar insumo:", error);
+        toast({
+          title: "Error al guardar",
+          description: error?.message || "No se pudo crear el insumo",
+          variant: "destructive",
+        });
+      })
+      .finally(() => {
+        setIsSubmitting(false);
       });
-    } else {
-      toast({
-        title: "Insumo registrado",
-        description: `${formData.nombre} agregado al inventario`,
-      });
-    }
-
-    // Reset form
-    setFormData({
-      nombre: "",
-      categoria: "" as
-        | "fertilizante"
-        | "protector"
-        | "herramienta"
-        | "empaque"
-        | "otro",
-      unidadMedida: "",
-      stockActual: "",
-      stockMinimo: "",
-      stockMaximo: "",
-      precioUnitario: "",
-      proveedor: "",
-      finca: "" as FincaName | "",
-    });
-    setErrors({});
-    setIsSubmitting(false);
   };
 
   return (

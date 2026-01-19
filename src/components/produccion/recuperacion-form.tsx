@@ -101,6 +101,7 @@ export function RecuperacionForm() {
           return matchFinca && r.año === añoActual;
         })
         .map((r) => r.semana)
+        .filter((v): v is number => v !== undefined)
         .filter((v, i, a) => a.indexOf(v) === i)
         .sort((a, b) => a - b);
       setRegisteredWeeks(weeksForFinca);
@@ -218,38 +219,46 @@ export function RecuperacionForm() {
       return;
     }
 
-    addRecuperacionCinta(newRecuperacion);
-
-    if (porcentajeRecuperacion < 80) {
-      toast({
-        title: "Alerta: Recuperación Baja",
-        description: `La recuperación de ${porcentajeRecuperacion.toFixed(
-          1
-        )}% está por debajo del 80% esperado`,
-        variant: "destructive",
+    addRecuperacionCinta(newRecuperacion)
+      .then(() => {
+        if (porcentajeRecuperacion < 80) {
+          toast({
+            title: "Alerta: Recuperación Baja",
+            description: `La recuperación de ${porcentajeRecuperacion.toFixed(1)}% está por debajo del 80% esperado`,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Recuperación registrada",
+            description: `Recuperación: ${porcentajeRecuperacion.toFixed(1)}%`,
+          });
+        }
+        // Reset form
+        setFormData({
+          finca: undefined as string | undefined,
+          semana: "",
+          año: new Date().getFullYear().toString(),
+          colorCinta: "",
+          enfundesIniciales: "",
+          primeraCalCosecha: "",
+          segundaCalCosecha: "",
+          terceraCalCosecha: "",
+          barridaFinal: "",
+        });
+        setErrors({});
+        setRegisteredWeeks([]);
+      })
+      .catch((error: Error) => {
+        console.error("Error al guardar recuperación:", error);
+        toast({
+          title: "Error al guardar",
+          description: error?.message || "No se pudo crear la recuperación",
+          variant: "destructive",
+        });
+      })
+      .finally(() => {
+        setIsSubmitting(false);
       });
-    } else {
-      toast({
-        title: "Recuperación registrada",
-        description: `Recuperación: ${porcentajeRecuperacion.toFixed(1)}%`,
-      });
-    }
-
-    // Reset form
-    setFormData({
-      finca: undefined as string | undefined,
-      semana: "",
-      año: new Date().getFullYear().toString(),
-      colorCinta: "",
-      enfundesIniciales: "",
-      primeraCalCosecha: "",
-      segundaCalCosecha: "",
-      terceraCalCosecha: "",
-      barridaFinal: "",
-    });
-    setErrors({});
-    setRegisteredWeeks([]);
-    setIsSubmitting(false);
   };
 
   return (
