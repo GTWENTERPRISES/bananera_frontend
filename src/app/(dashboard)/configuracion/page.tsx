@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
-import { Settings, Users, MapPin, Shield } from "lucide-react";
+import { Settings, Users, MapPin, Shield, Bot } from "lucide-react";
 import { useApp } from "@/src/contexts/app-context";
 
 export default function ConfiguracionIndexPage() {
@@ -57,6 +57,16 @@ export default function ConfiguracionIndexPage() {
           <CardContent className="flex flex-col gap-3 md:flex-row md:justify-between md:items-end">
             <p className="text-sm text-muted-foreground">Reglas de acceso por rol</p>
             <Link href="/configuracion/permisos"><Button className="w-full md:w-auto">Administrar</Button></Link>
+          </CardContent>
+        </Card>
+
+        <Card className="border-primary/50 bg-primary/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2"><Bot className="h-5 w-5 text-primary" /> Agente IA</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3 md:flex-row md:justify-between md:items-end">
+            <p className="text-sm text-muted-foreground">Notificaciones inteligentes con Gemini</p>
+            <Link href="/configuracion/agente-ia"><Button className="w-full md:w-auto">Configurar</Button></Link>
           </CardContent>
         </Card>
       </div>

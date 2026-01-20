@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bell, Moon, Sun, User, LogOut, AlertCircle, AlertTriangle, Info, Search, Users, Package, Sprout, FileText } from "lucide-react";
+import { Bell, Moon, Sun, User, LogOut, AlertCircle, AlertTriangle, Info, Search, Users, Package, Sprout, FileText, Bot, Sparkles } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/src/components/ui/button";
 import {
@@ -26,6 +26,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/src/components/ui/avatar"
 import { useApp } from "@/src/contexts/app-context";
 import { useIsMobile } from "@/src/hooks/use-mobile";
 import { cn } from "@/src/lib/utils";
+import { useNotificationAgent } from "@/src/hooks/use-notification-agent";
 
 export function AppHeader() {
   const router = useRouter();
@@ -33,6 +34,9 @@ export function AppHeader() {
   const { currentUser, theme, toggleTheme, alertas, fincas, logout, canAccess, marcarAlertaLeida } = useApp();
   const isMobile = useIsMobile();
   const [searchOpen, setSearchOpen] = useState(false);
+  
+  // Agente de notificaciones IA
+  const { notifications: aiNotifications, isConfigured: isAIConfigured, generateNotifications, isLoading: isAILoading } = useNotificationAgent();
   
   const fincaAsignadaNombre = (() => {
     if (!currentUser?.fincaAsignada) return undefined;
@@ -140,6 +144,98 @@ export function AppHeader() {
             <Sun className="h-5 w-5" />
           )}
         </Button>
+
+        {/* Botón del Agente IA */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="relative">
+              <Bot className={cn("h-5 w-5", isAIConfigured && "text-primary")} />
+              {aiNotifications.length > 0 && (
+                <Badge
+                  variant="default"
+                  className="absolute -right-1 -top-1 h-5 min-w-5 rounded-full px-1 text-xs bg-primary"
+                >
+                  {aiNotifications.length}
+                </Badge>
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" side="bottom" sideOffset={8} className="w-80 rounded-xl p-0">
+            <DropdownMenuLabel className="px-3 py-2 text-sm flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                Agente IA
+              </span>
+              {isAIConfigured && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-xs"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    generateNotifications();
+                  }}
+                  disabled={isAILoading}
+                >
+                  {isAILoading ? "Analizando..." : "Actualizar"}
+                </Button>
+              )}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <ScrollArea className="max-h-64">
+              {!isAIConfigured ? (
+                <div className="p-3 text-center">
+                  <Bot className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground mb-2">Agente no configurado</p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => router.push("/configuracion/agente-ia")}
+                  >
+                    Configurar Gemini API
+                  </Button>
+                </div>
+              ) : aiNotifications.length === 0 ? (
+                <div className="p-3 text-center text-sm text-muted-foreground">
+                  <p>Sin alertas inteligentes</p>
+                  <p className="text-xs">Haz clic en Actualizar para analizar</p>
+                </div>
+              ) : (
+                aiNotifications.slice(0, 5).map((n) => (
+                  <DropdownMenuItem key={n.id} className="px-3 py-2 cursor-default">
+                    <div className="flex items-start gap-2 w-full">
+                      <span className={cn(
+                        "mt-0.5",
+                        n.tipo === "critico" ? "text-destructive" :
+                        n.tipo === "advertencia" ? "text-yellow-500" :
+                        n.tipo === "oportunidad" ? "text-green-500" : "text-blue-500"
+                      )}>
+                        {n.tipo === "critico" ? <AlertCircle className="h-4 w-4" /> :
+                         n.tipo === "advertencia" ? <AlertTriangle className="h-4 w-4" /> :
+                         <Info className="h-4 w-4" />}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{n.titulo}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-2">{n.descripcion}</p>
+                      </div>
+                    </div>
+                  </DropdownMenuItem>
+                ))
+              )}
+            </ScrollArea>
+            {isAIConfigured && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="px-3 py-2 justify-center"
+                  onClick={() => router.push("/configuracion/agente-ia")}
+                >
+                  Ver todas las alertas IA
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
